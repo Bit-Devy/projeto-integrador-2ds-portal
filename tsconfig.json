@@ -1,0 +1,50 @@
+{
+  // reúne as opções do código tipado
+  "compilerOptions": {
+    // define a versão e os recursos do código gerado
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    // permite arquivos comuns junto dos arquivos tipados
+    "allowJs": true,
+    // ignora erros internos das bibliotecas
+    "skipLibCheck": true,
+    // exige verificações mais seguras
+    "strict": true,
+    // usa a ferramenta apenas para verificar o código
+    "noEmit": true,
+    // facilita o uso de pacotes com formatos diferentes
+    "esModuleInterop": true,
+    // usa o formato moderno de módulos
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    // permite importar dados em json
+    "resolveJsonModule": true,
+    // verifica cada arquivo de forma separada
+    "isolatedModules": true,
+    // transforma os elementos das páginas
+    "jsx": "react-jsx",
+    // guarda resultados para acelerar novas verificações
+    "incremental": true,
+    // ativa a integração com as páginas
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    // cria um atalho para a pasta principal
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  // escolhe os arquivos verificados
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  // ignora os pacotes instalados
+  "exclude": ["node_modules"]
+}

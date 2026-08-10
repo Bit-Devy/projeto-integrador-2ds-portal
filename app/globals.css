@@ -1,0 +1,6828 @@
+/* importa os estilos do tailwind css */
+@import "tailwindcss";
+
+/* cores usadas em todo o site */
+:root {
+  --azul: #0072bb;
+  --azul-escuro: #075f96;
+  --azul-claro: #00a9e0;
+  --verde: #198847;
+  --cinza-topo: #46565d;
+  --cinza-texto: #333333;
+  --cinza-claro: #f3f5f6;
+  --branco: #ffffff;
+}
+
+/* ajusta o tamanho de todos os elementos */
+* {
+  box-sizing: border-box;
+}
+
+/* rolagem suave da página */
+html {
+  scroll-behavior: smooth;
+}
+
+/* aparência geral da página */
+body {
+  margin: 0;
+  background: var(--branco);
+  color: var(--cinza-texto);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+}
+
+/* fonte dos botões e campos */
+button,
+input {
+  font: inherit;
+}
+
+/* aparência padrão dos links */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* toque dos botões e links */
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* limite de largura do conteúdo */
+.limite {
+  /* calcula o tamanho conforme o espaço disponível */
+  width: min(1140px, calc(100% - 32px));
+  margin-inline: auto;
+}
+
+/* conteúdo exclusivo de leitores de tela */
+.somente-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  /* esconde o elemento sem removê-lo dos leitores de tela */
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* atalho para pular ao conteúdo */
+.pular-conteudo {
+  position: fixed;
+  z-index: 1000;
+  top: 8px;
+  left: 8px;
+  padding: 10px 14px;
+  background: #ffffff;
+  color: #000000;
+  /* move o elemento para ajustar sua posição */
+  transform: translateY(-150%);
+}
+
+/* interação de atalho para pular ao conteúdo */
+.pular-conteudo:focus {
+  /* move o elemento para ajustar sua posição */
+  transform: translateY(0);
+}
+
+/* barra de cima */
+.barra-governo {
+  height: 46px;
+  /* cria o fundo em degradê */
+  background: linear-gradient(115deg, var(--cinza-topo) 0 69%, #ffffff 69.1%);
+  font-size: 12px;
+}
+
+/* conteúdo da barra do governo */
+.barra-governo-conteudo {
+  /* calcula o tamanho conforme o espaço disponível */
+  width: min(1140px, calc(100% - 32px));
+  height: 100%;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 34px;
+}
+
+/* link de conteúdo da barra do governo */
+.barra-governo-conteudo > a {
+  color: var(--verde);
+  font-weight: 700;
+}
+
+/* atalhos acessibilidade */
+.atalhos-acessibilidade {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: #777777;
+}
+
+/* botão de atalhos acessibilidade */
+.atalhos-acessibilidade button {
+  border: 0;
+  padding: 3px;
+  background: transparent;
+  color: #777777;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+/* logos */
+.cabecalho-principal {
+  height: 120px;
+  background: #ffffff;
+}
+
+/* conteúdo do cabeçalho */
+.cabecalho-conteudo {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* marca do colégio */
+.marca-colegio,
+.marca-gecep {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+/* imagem de marca do colégio */
+.marca-colegio img {
+  width: 100px;
+  height: 100px;
+  /* ajusta a imagem dentro do espaço disponível */
+  object-fit: contain;
+}
+
+/* divisor marcas */
+.divisor-marcas {
+  width: 1px;
+  height: 66px;
+  margin-left: 2px;
+  background: #d7d7d7;
+}
+
+/* marca do gecep */
+.marca-gecep {
+  gap: 10px;
+}
+
+/* logo gecep provisória */
+.logo-gecep-provisoria {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border: 4px solid var(--azul);
+  border-radius: 50%;
+  color: var(--azul);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 0 0 3px #ffffff, inset 0 0 0 5px #f2c230;
+}
+
+/* nome do gecep */
+.nome-gecep {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+/* destaque de nome do gecep */
+.nome-gecep strong {
+  color: var(--azul-escuro);
+  font-size: 21px;
+}
+
+/* texto auxiliar de nome do gecep */
+.nome-gecep small {
+  margin-top: 5px;
+  color: #666666;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* caixa de busca */
+.caixa-busca {
+  margin-left: auto;
+  width: 272px;
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid #c8d6dc;
+}
+
+/* foco dentro de caixa de busca */
+.caixa-busca:focus-within {
+  border-bottom-color: var(--verde);
+}
+
+/* campo de caixa de busca */
+.caixa-busca input {
+  min-width: 0;
+  width: 100%;
+  padding: 12px 8px;
+  border: 0;
+  outline: 0;
+  color: #444444;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* botão de caixa de busca */
+.caixa-busca button {
+  border: 0;
+  background: transparent;
+  color: #2da765;
+  cursor: pointer;
+  font-size: 28px;
+  line-height: 1;
+}
+
+/* botão do menu celular */
+.botao-menu-celular {
+  display: none;
+}
+
+/* menu azul */
+.menu-principal {
+  position: relative;
+  z-index: 20;
+  min-height: 44px;
+  background: var(--azul);
+  color: #ffffff;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -3px 0 rgba(0, 169, 224, 0.6);
+}
+
+/* lista do menu */
+.lista-menu {
+  min-height: 44px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+  list-style: none;
+}
+
+/* item do menu */
+.item-menu {
+  position: relative;
+  /* suaviza as mudanças visuais */
+  transition: background 160ms ease;
+}
+
+/* item do menu com submenu */
+.item-menu-tem-submenu {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: max-content 24px;
+}
+
+/* link de item do menu */
+.item-menu > a {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 17px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  /* suaviza as mudanças visuais */
+  transition: background 160ms ease;
+}
+
+/* link de item do menu com submenu */
+.item-menu-tem-submenu > a {
+  padding-right: 2px;
+}
+
+/* botão do submenu */
+.botao-submenu {
+  position: static;
+  z-index: 2;
+  width: 24px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* foco dentro de item do menu */
+.item-menu:hover,
+.item-menu:focus-within {
+  background: var(--azul-escuro);
+}
+
+/* submenu */
+.submenu {
+  position: absolute;
+  z-index: 30;
+  top: 44px;
+  left: 0;
+  min-width: 230px;
+  display: none;
+  padding: 5px 0;
+  list-style: none;
+  background: #ffffff;
+  color: #444444;
+  border-top: 3px solid var(--azul-claro);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 8px 22px rgba(25, 52, 66, 0.2);
+}
+
+/* link de submenu */
+.submenu a {
+  display: block;
+  padding: 10px 15px;
+  border-bottom: 1px solid #e7e7e7;
+  font-size: 13px;
+}
+
+/* interação de link de submenu */
+.submenu a:hover,
+.submenu a:focus {
+  color: var(--azul);
+  background: #f1f7fa;
+}
+
+/* estado ativo de submenu */
+.item-menu.submenu-aberto .submenu {
+  display: block;
+}
+
+/* ajuste específico de submenu */
+.item-menu:last-child .submenu {
+  right: 0;
+  left: auto;
+}
+
+/* aviso grande */
+.banner-principal {
+  position: relative;
+  min-height: 350px;
+  overflow: hidden;
+  background: #f0f3f4;
+  border-bottom: 1px solid #d9e1e5;
+}
+
+/* detalhe visual de banner principal */
+.banner-principal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+  /* cria o fundo em degradê */
+  background-image: linear-gradient(135deg, transparent 60%, rgba(0, 114, 187, 0.09) 60%),
+    repeating-linear-gradient(90deg, transparent 0 79px, rgba(0, 114, 187, 0.045) 80px);
+}
+
+/* banner 2 */
+.banner-2 {
+  background: #edf5f7;
+}
+
+/* banner 3 */
+.banner-3 {
+  background: #f5f3eb;
+}
+
+/* conteúdo do banner */
+.banner-conteudo {
+  position: relative;
+  min-height: 350px;
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 48px minmax(0, 1.25fr) minmax(270px, 0.75fr) 48px;
+  align-items: center;
+  gap: 16px;
+}
+
+/* texto do banner */
+.texto-banner {
+  max-width: 650px;
+  padding: 34px 0;
+}
+
+/* etiqueta banner */
+.etiqueta-banner {
+  display: inline-block;
+  margin-bottom: 14px;
+  padding-left: 12px;
+  border-left: 4px solid var(--azul-claro);
+  color: var(--azul-escuro);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+/* título de texto do banner */
+.texto-banner h1 {
+  max-width: 640px;
+  margin: 0;
+  color: #283b44;
+  /* ajusta o texto conforme o tamanho da tela */
+  font-size: clamp(30px, 3.15vw, 44px);
+  line-height: 1.08;
+  font-weight: 500;
+  letter-spacing: -0.8px;
+}
+
+/* texto do banner */
+.texto-banner p {
+  max-width: 590px;
+  margin: 17px 0 25px;
+  color: #55666d;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+/* botão de banner */
+.botao-banner {
+  display: inline-block;
+  padding: 11px 18px;
+  border: 1px solid var(--azul);
+  color: var(--azul-escuro);
+  background: rgba(255, 255, 255, 0.75);
+  font-weight: 700;
+  /* suaviza as mudanças visuais */
+  transition: 160ms ease;
+}
+
+/* interação de botão de banner */
+.botao-banner:hover,
+.botao-banner:focus {
+  color: #ffffff;
+  background: var(--azul);
+}
+
+/* arte do banner */
+.arte-banner {
+  position: relative;
+  height: 290px;
+  display: grid;
+  place-items: center;
+}
+
+/* círculo grande */
+.circulo-grande {
+  position: relative;
+  z-index: 2;
+  width: 220px;
+  height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 10px solid #ffffff;
+  border-radius: 50%;
+  color: #ffffff;
+  /* cria o fundo em degradê */
+  background: linear-gradient(145deg, var(--azul), var(--azul-escuro));
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 15px 34px rgba(16, 74, 105, 0.24), inset 0 0 0 4px #f1c232;
+}
+
+/* elemento de círculo grande */
+.circulo-grande span {
+  font-size: 31px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+/* texto auxiliar de círculo grande */
+.circulo-grande small {
+  margin-top: 5px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* linha de arte */
+.linha-arte {
+  position: absolute;
+  border: 2px solid rgba(0, 114, 187, 0.22);
+  border-radius: 50%;
+}
+
+/* linha de um */
+.linha-um {
+  width: 270px;
+  height: 270px;
+}
+
+/* linha de dois */
+.linha-dois {
+  width: 310px;
+  height: 190px;
+  /* gira o elemento para compor a decoração */
+  transform: rotate(-20deg);
+}
+
+/* seta banner */
+.seta-banner {
+  width: 42px;
+  height: 62px;
+  border: 0;
+  color: #6c7d85;
+  background: rgba(255, 255, 255, 0.66);
+  cursor: pointer;
+  font-size: 42px;
+  font-weight: 300;
+  /* suaviza as mudanças visuais */
+  transition: 150ms ease;
+}
+
+/* interação de seta banner */
+.seta-banner:hover,
+.seta-banner:focus {
+  color: #ffffff;
+  background: var(--azul);
+}
+
+/* controles do banner */
+.pontos-banner {
+  position: absolute;
+  z-index: 5;
+  bottom: 15px;
+  left: 50%;
+  display: flex;
+  gap: 8px;
+  /* move o elemento para ajustar sua posição */
+  transform: translateX(-50%);
+}
+
+/* botão de controles do banner */
+.pontos-banner button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 1px solid var(--azul);
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+/* estado ativo de controles do banner */
+.pontos-banner .ponto-ativo {
+  background: var(--azul);
+}
+
+/* atalhos */
+.secao-servicos {
+  padding-bottom: 34px;
+  background: #ffffff;
+}
+
+/* faixa de título */
+.faixa-titulo {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+  background: var(--azul-escuro);
+  color: #ffffff;
+}
+
+/* título de faixa de título */
+.faixa-titulo h2 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 500;
+}
+
+/* grade de serviços */
+.grade-servicos {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(5, 1fr);
+  border-right: 1px solid #dfe5e8;
+  border-bottom: 1px solid #dfe5e8;
+}
+
+/* cartão de serviço */
+.cartao-servico {
+  min-height: 128px;
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 42px 1fr 16px;
+  align-items: center;
+  gap: 11px;
+  padding: 18px 13px;
+  border-left: 1px solid #dfe5e8;
+  background: #ffffff;
+  /* suaviza as mudanças visuais */
+  transition: 160ms ease;
+}
+
+/* interação de cartão de serviço */
+.cartao-servico:hover,
+.cartao-servico:focus {
+  background: #f0f7fa;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul-claro);
+}
+
+/* ícone de serviço */
+.icone-servico {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--azul);
+  border-radius: 50%;
+  color: var(--azul);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* destaque de cartão de serviço */
+.cartao-servico strong,
+.cartao-servico small {
+  display: block;
+}
+
+/* destaque de cartão de serviço */
+.cartao-servico strong {
+  margin-bottom: 6px;
+  color: #333333;
+  font-size: 14px;
+}
+
+/* texto auxiliar de cartão de serviço */
+.cartao-servico small {
+  color: #6a7479;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* seta serviço */
+.seta-servico {
+  color: var(--azul-claro);
+  font-size: 25px;
+}
+
+/* primeira apresentação */
+.primeira-apresentacao {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 1fr 1fr;
+  gap: 70px;
+  padding-block: 64px 78px;
+}
+
+/* rótulo seção */
+.rotulo-secao {
+  display: inline-block;
+  padding-left: 10px;
+  border-left: 4px solid var(--azul-claro);
+  color: var(--azul-escuro);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* título de primeira apresentação */
+.primeira-apresentacao h2 {
+  margin: 13px 0 0;
+  color: #33474f;
+  font-size: 29px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+/* texto de primeira apresentação */
+.primeira-apresentacao p {
+  margin: 18px 0 0;
+  color: #5f6c72;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* âncora vazia */
+.ancora-vazia {
+  scroll-margin-top: 50px;
+}
+
+/* logo oficial do GECEP */
+.marca-gecep img {
+  width: 190px;
+  height: 82px;
+  /* ajusta a imagem dentro do espaço disponível */
+  object-fit: contain;
+}
+
+/* link de item do menu */
+.item-menu > a {
+  padding-inline: 11px;
+  font-size: 12px;
+}
+
+/* página inicial */
+.inicio-apresentacao {
+  position: relative;
+  min-height: 410px;
+  overflow: hidden;
+  background: #eef3f5;
+  border-bottom: 1px solid #d9e1e5;
+}
+
+/* detalhe visual de apresentação inicial */
+.inicio-apresentacao::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.6;
+  /* cria o fundo em degradê */
+  background-image:
+    linear-gradient(135deg, transparent 57%, rgba(0, 114, 187, 0.09) 57%),
+    repeating-linear-gradient(90deg, transparent 0 79px, rgba(0, 114, 187, 0.045) 80px);
+}
+
+/* conteúdo inicial */
+.inicio-conteudo {
+  position: relative;
+  min-height: 410px;
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+  align-items: center;
+  gap: 70px;
+}
+
+/* texto inicial */
+.inicio-texto {
+  padding-block: 55px;
+}
+
+/* título de texto inicial */
+.inicio-texto h1 {
+  max-width: 720px;
+  margin: 13px 0 17px;
+  color: #283f49;
+  /* ajusta o texto conforme o tamanho da tela */
+  font-size: clamp(38px, 4.2vw, 56px);
+  line-height: 1.04;
+  font-weight: 400;
+  letter-spacing: -1.4px;
+}
+
+/* texto inicial */
+.inicio-texto p {
+  max-width: 660px;
+  margin: 0 0 25px;
+  color: #5c6c73;
+  font-size: 17px;
+  line-height: 1.62;
+}
+
+/* botões de início */
+.botoes-inicio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 11px;
+  margin-top: 24px;
+}
+
+/* aparência comum dos botões da página */
+.botao-primario,
+.botao-secundario,
+.botao-claro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 43px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  /* suaviza as mudanças visuais */
+  transition: 160ms ease;
+}
+
+/* botão principal */
+.botao-primario {
+  color: #ffffff;
+  background: var(--azul);
+  border: 1px solid var(--azul);
+}
+
+/* interação de botão principal */
+.botao-primario:hover,
+.botao-primario:focus {
+  background: var(--azul-escuro);
+  border-color: var(--azul-escuro);
+}
+
+/* botão secundário */
+.botao-secundario {
+  color: var(--azul-escuro);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--azul);
+}
+
+/* interação de botão secundário */
+.botao-secundario:hover,
+.botao-secundario:focus {
+  background: #ffffff;
+}
+
+/* marca da tela inicial */
+.inicio-marca {
+  position: relative;
+  height: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* imagem de marca da tela inicial */
+.inicio-marca img {
+  position: relative;
+  z-index: 2;
+  width: 245px;
+  height: 245px;
+  /* ajusta a imagem dentro do espaço disponível */
+  object-fit: contain;
+  /* aplica um efeito visual ao elemento */
+  filter: drop-shadow(0 17px 18px rgba(14, 63, 89, 0.2));
+}
+
+/* texto auxiliar de marca da tela inicial */
+.inicio-marca small {
+  position: relative;
+  z-index: 2;
+  margin-top: -9px;
+  padding: 6px 12px;
+  color: #5b6e76;
+  background: rgba(255, 255, 255, 0.84);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+}
+
+/* órbita */
+.orbita {
+  position: absolute;
+  border: 2px solid rgba(0, 114, 187, 0.18);
+  border-radius: 50%;
+}
+
+/* órbita um */
+.orbita-um {
+  width: 310px;
+  height: 310px;
+}
+
+/* órbita dois */
+.orbita-dois {
+  width: 355px;
+  height: 215px;
+  /* gira o elemento para compor a decoração */
+  transform: rotate(-19deg);
+}
+
+/* seção de introdução */
+.secao-introducao {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 1fr 1fr;
+  gap: 75px;
+  padding-block: 73px 80px;
+}
+
+/* título de introdução de título */
+.introducao-titulo h2 {
+  margin: 13px 0 0;
+  color: #304852;
+  font-size: 32px;
+  line-height: 1.18;
+  font-weight: 500;
+}
+
+/* texto de introdução de texto */
+.introducao-texto p {
+  margin: 17px 0 17px;
+  color: #617178;
+  font-size: 16px;
+  line-height: 1.72;
+}
+
+/* link de introdução de texto */
+.introducao-texto a,
+.link-seta {
+  color: var(--azul);
+  font-weight: 700;
+}
+
+/* grade de áreas portal */
+.grade-areas-portal {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+/* cartão de área */
+.cartao-area {
+  position: relative;
+  min-height: 235px;
+  padding: 27px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #dce3e6;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul-claro);
+  /* suaviza as mudanças visuais */
+  transition: 170ms ease;
+}
+
+/* interação de cartão de área */
+.cartao-area:hover,
+.cartao-area:focus {
+  /* move o elemento para ajustar sua posição */
+  transform: translateY(-3px);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 9px 22px rgba(29, 63, 78, 0.12), inset 0 -4px 0 var(--azul);
+}
+
+/* elemento de cartão de área */
+.cartao-area > span {
+  position: absolute;
+  top: -18px;
+  right: 14px;
+  color: #edf3f5;
+  font-size: 92px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* título de cartão de área */
+.cartao-area h3,
+.cartao-area p,
+.cartao-area b {
+  position: relative;
+  z-index: 1;
+}
+
+/* título de cartão de área */
+.cartao-area h3 {
+  margin: 50px 0 11px;
+  color: #2f4750;
+  font-size: 21px;
+}
+
+/* texto de cartão de área */
+.cartao-area p {
+  min-height: 58px;
+  margin: 0 0 18px;
+  color: #6b797e;
+  line-height: 1.55;
+}
+
+/* destaque de cartão de área */
+.cartao-area b {
+  color: var(--azul);
+  font-size: 12px;
+}
+
+/* notícias da tela inicial */
+.secao-inicial-noticias {
+  padding-block: 77px 86px;
+}
+
+/* imagem de notícia */
+.imagem-noticia img {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  /* ajusta a imagem dentro do espaço disponível */
+  object-fit: contain;
+  opacity: 0.34;
+  /* move o elemento para ajustar sua posição */
+  transform: translate(-50%, -54%);
+  /* aplica um efeito visual ao elemento */
+  filter: grayscale(0.15) brightness(1.25);
+}
+
+/* elemento de imagem de notícia */
+.imagem-noticia span {
+  position: relative;
+  z-index: 2;
+  font-weight: 700;
+}
+
+/* imagem laranja */
+.imagem-laranja {
+  /* cria o fundo em degradê */
+  background: linear-gradient(135deg, #e89a2e, #c66a1d);
+}
+
+/* agenda da tela inicial */
+.secao-agenda-inicial {
+  padding-block: 68px 76px;
+  color: #ffffff;
+  /* cria o fundo em degradê */
+  background: linear-gradient(135deg, #075f96, #034970);
+}
+
+/* grade de agenda inicial */
+.grade-agenda-inicial {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
+  gap: 70px;
+  align-items: center;
+}
+
+/* rótulo seção */
+.agenda-inicial-titulo .rotulo-secao {
+  color: #a8e6f7;
+}
+
+/* título de agenda inicial título */
+.agenda-inicial-titulo h2 {
+  margin: 13px 0 13px;
+  font-size: 32px;
+  line-height: 1.18;
+  font-weight: 500;
+}
+
+/* texto de agenda inicial título */
+.agenda-inicial-titulo p {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+/* selo demonstrativo */
+.selo-demonstrativo {
+  display: inline-flex;
+  margin: 7px 0 22px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* botão claro */
+.botao-claro {
+  color: var(--azul-escuro);
+  background: #ffffff;
+  border: 1px solid #ffffff;
+}
+
+/* lista de eventos inicial */
+.lista-eventos-inicial {
+  background: #ffffff;
+  color: #33474f;
+}
+
+/* evento inicial */
+.evento-inicial {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 67px 1fr 20px;
+  align-items: center;
+  gap: 16px;
+  min-height: 98px;
+  padding: 13px 18px;
+  border-bottom: 1px solid #e1e7e9;
+  /* suaviza as mudanças visuais */
+  transition: 150ms ease;
+}
+
+/* ajuste específico de evento inicial */
+.evento-inicial:last-child {
+  border-bottom: 0;
+}
+
+/* interação de evento inicial */
+.evento-inicial:hover,
+.evento-inicial:focus {
+  background: #edf7fa;
+}
+
+/* data de evento */
+.data-evento {
+  width: 58px;
+  height: 66px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: var(--azul);
+}
+
+/* destaque de data de evento */
+.data-evento strong {
+  font-size: 24px;
+  line-height: 1;
+}
+
+/* texto auxiliar de data de evento */
+.data-evento small {
+  margin-top: 5px;
+  font-size: 10px;
+}
+
+/* ajuste específico de elemento de evento inicial */
+.evento-inicial > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ajuste específico de texto auxiliar de evento inicial */
+.evento-inicial > span:nth-child(2) small {
+  color: var(--azul);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* ajuste específico de destaque de evento inicial */
+.evento-inicial > span:nth-child(2) strong {
+  font-size: 15px;
+}
+
+/* ajuste específico de destaque de evento inicial */
+.evento-inicial > span:nth-child(2) b {
+  color: #748187;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* evento inicial */
+.evento-inicial i {
+  color: var(--azul-claro);
+  font-size: 25px;
+  font-style: normal;
+}
+
+/* convite participação */
+.convite-participacao {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 180px 1fr auto;
+  align-items: center;
+  gap: 34px;
+  padding-block: 62px;
+}
+
+/* imagem de convite participação */
+.convite-participacao img {
+  width: 170px;
+  height: 86px;
+  /* ajusta a imagem dentro do espaço disponível */
+  object-fit: contain;
+}
+
+/* título de convite participação */
+.convite-participacao h2 {
+  margin: 10px 0 7px;
+  color: #304952;
+  font-size: 27px;
+  font-weight: 500;
+}
+
+/* texto de convite participação */
+.convite-participacao p {
+  margin: 0;
+  color: #66757b;
+  line-height: 1.55;
+}
+
+/* começo das páginas internas */
+.topo-pagina {
+  position: relative;
+  min-height: 245px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  color: #ffffff;
+  /* cria o fundo em degradê */
+  background: linear-gradient(135deg, #075f96, #03496f);
+}
+
+/* detalhe visual de topo de página */
+.topo-pagina::before {
+  content: "";
+  position: absolute;
+  width: 430px;
+  height: 430px;
+  top: -210px;
+  right: 5%;
+  border: 2px solid rgba(255, 255, 255, 0.11);
+  border-radius: 50%;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 0 0 55px rgba(255, 255, 255, 0.035), 0 0 0 105px rgba(255, 255, 255, 0.025);
+}
+
+/* topo de página conteúdo */
+.topo-pagina-conteudo {
+  position: relative;
+  z-index: 1;
+  padding-block: 37px;
+}
+
+/* migalhas */
+.migalhas {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+}
+
+/* interação de link de migalhas */
+.migalhas a:hover,
+.migalhas a:focus {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+/* traço título */
+.traco-titulo {
+  display: block;
+  width: 42px;
+  height: 4px;
+  margin-bottom: 13px;
+  background: var(--azul-claro);
+}
+
+/* título de topo de página */
+.topo-pagina h1 {
+  margin: 0 0 12px;
+  /* ajusta o texto conforme o tamanho da tela */
+  font-size: clamp(34px, 4vw, 48px);
+  line-height: 1.08;
+  font-weight: 400;
+}
+
+/* texto de topo de página */
+.topo-pagina p {
+  max-width: 760px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+/* conteúdo da página */
+.pagina-conteudo {
+  padding-block: 70px 82px;
+}
+
+/* seção padrão */
+.secao-padrao {
+  padding-block: 70px 80px;
+}
+
+/* grade de apresentação interna */
+.grade-apresentacao-interna {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  gap: 68px;
+  align-items: center;
+}
+
+/* título de grade de apresentação interna */
+.grade-apresentacao-interna h2,
+.grade-duas-colunas h2,
+.grade-formulario-pagina h2,
+.grade-formulario-contato h2,
+.grade-estatuto-abertura h2 {
+  margin: 12px 0 16px;
+  color: #304952;
+  font-size: 31px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+/* texto de grade de apresentação interna */
+.grade-apresentacao-interna p,
+.grade-duas-colunas > div > p,
+.grade-formulario-pagina > div > p,
+.grade-formulario-contato > div > p,
+.grade-estatuto-abertura p {
+  color: #627279;
+  font-size: 15px;
+  line-height: 1.72;
+}
+
+/* quadro de logo interno */
+.quadro-logo-interno,
+.quadro-destaque {
+  min-height: 310px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 35px;
+  background: #eef4f6;
+  border-top: 5px solid var(--azul);
+}
+
+/* imagem de quadro de logo interno */
+.quadro-logo-interno img {
+  /* calcula o tamanho conforme o espaço disponível */
+  width: min(100%, 330px);
+  height: 180px;
+  /* ajusta a imagem dentro do espaço disponível */
+  object-fit: contain;
+}
+
+/* texto auxiliar de quadro de logo interno */
+.quadro-logo-interno small {
+  margin-top: 18px;
+  color: #687980;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* quadro de destaque */
+.quadro-destaque {
+  align-items: flex-start;
+  color: #ffffff;
+  /* cria o fundo em degradê */
+  background: linear-gradient(145deg, #0874b7, #04517e);
+  border-top-color: #f0c32d;
+}
+
+/* destaque de quadro de destaque */
+.quadro-destaque strong {
+  max-width: 310px;
+  font-size: 31px;
+  line-height: 1.18;
+  font-weight: 500;
+}
+
+/* texto de quadro de destaque */
+.quadro-destaque p {
+  margin: 20px 0 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* faixa de dados gecep */
+.faixa-dados-gecep {
+  color: #ffffff;
+  background: var(--azul-escuro);
+}
+
+/* grade de dados gecep */
+.grade-dados-gecep {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* item de grade de dados gecep */
+.grade-dados-gecep article {
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ajuste específico de item de grade de dados gecep */
+.grade-dados-gecep article:first-child {
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* destaque de grade de dados gecep */
+.grade-dados-gecep strong {
+  font-size: 31px;
+  font-weight: 500;
+}
+
+/* elemento de grade de dados gecep */
+.grade-dados-gecep span {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+/* grade de valores */
+.grade-valores {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 17px;
+}
+
+/* item de grade de valores */
+.grade-valores article {
+  min-height: 210px;
+  padding: 24px;
+  border: 1px solid #dae2e5;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul-claro);
+}
+
+/* elemento de grade de valores */
+.grade-valores article > span {
+  color: var(--azul-claro);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* título de grade de valores */
+.grade-valores h3 {
+  margin: 34px 0 11px;
+  color: #304952;
+  font-size: 19px;
+}
+
+/* texto de grade de valores */
+.grade-valores p {
+  margin: 0;
+  color: #6b797f;
+  line-height: 1.58;
+}
+
+/* linha de tempo */
+.linha-tempo {
+  position: relative;
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+/* detalhe visual de linha de tempo */
+.linha-tempo::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 4%;
+  right: 4%;
+  height: 2px;
+  background: #cad8dd;
+}
+
+/* item de linha de tempo */
+.linha-tempo article {
+  position: relative;
+  padding: 36px 20px 22px;
+  background: #ffffff;
+  border: 1px solid #dce4e7;
+}
+
+/* detalhe visual de item de linha de tempo */
+.linha-tempo article::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 20px;
+  width: 13px;
+  height: 13px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  background: var(--azul-claro);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 0 0 2px var(--azul-claro);
+}
+
+/* data de linha de tempo */
+.linha-tempo time {
+  color: var(--azul);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* título de linha de tempo */
+.linha-tempo h3 {
+  margin: 11px 0 8px;
+  color: #304952;
+}
+
+/* texto de linha de tempo */
+.linha-tempo p {
+  margin: 0;
+  color: #6b7a80;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* chamada interna */
+.chamada-interna {
+  min-height: 190px;
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 35px;
+  padding-block: 46px;
+}
+
+/* título de chamada interna */
+.chamada-interna h2 {
+  margin: 9px 0 6px;
+  color: #304952;
+  font-size: 27px;
+  font-weight: 500;
+}
+
+/* texto de chamada interna */
+.chamada-interna p {
+  margin: 0;
+  color: #68777d;
+}
+
+/* gestão e representação */
+.aviso-informativo {
+  margin-bottom: 35px;
+  padding: 17px 20px;
+  color: #28515f;
+  background: #e8f6fa;
+  border-left: 5px solid var(--azul-claro);
+}
+
+/* destaque de aviso informativo */
+.aviso-informativo strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+/* texto de aviso informativo */
+.aviso-informativo p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* aviso amarelo */
+.aviso-amarelo {
+  color: #6b5719;
+  background: #fff5cd;
+  border-left-color: #e5b925;
+}
+
+/* aviso azul */
+.aviso-azul {
+  margin-bottom: 55px;
+}
+
+/* grade de cargos */
+.grade-cargos {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 17px;
+}
+
+/* item de grade de cargos */
+.grade-cargos article {
+  min-height: 235px;
+  display: flex;
+  flex-direction: column;
+  padding: 25px;
+  border: 1px solid #dbe3e6;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul);
+}
+
+/* elemento de grade de cargos */
+.grade-cargos article > span {
+  color: #d9eaf0;
+  font-size: 40px;
+  font-weight: 800;
+}
+
+/* título de grade de cargos */
+.grade-cargos h3 {
+  margin: 13px 0 10px;
+  color: #304952;
+  font-size: 19px;
+}
+
+/* texto de grade de cargos */
+.grade-cargos p {
+  margin: 0 0 18px;
+  color: #6c7a80;
+  line-height: 1.55;
+}
+
+/* texto auxiliar de grade de cargos */
+.grade-cargos small {
+  margin-top: auto;
+  color: var(--azul);
+  font-weight: 700;
+}
+
+/* grade de duas colunas */
+.grade-duas-colunas {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 65px;
+  align-items: center;
+  padding-block: 70px;
+}
+
+/* lista de metas exemplo */
+.lista-metas-exemplo,
+.lista-simples {
+  background: #ffffff;
+  border: 1px solid #dce3e6;
+}
+
+/* item de lista de metas exemplo */
+.lista-metas-exemplo article,
+.lista-simples p {
+  margin: 0;
+  padding: 16px 19px;
+  border-bottom: 1px solid #e2e7e9;
+}
+
+/* ajuste específico de item de lista de metas exemplo */
+.lista-metas-exemplo article:last-child,
+.lista-simples p:last-child {
+  border-bottom: 0;
+}
+
+/* item de lista de metas exemplo */
+.lista-metas-exemplo article {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 105px 1fr;
+  gap: 4px 15px;
+}
+
+/* elemento de lista de metas exemplo */
+.lista-metas-exemplo article > span {
+  /* define o espaço ocupado na grade */
+  grid-row: span 2;
+  align-self: center;
+  color: var(--azul);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* texto auxiliar de lista de metas exemplo */
+.lista-metas-exemplo small,
+.lista-simples p {
+  color: #6c7a80;
+  line-height: 1.5;
+}
+
+/* seção azul interna */
+.secao-azul-interna {
+  padding-block: 65px 72px;
+  color: #ffffff;
+  /* cria o fundo em degradê */
+  background: linear-gradient(135deg, #075f96, #034970);
+}
+
+/* fluxo crt */
+.fluxo-crt {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+/* item de fluxo crt */
+.fluxo-crt article {
+  min-height: 210px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+/* elemento de fluxo crt */
+.fluxo-crt article > span {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--azul-escuro);
+  background: #ffffff;
+  font-weight: 700;
+}
+
+/* título de fluxo crt */
+.fluxo-crt h3 {
+  margin: 30px 0 9px;
+  font-size: 18px;
+}
+
+/* texto de fluxo crt */
+.fluxo-crt p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.55;
+}
+
+/* caixa vazia */
+.caixa-vazia {
+  min-height: 135px;
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 75px 1fr;
+  align-items: center;
+  gap: 22px;
+  padding: 24px;
+  color: #ffffff;
+  background: var(--azul-escuro);
+}
+
+/* elemento de caixa vazia */
+.caixa-vazia > span {
+  width: 65px;
+  height: 65px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+/* texto de caixa vazia */
+.caixa-vazia p {
+  margin: 7px 0 0;
+  color: rgba(255, 255, 255, 0.76);
+  line-height: 1.5;
+}
+
+/* caixa vazia clara */
+.caixa-vazia-clara {
+  color: #304952;
+  background: #ffffff;
+  border: 1px solid #d9e2e5;
+}
+
+/* elemento de caixa vazia clara */
+.caixa-vazia-clara > span {
+  color: var(--azul);
+  border-color: var(--azul);
+}
+
+/* texto de caixa vazia clara */
+.caixa-vazia-clara p {
+  color: #6c7b80;
+}
+
+/* projetos */
+.grade-projetos {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* cartão de projeto */
+.cartao-projeto {
+  min-height: 295px;
+  padding: 26px;
+  background: #ffffff;
+  border: 1px solid #dbe3e6;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul-claro);
+}
+
+/* topo de projeto */
+.topo-projeto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* elemento de topo de projeto */
+.topo-projeto > span {
+  color: #d7e8ee;
+  font-size: 44px;
+  font-weight: 800;
+}
+
+/* texto auxiliar de topo de projeto */
+.topo-projeto small {
+  padding: 5px 8px;
+  color: #176a45;
+  background: #e2f3e9;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* destaque de cartão de projeto */
+.cartao-projeto > b {
+  color: var(--azul);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* título de cartão de projeto */
+.cartao-projeto h3 {
+  margin: 10px 0 9px;
+  color: #304952;
+  font-size: 22px;
+}
+
+/* texto de cartão de projeto */
+.cartao-projeto p {
+  min-height: 64px;
+  color: #6c7b80;
+  line-height: 1.58;
+}
+
+/* link de cartão de projeto */
+.cartao-projeto a {
+  color: var(--azul);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* etapas projeto */
+.etapas-projeto {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 17px;
+}
+
+/* item de etapas projeto */
+.etapas-projeto article {
+  min-height: 190px;
+  padding: 23px;
+  background: #ffffff;
+  border: 1px solid #dce3e6;
+}
+
+/* elemento de etapas projeto */
+.etapas-projeto span {
+  color: var(--azul-claro);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* destaque de etapas projeto */
+.etapas-projeto strong {
+  display: block;
+  margin: 30px 0 8px;
+  color: #304952;
+  font-size: 18px;
+}
+
+/* texto de etapas projeto */
+.etapas-projeto p {
+  margin: 0;
+  color: #6c7a80;
+  line-height: 1.5;
+}
+
+/* estatuto e documentos */
+.grade-estatuto-abertura {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: center;
+  gap: 70px;
+}
+
+/* cartão de documento grande */
+.cartao-documento-grande {
+  min-height: 250px;
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+  gap: 25px;
+  padding: 35px;
+  color: #ffffff;
+  background: var(--azul-escuro);
+  border-top: 6px solid #f1c32c;
+}
+
+/* elemento de cartão de documento grande */
+.cartao-documento-grande > span {
+  width: 90px;
+  height: 115px;
+  display: grid;
+  place-items: center;
+  background: var(--azul);
+  clip-path: polygon(0 0, 74% 0, 100% 23%, 100% 100%, 0 100%);
+  font-weight: 700;
+}
+
+/* destaque de cartão de documento grande */
+.cartao-documento-grande strong,
+.cartao-documento-grande small {
+  display: block;
+}
+
+/* destaque de cartão de documento grande */
+.cartao-documento-grande strong {
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+/* texto auxiliar de cartão de documento grande */
+.cartao-documento-grande small {
+  margin-top: 12px;
+  color: rgba(255, 255, 255, 0.73);
+}
+
+/* grade de tópicos estatuto */
+.grade-topicos-estatuto {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 17px;
+}
+
+/* item de grade de tópicos estatuto */
+.grade-topicos-estatuto article {
+  min-height: 190px;
+  padding: 23px;
+  background: #ffffff;
+  border: 1px solid #dce3e6;
+}
+
+/* elemento de grade de tópicos estatuto */
+.grade-topicos-estatuto span {
+  color: #d6e9ef;
+  font-size: 40px;
+  font-weight: 800;
+}
+
+/* título de grade de tópicos estatuto */
+.grade-topicos-estatuto h3 {
+  margin: 14px 0 8px;
+  color: #304952;
+}
+
+/* texto de grade de tópicos estatuto */
+.grade-topicos-estatuto p {
+  margin: 0;
+  color: #6b7a80;
+  line-height: 1.5;
+}
+
+/* visualizador pdf */
+.visualizador-pdf {
+  position: relative;
+  min-height: 720px;
+  background: #e9eff1;
+  border: 1px solid #d2dde1;
+}
+
+/* visualizador pdf */
+.visualizador-pdf iframe {
+  width: 100%;
+  height: 720px;
+  border: 0;
+}
+
+/* aviso de visualizador */
+.aviso-visualizador {
+  position: absolute;
+  right: 15px;
+  bottom: 15px;
+  max-width: 330px;
+  padding: 13px 15px;
+  background: rgba(255, 255, 255, 0.94);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 5px 18px rgba(22, 54, 68, 0.16);
+}
+
+/* texto de aviso de visualizador */
+.aviso-visualizador p {
+  margin: 0 0 7px;
+  color: #68777d;
+  font-size: 11px;
+}
+
+/* link de aviso de visualizador */
+.aviso-visualizador a {
+  color: var(--azul);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* grade de documentos completa */
+.grade-documentos-completa {
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* cartão de documento */
+.grade-documentos-completa .cartao-documento {
+  min-height: 165px;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 58px 1fr 18px;
+}
+
+/* texto auxiliar de cartão de documento */
+.cartao-documento span > small {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--azul);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* texto de cartão de documento */
+.cartao-documento span > p {
+  margin: 8px 0;
+  color: #6e7c82;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* destaque de cartão de documento */
+.cartao-documento span > b {
+  color: #8a969a;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+/* cartão de documento */
+.cartao-documento > i {
+  color: var(--azul-claro);
+  font-size: 24px;
+  font-style: normal;
+}
+
+/* grade de arquivo */
+.grade-arquivo {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 17px;
+}
+
+/* item de grade de arquivo */
+.grade-arquivo article {
+  min-height: 185px;
+  display: flex;
+  flex-direction: column;
+  padding: 23px;
+  border: 1px solid #dbe3e6;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul-claro);
+}
+
+/* destaque de grade de arquivo */
+.grade-arquivo strong {
+  color: #304952;
+  font-size: 18px;
+}
+
+/* texto de grade de arquivo */
+.grade-arquivo p {
+  color: #6d7b80;
+  line-height: 1.5;
+}
+
+/* elemento de grade de arquivo */
+.grade-arquivo span,
+.grade-arquivo a {
+  margin-top: auto;
+  color: var(--azul);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* página de calendário */
+.grade-calendario-pagina {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+  gap: 25px;
+}
+
+/* calendário */
+.grade-calendario-pagina .calendario,
+.grade-calendario-pagina .detalhes-evento {
+  border: 1px solid #d7e1e4;
+}
+
+/* título de topo de calendário */
+.topo-calendario h2 {
+  margin: 0;
+  text-align: center;
+  color: #29434e;
+  font-size: 21px;
+  font-weight: 500;
+}
+
+/* categoria evento */
+.categoria-evento {
+  align-self: flex-start;
+  margin: -7px 0 12px;
+  padding: 5px 7px;
+  color: #176b46;
+  background: #e3f3ea;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* lista de eventos completa */
+.lista-eventos-completa {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 17px;
+}
+
+/* item de lista de eventos completa */
+.lista-eventos-completa article {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 75px 1fr;
+  gap: 19px;
+  padding: 22px;
+  background: #ffffff;
+  border: 1px solid #dce3e6;
+}
+
+/* data de lista de eventos completa */
+.lista-eventos-completa time {
+  width: 68px;
+  height: 78px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: var(--azul);
+}
+
+/* destaque de lista de eventos completa */
+.lista-eventos-completa time strong {
+  font-size: 27px;
+  line-height: 1;
+}
+
+/* elemento de lista de eventos completa */
+.lista-eventos-completa time span {
+  margin-top: 5px;
+  font-size: 10px;
+}
+
+/* texto auxiliar de lista de eventos completa */
+.lista-eventos-completa small {
+  color: var(--azul);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* título de lista de eventos completa */
+.lista-eventos-completa h3 {
+  margin: 7px 0;
+  color: #304952;
+}
+
+/* texto de lista de eventos completa */
+.lista-eventos-completa p {
+  margin: 0 0 9px;
+  color: #6c7a80;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* destaque de lista de eventos completa */
+.lista-eventos-completa b {
+  color: #53666e;
+  font-size: 10px;
+}
+
+/* grade de tipos agenda */
+.grade-tipos-agenda {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 17px;
+}
+
+/* item de grade de tipos agenda */
+.grade-tipos-agenda article {
+  min-height: 180px;
+  padding: 23px;
+  border: 1px solid #dce3e6;
+}
+
+/* elemento de grade de tipos agenda */
+.grade-tipos-agenda span {
+  color: var(--azul-claro);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* destaque de grade de tipos agenda */
+.grade-tipos-agenda strong {
+  display: block;
+  margin: 28px 0 8px;
+  color: #304952;
+}
+
+/* texto de grade de tipos agenda */
+.grade-tipos-agenda p {
+  margin: 0;
+  color: #6c7a80;
+  line-height: 1.5;
+}
+
+/* transparência */
+.grade-relatorios {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 17px;
+}
+
+/* item de grade de relatórios */
+.grade-relatorios article {
+  min-height: 205px;
+  display: flex;
+  flex-direction: column;
+  padding: 23px;
+  background: #ffffff;
+  border: 1px solid #dce3e6;
+}
+
+/* elemento de grade de relatórios */
+.grade-relatorios article > span {
+  color: #d8e9ef;
+  font-size: 34px;
+  font-weight: 800;
+}
+
+/* destaque de grade de relatórios */
+.grade-relatorios strong {
+  margin-top: 12px;
+  color: #304952;
+  font-size: 18px;
+}
+
+/* texto de grade de relatórios */
+.grade-relatorios p {
+  color: #6c7a80;
+}
+
+/* botão de grade de relatórios */
+.grade-relatorios button {
+  margin-top: auto;
+  padding: 8px 10px;
+  border: 1px solid #d3dcdf;
+  color: #879398;
+  background: #f5f7f8;
+  text-align: left;
+  font-size: 10px;
+}
+
+/* participação e contato */
+.grade-formulario-pagina {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: minmax(300px, 0.75fr) minmax(0, 1.25fr);
+  gap: 65px;
+  align-items: start;
+}
+
+/* lista de orientações de formulário */
+.orientacoes-formulario ol {
+  margin: 28px 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* item de orientações de formulário */
+.orientacoes-formulario li {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 34px 1fr;
+  gap: 14px;
+  padding: 15px 0;
+  border-bottom: 1px solid #dce4e7;
+}
+
+/* elemento de orientações de formulário */
+.orientacoes-formulario li > span {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #ffffff;
+  background: var(--azul);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* texto de orientações de formulário */
+.orientacoes-formulario li p {
+  margin: 5px 0 0;
+  color: #6d7b80;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* nota de privacidade */
+.nota-privacidade {
+  padding: 17px;
+  color: #5e501b;
+  background: #fff6d3;
+  border-left: 4px solid #e4b926;
+}
+
+/* texto de nota de privacidade */
+.nota-privacidade p {
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* formulário de participação */
+.formulario-participacao {
+  padding: 27px;
+  background: #ffffff;
+  border-top: 5px solid var(--azul);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 8px 22px rgba(31, 68, 83, 0.11);
+}
+
+/* rótulo de formulário de participação */
+.formulario-participacao label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 14px;
+  color: #495c64;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* campo de formulário de participação */
+.formulario-participacao input,
+.formulario-participacao select,
+.formulario-participacao textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #ccd8dd;
+  border-radius: 0;
+  outline: 0;
+  color: #3f535b;
+  background: #ffffff;
+  font: 13px Arial, Helvetica, sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* área de texto de formulário de participação */
+.formulario-participacao textarea {
+  resize: vertical;
+}
+
+/* interação de campo de formulário de participação */
+.formulario-participacao input:focus,
+.formulario-participacao select:focus,
+.formulario-participacao textarea:focus {
+  border-color: var(--azul);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 0 0 2px rgba(0, 114, 187, 0.12);
+}
+
+/* estado desativado de campo de formulário de participação */
+.formulario-participacao input:disabled {
+  color: #859298;
+  background: #f1f4f5;
+  cursor: not-allowed;
+}
+
+/* opção anônima */
+.formulario-participacao .opcao-anonima {
+  flex-direction: row;
+  align-items: center;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* campo de opção anônima */
+.formulario-participacao .opcao-anonima input {
+  width: auto;
+}
+
+/* botão de formulário de participação */
+.formulario-participacao > button {
+  min-width: 170px;
+  padding: 11px 17px;
+  border: 0;
+  color: #ffffff;
+  background: var(--azul);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+/* grade de participação */
+.grade-participacao {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 17px;
+}
+
+/* item de grade de participação */
+.grade-participacao article {
+  min-height: 195px;
+  padding: 23px;
+  background: #ffffff;
+  border: 1px solid #dce3e6;
+}
+
+/* elemento de grade de participação */
+.grade-participacao article > span {
+  color: var(--azul-claro);
+  font-size: 27px;
+}
+
+/* título de grade de participação */
+.grade-participacao h3 {
+  margin: 24px 0 8px;
+  color: #304952;
+}
+
+/* texto de grade de participação */
+.grade-participacao p {
+  margin: 0;
+  color: #6c7a80;
+  line-height: 1.5;
+}
+
+/* grade de canais contato */
+.grade-canais-contato {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 70px;
+}
+
+/* item de grade de canais contato */
+.grade-canais-contato article {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border: 1px solid #dce3e6;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul-claro);
+}
+
+/* elemento de grade de canais contato */
+.grade-canais-contato article > span {
+  color: var(--azul);
+  font-size: 25px;
+}
+
+/* título de grade de canais contato */
+.grade-canais-contato h2 {
+  margin: 27px 0 8px;
+  color: #304952;
+  font-size: 18px;
+}
+
+/* texto de grade de canais contato */
+.grade-canais-contato p {
+  color: #6c7a80;
+  line-height: 1.5;
+}
+
+/* texto auxiliar de grade de canais contato */
+.grade-canais-contato small,
+.grade-canais-contato a {
+  margin-top: auto;
+  color: var(--azul);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* grade de formulário contato */
+.grade-formulario-contato {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 0.75fr 1.25fr;
+  align-items: start;
+  gap: 65px;
+}
+
+/* grade de faq */
+.grade-faq {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+/* grade de faq */
+.grade-faq details {
+  background: #ffffff;
+  border: 1px solid #dce3e6;
+}
+
+/* grade de faq */
+.grade-faq summary {
+  padding: 17px 19px;
+  color: #304952;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+/* texto de grade de faq */
+.grade-faq details p {
+  margin: 0;
+  padding: 0 19px 18px;
+  color: #6c7b80;
+  line-height: 1.55;
+}
+
+/* notícias */
+.filtro-noticias {
+  margin-bottom: 34px;
+  padding: 20px;
+  background: #eef4f6;
+  border-left: 5px solid var(--azul-claro);
+}
+
+/* rótulo de filtro notícias */
+.filtro-noticias label {
+  display: block;
+  margin-bottom: 8px;
+  color: #43565e;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* bloco de filtro notícias */
+.filtro-noticias > div {
+  display: flex;
+  gap: 8px;
+}
+
+/* campo de filtro notícias */
+.filtro-noticias input {
+  /* calcula o tamanho conforme o espaço disponível */
+  width: min(100%, 620px);
+  padding: 11px 12px;
+  border: 1px solid #cbd8dc;
+  outline: 0;
+}
+
+/* botão de filtro notícias */
+.filtro-noticias button {
+  padding: 10px 15px;
+  border: 1px solid var(--azul);
+  color: var(--azul);
+  background: #ffffff;
+  cursor: pointer;
+}
+
+/* texto de filtro notícias */
+.filtro-noticias p {
+  margin: 9px 0 0;
+  color: #6b7a80;
+  font-size: 11px;
+}
+
+/* grade de notícias completa */
+.grade-noticias-completa {
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* titulos das partes */
+.cabecalho-secao {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+/* título de cabeçalho de seção */
+.cabecalho-secao h2 {
+  margin: 10px 0 0;
+  color: #33474f;
+  font-size: 31px;
+  line-height: 1.15;
+  font-weight: 500;
+}
+
+/* texto de cabeçalho de seção */
+.cabecalho-secao p {
+  max-width: 650px;
+  margin: 10px 0 0;
+  color: #66747a;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* link de cabeçalho de seção */
+.cabecalho-secao > a {
+  color: var(--azul);
+  font-weight: 700;
+}
+
+/* interação de link de cabeçalho de seção */
+.cabecalho-secao > a:hover,
+.cabecalho-secao > a:focus {
+  text-decoration: underline;
+}
+
+/* cabeçalho centralizado */
+.cabecalho-centralizado {
+  justify-content: center;
+  text-align: center;
+}
+
+/* texto de cabeçalho centralizado */
+.cabecalho-centralizado p {
+  margin-inline: auto;
+}
+
+/* noticias */
+.secao-cinza {
+  padding: 68px 0 74px;
+  scroll-margin-top: 30px;
+  background: var(--cinza-claro);
+  border-top: 1px solid #e2e8eb;
+  border-bottom: 1px solid #e2e8eb;
+}
+
+/* grade de notícias avisos */
+.grade-noticias-avisos {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: minmax(0, 2.2fr) minmax(270px, 0.8fr);
+  gap: 42px;
+}
+
+/* resultado de busca */
+.resultado-busca {
+  margin: -12px 0 22px;
+  color: #64757c;
+}
+
+/* grade de notícias */
+.grade-noticias {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+/* cartão de notícia */
+.cartao-noticia {
+  min-width: 0;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e0e5e7;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 4px 12px rgba(28, 62, 78, 0.07);
+  /* suaviza as mudanças visuais */
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+/* interação de cartão de notícia */
+.cartao-noticia:hover {
+  /* move o elemento para ajustar sua posição */
+  transform: translateY(-3px);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 9px 21px rgba(28, 62, 78, 0.12);
+}
+
+/* imagem de notícia */
+.imagem-noticia {
+  position: relative;
+  height: 142px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 15px;
+  overflow: hidden;
+  color: #ffffff;
+}
+
+/* detalhe visual de imagem de notícia */
+.imagem-noticia::before,
+.imagem-noticia::after {
+  content: "";
+  position: absolute;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+}
+
+/* detalhe visual de imagem de notícia */
+.imagem-noticia::before {
+  width: 160px;
+  height: 160px;
+  top: -55px;
+  right: -40px;
+}
+
+/* detalhe visual de imagem de notícia */
+.imagem-noticia::after {
+  width: 105px;
+  height: 105px;
+  top: -20px;
+  right: 15px;
+}
+
+/* imagem azul */
+.imagem-azul {
+  /* cria o fundo em degradê */
+  background: linear-gradient(135deg, #076ca8, #034971);
+}
+
+/* imagem verde */
+.imagem-verde {
+  /* cria o fundo em degradê */
+  background: linear-gradient(135deg, #258d58, #0c6740);
+}
+
+/* imagem amarelo */
+.imagem-amarelo {
+  color: #243b45;
+  /* cria o fundo em degradê */
+  background: linear-gradient(135deg, #f4cf4e, #e5a622);
+}
+
+/* elemento de imagem de notícia */
+.imagem-noticia span,
+.imagem-noticia strong {
+  position: relative;
+  z-index: 2;
+}
+
+/* elemento de imagem de notícia */
+.imagem-noticia span {
+  font-size: 11px;
+  letter-spacing: 0.8px;
+}
+
+/* destaque de imagem de notícia */
+.imagem-noticia strong {
+  margin-top: 2px;
+  font-size: 24px;
+}
+
+/* conteúdo de notícia */
+.corpo-noticia {
+  padding: 18px;
+}
+
+/* texto auxiliar de conteúdo de notícia */
+.corpo-noticia > small {
+  color: var(--azul);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+}
+
+/* título de conteúdo de notícia */
+.corpo-noticia h3 {
+  margin: 8px 0 10px;
+  color: #33464e;
+  font-size: 16px;
+  line-height: 1.32;
+}
+
+/* texto de conteúdo de notícia */
+.corpo-noticia p {
+  margin: 0 0 15px;
+  color: #6a767b;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* link de conteúdo de notícia */
+.corpo-noticia a {
+  color: var(--azul-escuro);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* interação de link de conteúdo de notícia */
+.corpo-noticia a:hover,
+.corpo-noticia a:focus {
+  text-decoration: underline;
+}
+
+/* sem resultados */
+.sem-resultados {
+  padding: 24px;
+  color: #68767c;
+  background: #ffffff;
+  border-left: 4px solid var(--azul-claro);
+}
+
+/* cabeçalho de avisos */
+.cabecalho-avisos {
+  margin-bottom: 18px;
+}
+
+/* aviso de demonstração */
+.aviso-demonstracao {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 13px;
+  padding: 12px 14px;
+  color: #665418;
+  background: #fff6cf;
+  border-left: 4px solid #e7b928;
+}
+
+/* destaque de aviso de demonstração */
+.aviso-demonstracao strong {
+  font-size: 12px;
+}
+
+/* elemento de aviso de demonstração */
+.aviso-demonstracao span {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* lista de avisos */
+.lista-avisos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid #dfe5e8;
+}
+
+/* item de lista de avisos */
+.lista-avisos li {
+  padding: 14px 15px 12px;
+  border-bottom: 1px solid #e4e8ea;
+}
+
+/* ajuste específico de item de lista de avisos */
+.lista-avisos li:last-child {
+  border-bottom: 0;
+}
+
+/* link de lista de avisos */
+.lista-avisos a {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 13px 1fr;
+  color: #33474f;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* elemento de lista de avisos */
+.lista-avisos a span {
+  color: var(--azul-claro);
+  font-size: 20px;
+  line-height: 0.8;
+}
+
+/* interação de link de lista de avisos */
+.lista-avisos a:hover,
+.lista-avisos a:focus {
+  color: var(--azul);
+}
+
+/* texto auxiliar de lista de avisos */
+.lista-avisos small {
+  display: block;
+  margin: 7px 0 0 13px;
+  color: #899398;
+  font-size: 10px;
+}
+
+/* representação */
+.secao-representacao {
+  padding-block: 76px 84px;
+  scroll-margin-top: 30px;
+}
+
+/* grade de representação */
+.grade-representacao {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+/* item de grade de representação */
+.grade-representacao article {
+  position: relative;
+  min-height: 240px;
+  padding: 28px 27px 25px;
+  overflow: hidden;
+  border: 1px solid #dbe2e5;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul-claro);
+}
+
+/* elemento de grade de representação */
+.grade-representacao article > span {
+  position: absolute;
+  top: -17px;
+  right: 13px;
+  color: #eef3f5;
+  font-size: 92px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+/* título de grade de representação */
+.grade-representacao h3,
+.grade-representacao p,
+.grade-representacao a {
+  position: relative;
+  z-index: 1;
+}
+
+/* título de grade de representação */
+.grade-representacao h3 {
+  margin: 38px 0 13px;
+  color: #2d444e;
+  font-size: 21px;
+}
+
+/* texto de grade de representação */
+.grade-representacao p {
+  margin: 0 0 22px;
+  color: #66747a;
+  line-height: 1.6;
+}
+
+/* link de grade de representação */
+.grade-representacao a {
+  color: var(--azul);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* calendário */
+.secao-calendario {
+  padding: 70px 0 82px;
+  scroll-margin-top: 30px;
+  color: #ffffff;
+  /* cria o fundo em degradê */
+  background: linear-gradient(135deg, #075f96, #03496f);
+}
+
+/* título de cabeçalho claro */
+.cabecalho-claro h2,
+.cabecalho-claro p {
+  color: #ffffff;
+}
+
+/* rótulo seção */
+.cabecalho-claro .rotulo-secao {
+  color: #a9e7f8;
+}
+
+/* selo de exemplo */
+.selo-exemplo {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.09);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* grade de calendário */
+.grade-calendario {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 27px;
+}
+
+/* calendário */
+.calendario,
+.detalhes-evento {
+  background: #ffffff;
+  color: var(--cinza-texto);
+}
+
+/* calendário */
+.calendario {
+  padding: 23px 26px 27px;
+}
+
+/* topo de calendário */
+.topo-calendario {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+/* título de topo de calendário */
+.topo-calendario h3 {
+  margin: 0;
+  text-align: center;
+  color: #29434e;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+/* botão de topo de calendário */
+.topo-calendario button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #cfdce1;
+  color: var(--azul);
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 27px;
+}
+
+/* interação de botão de topo de calendário */
+.topo-calendario button:hover,
+.topo-calendario button:focus {
+  color: #ffffff;
+  background: var(--azul);
+}
+
+/* dias semana */
+.dias-semana,
+.dias-calendario {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(7, 1fr);
+}
+
+/* dias semana */
+.dias-semana {
+  border-top: 1px solid #e0e6e8;
+  border-bottom: 1px solid #e0e6e8;
+}
+
+/* elemento de dias semana */
+.dias-semana span {
+  padding: 9px 2px;
+  text-align: center;
+  color: #77858b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* dias calendário */
+.dias-calendario {
+  padding-top: 7px;
+}
+
+/* botão de dias calendário */
+.dias-calendario > button,
+.dia-vazio {
+  /* mantém a proporção do elemento */
+  aspect-ratio: 1.38;
+}
+
+/* botão de dias calendário */
+.dias-calendario > button {
+  position: relative;
+  border: 0;
+  color: #46575e;
+  background: #ffffff;
+}
+
+/* estado desativado de botão de dias calendário */
+.dias-calendario > button:disabled {
+  opacity: 1;
+}
+
+/* dia com evento */
+.dias-calendario .dia-com-evento {
+  color: var(--azul-escuro);
+  background: #e8f5f9;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+/* elemento de dia com evento */
+.dia-com-evento span {
+  position: absolute;
+  bottom: 7px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--azul-claro);
+  /* move o elemento para ajustar sua posição */
+  transform: translateX(-50%);
+}
+
+/* interação de dia com evento */
+.dias-calendario .dia-com-evento:hover,
+.dias-calendario .dia-com-evento:focus {
+  color: #ffffff;
+  background: var(--azul);
+}
+
+/* detalhes de evento */
+.detalhes-evento {
+  display: flex;
+  flex-direction: column;
+  padding: 30px;
+  border-top: 5px solid #f0c32e;
+}
+
+/* etiqueta evento */
+.etiqueta-evento {
+  color: var(--azul);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* título de detalhes de evento */
+.detalhes-evento h3 {
+  margin: 11px 0 19px;
+  color: #29434e;
+  font-size: 23px;
+  line-height: 1.2;
+}
+
+/* lista de detalhes de detalhes de evento */
+.detalhes-evento dl {
+  margin: 0;
+}
+
+/* bloco de detalhes de evento */
+.detalhes-evento dl div {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 68px 1fr;
+  padding: 8px 0;
+  border-bottom: 1px solid #e7ebed;
+}
+
+/* nome do detalhe de detalhes de evento */
+.detalhes-evento dt {
+  color: #7c898e;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+/* valor do detalhe de detalhes de evento */
+.detalhes-evento dd {
+  margin: 0;
+  color: #41545c;
+  font-weight: 700;
+}
+
+/* texto de detalhes de evento */
+.detalhes-evento p {
+  margin: 20px 0;
+  color: #637177;
+  line-height: 1.62;
+}
+
+/* link de detalhes de evento */
+.detalhes-evento a {
+  margin-top: auto;
+  color: var(--azul);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* transparência */
+.secao-transparencia {
+  padding-block: 76px 86px;
+  scroll-margin-top: 30px;
+}
+
+/* selo amarelo */
+.selo-amarelo {
+  color: #65531b;
+  background: #fff6cf;
+  border-color: #ebcf6c;
+}
+
+/* resumo financeiro */
+.resumo-financeiro {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 35px;
+  border-top: 1px solid #dce3e6;
+  border-right: 1px solid #dce3e6;
+}
+
+/* item de resumo financeiro */
+.resumo-financeiro article {
+  min-height: 143px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 21px;
+  border-left: 1px solid #dce3e6;
+  border-bottom: 1px solid #dce3e6;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 4px 0 var(--azul);
+}
+
+/* texto auxiliar de resumo financeiro */
+.resumo-financeiro small {
+  color: #738086;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+/* destaque de resumo financeiro */
+.resumo-financeiro strong {
+  margin: 10px 0 7px;
+  color: #29434e;
+  font-size: 23px;
+  font-weight: 500;
+}
+
+/* elemento de resumo financeiro */
+.resumo-financeiro span {
+  color: #8a9498;
+  font-size: 11px;
+}
+
+/* valor entrada */
+.resumo-financeiro .valor-entrada,
+.valor-entrada {
+  color: #187b4b;
+}
+
+/* valor saida */
+.resumo-financeiro .valor-saida,
+.valor-saida {
+  color: #b7473b;
+}
+
+/* cartão de prestacao */
+.resumo-financeiro .cartao-prestacao {
+  color: #ffffff;
+  background: var(--azul-escuro);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 4px 0 var(--azul-claro);
+}
+
+/* texto auxiliar de cartão de prestacao */
+.cartao-prestacao small,
+.cartao-prestacao strong,
+.cartao-prestacao span {
+  color: #ffffff;
+}
+
+/* topo de tabela */
+.topo-tabela {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 25px;
+  margin-bottom: 15px;
+}
+
+/* título de topo de tabela */
+.topo-tabela h3 {
+  margin: 0;
+  color: #314952;
+  font-size: 20px;
+}
+
+/* texto de topo de tabela */
+.topo-tabela p {
+  margin: 6px 0 0;
+  color: #78858a;
+  font-size: 12px;
+}
+
+/* rótulo de topo de tabela */
+.topo-tabela label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #65747a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* lista de opções de topo de tabela */
+.topo-tabela select {
+  padding: 8px 29px 8px 10px;
+  border: 1px solid #cfd9dd;
+  color: #43565e;
+  background: #ffffff;
+}
+
+/* tabela responsiva */
+.tabela-responsiva {
+  overflow-x: auto;
+  border: 1px solid #dbe2e5;
+}
+
+/* tabela movimentos */
+.tabela-movimentos {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+/* tabela movimentos */
+.tabela-movimentos th {
+  padding: 12px 13px;
+  color: #ffffff;
+  background: var(--azul-escuro);
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* tabela movimentos */
+.tabela-movimentos td {
+  padding: 13px;
+  border-bottom: 1px solid #e4e9eb;
+  color: #52636a;
+}
+
+/* ajuste específico de tabela movimentos */
+.tabela-movimentos tbody tr:nth-child(even) {
+  background: #f7f9fa;
+}
+
+/* ajuste específico de tabela movimentos */
+.tabela-movimentos tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* tipo movimento */
+.tipo-movimento {
+  display: inline-block;
+  min-width: 58px;
+  padding: 4px 7px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* tipo entrada */
+.tipo-entrada {
+  color: #176d45;
+  background: #e0f2e8;
+}
+
+/* tipo saida */
+.tipo-saida {
+  color: #9c3e35;
+  background: #fae7e4;
+}
+
+/* valor tabela */
+.valor-tabela {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+/* botão de tabela movimentos */
+.tabela-movimentos button {
+  padding: 5px 8px;
+  border: 1px solid #d4dcdf;
+  color: #8a9498;
+  background: #f5f7f8;
+  font-size: 10px;
+}
+
+/* documentos */
+.secao-documentos {
+  padding: 70px 0 78px;
+  scroll-margin-top: 30px;
+  background: #eef3f5;
+  border-top: 1px solid #dce5e8;
+  border-bottom: 1px solid #dce5e8;
+}
+
+/* grade de documentos */
+.grade-documentos {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+/* cartão de documento */
+.cartao-documento {
+  min-height: 142px;
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 48px 1fr 16px;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #d9e1e4;
+  /* suaviza as mudanças visuais */
+  transition: 160ms ease;
+}
+
+/* interação de cartão de documento */
+.cartao-documento:hover,
+.cartao-documento:focus {
+  /* move o elemento para ajustar sua posição */
+  transform: translateY(-2px);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 7px 18px rgba(31, 69, 85, 0.12);
+}
+
+/* ícone de documento */
+.icone-documento {
+  width: 45px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: var(--azul);
+  font-size: 11px;
+  font-weight: 700;
+  clip-path: polygon(0 0, 74% 0, 100% 24%, 100% 100%, 0 100%);
+}
+
+/* destaque de cartão de documento */
+.cartao-documento strong,
+.cartao-documento small {
+  display: block;
+}
+
+/* destaque de cartão de documento */
+.cartao-documento strong {
+  margin-bottom: 8px;
+  color: #324a53;
+  font-size: 15px;
+}
+
+/* texto auxiliar de cartão de documento */
+.cartao-documento small {
+  color: #718086;
+  font-size: 11px;
+  line-height: 1.48;
+}
+
+/* destaque de cartão de documento */
+.cartao-documento b {
+  color: var(--azul-claro);
+  font-size: 24px;
+}
+
+/* formulários */
+.secao-formularios {
+  padding-block: 75px 84px;
+  scroll-margin-top: 30px;
+}
+
+/* grade de formulários */
+.grade-formularios {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+/* link de grade de formulários */
+.grade-formularios a {
+  min-height: 205px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border: 1px solid #dae2e5;
+  /* cria o fundo em degradê */
+  background: linear-gradient(145deg, #ffffff 65%, #eef6f9);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul);
+  /* suaviza as mudanças visuais */
+  transition: 160ms ease;
+}
+
+/* interação de link de grade de formulários */
+.grade-formularios a:hover,
+.grade-formularios a:focus {
+  background: #f0f8fb;
+  /* move o elemento para ajustar sua posição */
+  transform: translateY(-2px);
+}
+
+/* elemento de grade de formulários */
+.grade-formularios span {
+  color: var(--azul-claro);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* destaque de grade de formulários */
+.grade-formularios strong {
+  margin: 30px 0 12px;
+  color: #2f4852;
+  font-size: 18px;
+}
+
+/* texto auxiliar de grade de formulários */
+.grade-formularios small {
+  color: #708086;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* contato */
+.secao-contato {
+  padding: 74px 0 82px;
+  scroll-margin-top: 30px;
+  background: #eaf1f4;
+  border-top: 1px solid #d8e2e6;
+}
+
+/* grade de contato */
+.grade-contato {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  gap: 58px;
+  align-items: start;
+}
+
+/* título de texto de contato */
+.texto-contato h2 {
+  margin: 13px 0 17px;
+  color: #2d4650;
+  font-size: 34px;
+  font-weight: 500;
+}
+
+/* texto de contato */
+.texto-contato p {
+  color: #637278;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+/* lista de texto de contato */
+.texto-contato ul {
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* item de texto de contato */
+.texto-contato li {
+  padding: 10px 0;
+  border-bottom: 1px solid #cedade;
+  color: #53666e;
+  font-size: 12px;
+}
+
+/* formulário de contato */
+.formulario-contato {
+  padding: 27px;
+  background: #ffffff;
+  border-top: 5px solid var(--azul);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 9px 23px rgba(31, 68, 83, 0.1);
+}
+
+/* duas colunas formulário */
+.duas-colunas-formulario {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* rótulo de formulário de contato */
+.formulario-contato label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 14px;
+  color: #495c64;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* campo de formulário de contato */
+.formulario-contato input,
+.formulario-contato select,
+.formulario-contato textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #ccd8dd;
+  border-radius: 0;
+  outline: 0;
+  color: #3f535b;
+  background: #ffffff;
+  font: 13px Arial, Helvetica, sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* área de texto de formulário de contato */
+.formulario-contato textarea {
+  resize: vertical;
+}
+
+/* interação de campo de formulário de contato */
+.formulario-contato input:focus,
+.formulario-contato select:focus,
+.formulario-contato textarea:focus {
+  border-color: var(--azul);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 0 0 2px rgba(0, 114, 187, 0.12);
+}
+
+/* opção anônima */
+.formulario-contato .opcao-anonima {
+  flex-direction: row;
+  align-items: center;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+/* campo de opção anônima */
+.opcao-anonima input {
+  width: auto;
+}
+
+/* botão de formulário de contato */
+.formulario-contato > button {
+  min-width: 155px;
+  padding: 11px 17px;
+  border: 0;
+  color: #ffffff;
+  background: var(--azul);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+/* interação de botão de formulário de contato */
+.formulario-contato > button:hover,
+.formulario-contato > button:focus {
+  background: var(--azul-escuro);
+}
+
+/* confirmação formulário */
+.confirmacao-formulario {
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  color: #14633f;
+  background: #e3f4ea;
+  border-left: 4px solid #26935e;
+  font-size: 12px;
+}
+
+/* final */
+.acesso-rapido {
+  padding: 37px 0 41px;
+  color: #ffffff;
+  background: #07547f;
+}
+
+/* título de acesso rápido */
+.acesso-rapido h2 {
+  margin: 0 0 21px;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+/* links de acesso rápido */
+.links-acesso-rapido {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  border-left: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+/* link de links de acesso rápido */
+.links-acesso-rapido a {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  border-right: 1px solid rgba(255, 255, 255, 0.22);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: 12px;
+}
+
+/* interação de link de links de acesso rápido */
+.links-acesso-rapido a:hover,
+.links-acesso-rapido a:focus {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* rodapé */
+.rodape {
+  color: #ffffff;
+  background: var(--azul);
+}
+
+/* rodapé conteúdo */
+.rodape-conteudo {
+  min-height: 205px;
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 1.2fr 1fr 0.75fr;
+  align-items: center;
+  gap: 45px;
+  padding-block: 35px;
+}
+
+/* marcas rodapé */
+.marcas-rodape {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+}
+
+/* imagem de marcas rodapé */
+.marcas-rodape img {
+  width: 79px;
+  height: 79px;
+  padding: 5px;
+  /* ajusta a imagem dentro do espaço disponível */
+  object-fit: contain;
+  background: #ffffff;
+  border-radius: 50%;
+}
+
+/* bloco de marcas rodapé */
+.marcas-rodape div,
+.endereco-rodape,
+.redes-rodape {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* destaque de marcas rodapé */
+.marcas-rodape strong {
+  font-size: 24px;
+}
+
+/* elemento de marcas rodapé */
+.marcas-rodape span,
+.endereco-rodape span,
+.redes-rodape a {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* interação de link de redes rodapé */
+.redes-rodape a:hover,
+.redes-rodape a:focus {
+  text-decoration: underline;
+}
+
+/* rodapé final */
+.rodape-final {
+  background: #054b77;
+}
+
+/* limite de largura do conteúdo */
+.rodape-final .limite {
+  min-height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 10px;
+}
+
+/* botão de voltar topo */
+.botao-voltar-topo {
+  position: fixed;
+  z-index: 40;
+  right: 20px;
+  bottom: 20px;
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  background: var(--azul);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.23);
+  font-size: 21px;
+}
+
+/* acessibilidade */
+.texto-maior {
+  font-size: 17px;
+}
+
+/* modo de alto contraste */
+.alto-contraste {
+  /* aplica um efeito visual ao elemento */
+  filter: contrast(1.35);
+}
+
+/* barra do governo em alto contraste */
+.alto-contraste .barra-governo,
+.alto-contraste .menu-principal,
+.alto-contraste .faixa-titulo {
+  background: #000000;
+}
+
+/* destaque do foco pelo teclado */
+:focus-visible {
+  outline: 3px solid #f2c230;
+  outline-offset: 2px;
+}
+
+/* adapta os estilos para telas de até 1050 pixels */
+@media (max-width: 1050px) {
+  /* divisor marcas */
+  .divisor-marcas {
+    display: none;
+  }
+
+  /* link de item do menu */
+  .item-menu > a {
+    padding-inline: 11px;
+    font-size: 12px;
+  }
+
+  /* link de item do menu com submenu */
+  .item-menu-tem-submenu > a {
+    padding-right: 2px;
+  }
+
+  /* grade de serviços */
+  .grade-servicos {
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* grade de notícias */
+  .grade-noticias {
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* grade de representação */
+  .grade-representacao,
+  .grade-documentos,
+  .grade-formularios {
+    gap: 14px;
+  }
+
+  /* resumo financeiro */
+  .resumo-financeiro {
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* rodapé conteúdo */
+  .rodape-conteudo {
+    gap: 25px;
+  }
+}
+
+/* adapta os estilos para telas entre 781 e 960 pixels */
+@media (min-width: 781px) and (max-width: 960px) {
+  /* link de item do menu */
+  .item-menu > a {
+    padding-inline: 7px;
+    font-size: 11px;
+  }
+
+  /* link de item do menu com submenu */
+  .item-menu-tem-submenu > a {
+    padding-right: 2px;
+  }
+
+  /* item do menu com submenu */
+  .item-menu-tem-submenu {
+    /* organiza os elementos em colunas */
+    grid-template-columns: max-content 22px;
+  }
+
+  /* botão do submenu */
+  .botao-submenu {
+    width: 22px;
+  }
+}
+
+/* adapta os estilos para telas de até 780 pixels */
+@media (max-width: 780px) {
+  /* barra do governo */
+  .barra-governo {
+    height: 39px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e2e2;
+  }
+
+  /* conteúdo da barra do governo */
+  .barra-governo-conteudo {
+    justify-content: space-between;
+  }
+
+  /* elemento de atalhos acessibilidade */
+  .atalhos-acessibilidade > span {
+    display: none;
+  }
+
+  /* cabeçalho principal */
+  .cabecalho-principal {
+    height: 92px;
+  }
+
+  /* conteúdo do cabeçalho */
+  .cabecalho-conteudo {
+    gap: 10px;
+  }
+
+  /* botão do menu celular */
+  .botao-menu-celular {
+    width: 41px;
+    height: 41px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: var(--azul);
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 23px;
+  }
+
+  /* imagem de marca do colégio */
+  .marca-colegio img {
+    width: 72px;
+    height: 72px;
+  }
+
+  /* logo gecep provisória */
+  .logo-gecep-provisoria {
+    width: 46px;
+    height: 46px;
+    border-width: 3px;
+    font-size: 15px;
+  }
+
+  /* destaque de nome do gecep */
+  .nome-gecep strong {
+    font-size: 18px;
+  }
+
+  /* texto auxiliar de nome do gecep */
+  .nome-gecep small,
+  .caixa-busca {
+    display: none;
+  }
+
+  /* menu principal */
+  .menu-principal {
+    display: none;
+  }
+
+  /* menu de aberto */
+  .menu-principal.menu-aberto {
+    display: block;
+  }
+
+  /* lista do menu */
+  .lista-menu {
+    width: 100%;
+    display: block;
+  }
+
+  /* link de item do menu */
+  .item-menu > a {
+    min-height: 47px;
+    height: auto;
+    justify-content: space-between;
+    padding-inline: 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 14px;
+  }
+
+  /* link de item do menu com submenu */
+  .item-menu-tem-submenu > a {
+    padding-right: 4px;
+  }
+
+  /* item do menu com submenu */
+  .item-menu-tem-submenu {
+    /* organiza os elementos em colunas */
+    grid-template-columns: max-content 44px minmax(0, 1fr);
+  }
+
+  /* botão do submenu */
+  .botao-submenu {
+    width: 44px;
+    height: 47px;
+  }
+
+  /* foco dentro de submenu */
+  .submenu,
+  .item-menu:hover .submenu,
+  .item-menu:focus-within .submenu,
+  .item-menu.submenu-aberto .submenu {
+    position: static;
+    min-width: 0;
+    display: none;
+    border: 0;
+    /* cria uma sombra para destacar o elemento */
+    box-shadow: none;
+  }
+
+  /* submenu */
+  .item-menu-tem-submenu > .submenu {
+    /* define o espaço ocupado na grade */
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  /* conteúdo do banner */
+  .banner-conteudo {
+    min-height: 415px;
+    /* organiza os elementos em colunas */
+    grid-template-columns: 30px 1fr 30px;
+    gap: 8px;
+  }
+
+  /* texto do banner */
+  .texto-banner {
+    /* define o espaço ocupado na grade */
+    grid-column: 2;
+    text-align: center;
+  }
+
+  /* título de texto do banner */
+  .texto-banner h1 {
+    font-size: 32px;
+  }
+
+  /* arte do banner */
+  .arte-banner {
+    display: none;
+  }
+
+  /* seta banner */
+  .seta-banner {
+    width: 30px;
+    height: 54px;
+    font-size: 32px;
+  }
+
+  /* seta esquerda */
+  .seta-esquerda {
+    /* define o espaço ocupado na grade */
+    grid-column: 1;
+    /* define o espaço ocupado na grade */
+    grid-row: 1;
+  }
+
+  /* seta direita */
+  .seta-direita {
+    /* define o espaço ocupado na grade */
+    grid-column: 3;
+    /* define o espaço ocupado na grade */
+    grid-row: 1;
+  }
+
+  /* grade de serviços */
+  .grade-servicos {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* cartão de serviço */
+  .cartao-servico {
+    min-height: 88px;
+  }
+
+  /* primeira apresentação */
+  .primeira-apresentacao {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding-block: 48px 58px;
+  }
+
+  /* cabeçalho de seção */
+  .cabecalho-secao {
+    align-items: flex-start;
+  }
+
+  /* título de cabeçalho de seção */
+  .cabecalho-secao h2 {
+    font-size: 27px;
+  }
+
+  /* grade de notícias avisos */
+  .grade-noticias-avisos,
+  .grade-calendario,
+  .grade-contato {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* grade de notícias avisos */
+  .grade-noticias-avisos {
+    gap: 48px;
+  }
+
+  /* grade de notícias */
+  .grade-noticias,
+  .grade-representacao,
+  .grade-documentos,
+  .grade-formularios {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* item de grade de representação */
+  .grade-representacao article {
+    min-height: 205px;
+  }
+
+  /* seção de cinza */
+  .secao-cinza,
+  .secao-calendario,
+  .secao-documentos,
+  .secao-contato {
+    padding-block: 54px 60px;
+  }
+
+  /* seção de representação */
+  .secao-representacao,
+  .secao-transparencia,
+  .secao-formularios {
+    padding-block: 56px 62px;
+  }
+
+  /* selo de exemplo */
+  .selo-exemplo {
+    align-self: flex-start;
+  }
+
+  /* calendário */
+  .calendario {
+    padding: 18px 14px 20px;
+  }
+
+  /* resumo financeiro */
+  .resumo-financeiro {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* topo de tabela */
+  .topo-tabela {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  /* tabela responsiva */
+  .tabela-responsiva {
+    /* calcula o tamanho conforme o espaço disponível */
+    width: calc(100vw - 32px);
+  }
+
+  /* grade de contato */
+  .grade-contato {
+    gap: 32px;
+  }
+
+  /* links de acesso rápido */
+  .links-acesso-rapido {
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* rodapé conteúdo */
+  .rodape-conteudo {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 30px;
+    padding-block: 43px;
+  }
+
+  /* limite de largura do conteúdo */
+  .rodape-final .limite {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-block: 13px;
+  }
+}
+
+/* adapta os estilos para telas de até 450 pixels */
+@media (max-width: 450px) {
+  /* conteúdo da barra do governo */
+  .barra-governo-conteudo {
+    /* calcula o tamanho conforme o espaço disponível */
+    width: calc(100% - 20px);
+    gap: 10px;
+  }
+
+  /* link de conteúdo da barra do governo */
+  .barra-governo-conteudo > a {
+    font-size: 10px;
+  }
+
+  /* imagem de marca do colégio */
+  .marca-colegio img {
+    width: 62px;
+    height: 62px;
+  }
+
+  /* marca do gecep */
+  .marca-gecep {
+    margin-left: auto;
+  }
+
+  /* texto auxiliar de nome do gecep */
+  .nome-gecep small {
+    display: none;
+  }
+
+  /* banner principal */
+  .banner-principal,
+  .banner-conteudo {
+    min-height: 440px;
+  }
+
+  /* título de texto do banner */
+  .texto-banner h1 {
+    font-size: 27px;
+  }
+
+  /* texto do banner */
+  .texto-banner p {
+    font-size: 15px;
+  }
+
+  /* título de faixa de título */
+  .faixa-titulo h2 {
+    font-size: 19px;
+  }
+
+  /* cabeçalho de seção */
+  .cabecalho-secao {
+    flex-direction: column;
+  }
+
+  /* imagem de notícia */
+  .imagem-noticia {
+    height: 128px;
+  }
+
+  /* topo de calendário */
+  .topo-calendario {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 38px 1fr 38px;
+  }
+
+  /* título de topo de calendário */
+  .topo-calendario h3 {
+    font-size: 17px;
+  }
+
+  /* botão de dias calendário */
+  .dias-calendario > button,
+  .dia-vazio {
+    /* mantém a proporção do elemento */
+    aspect-ratio: 1;
+  }
+
+  /* elemento de dia com evento */
+  .dia-com-evento span {
+    bottom: 3px;
+  }
+
+  /* detalhes de evento */
+  .detalhes-evento {
+    padding: 23px 20px;
+  }
+
+  /* duas colunas formulário */
+  .duas-colunas-formulario {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  /* formulário de contato */
+  .formulario-contato {
+    padding: 22px 18px;
+  }
+
+  /* links de acesso rápido */
+  .links-acesso-rapido {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* marcas rodapé */
+  .marcas-rodape {
+    align-items: flex-start;
+  }
+
+  /* botão de voltar topo */
+  .botao-voltar-topo {
+    right: 12px;
+    bottom: 12px;
+  }
+}
+
+/* gestão do mapa e do ensalamento */
+.painel-mapa {
+  min-width: 0;
+}
+
+/* topo de painel mapa */
+.topo-painel-mapa {
+  margin-bottom: 14px;
+}
+
+/* abas mapa painel */
+.abas-mapa-painel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 14px;
+  padding: 10px;
+  background: #e8f0f3;
+  border: 1px solid #d4e0e4;
+}
+
+/* botão de abas mapa painel */
+.abas-mapa-painel button,
+.acoes-dados-mapa button {
+  padding: 10px 13px;
+  border: 1px solid #b9cbd2;
+  color: #49616a;
+  background: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82em;
+  font-weight: 700;
+}
+
+/* estado ativo de abas mapa painel */
+.abas-mapa-painel button.ativo {
+  color: #ffffff;
+  background: var(--azul);
+  border-color: var(--azul);
+}
+
+/* ferramentas de mapa painel */
+.ferramentas-mapa-painel {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(125px, 0.75fr));
+  gap: 13px;
+  margin-bottom: 18px;
+  padding: 17px;
+  background: #eef4f6;
+  border: 1px solid #dbe4e7;
+}
+
+/* ações de dados mapa */
+.acoes-dados-mapa {
+  /* define o espaço ocupado na grade */
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+/* estado desativado de botão de ações de dados mapa */
+.acoes-dados-mapa button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+/* rótulo de ferramentas de mapa painel */
+.ferramentas-mapa-painel > label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* elemento de ferramentas de mapa painel */
+.ferramentas-mapa-painel label > span {
+  color: #4c626b;
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* campo de ferramentas de mapa painel */
+.ferramentas-mapa-painel input,
+.ferramentas-mapa-painel select {
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 10px;
+  border: 1px solid #b9cbd2;
+  border-radius: 0;
+  outline: 0;
+  color: #3e535c;
+  background: #ffffff;
+  font: inherit;
+}
+
+/* interação de campo de ferramentas de mapa painel */
+.ferramentas-mapa-painel input:focus,
+.ferramentas-mapa-painel select:focus {
+  border-color: var(--azul);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 0 0 2px rgba(0, 114, 187, 0.12);
+}
+
+/* sucesso painel */
+.sucesso-painel {
+  padding: 13px 15px;
+  color: #17613f;
+  background: #e7f5ed;
+  border-left: 4px solid #268956;
+  font-size: 0.86em;
+}
+
+/* formulário de mapa painel */
+.formulario-mapa-painel {
+  margin-top: 18px;
+}
+
+/* campo de envio mapa */
+.campo-envio-mapa {
+  padding: 13px;
+  background: #f3f6f7;
+  border: 1px dashed #bfd0d6;
+}
+
+/* campo de envio mapa */
+.campo-envio-mapa input {
+  padding: 7px;
+  background: #ffffff;
+}
+
+/* item de lista de mapa painel */
+.lista-mapa-painel > article {
+  /* organiza os elementos em colunas */
+  grid-template-columns: 85px minmax(0, 1fr) auto;
+}
+
+/* total registros mapa */
+.total-registros-mapa {
+  margin: 0 0 3px;
+  color: #687980;
+  font-size: 0.82em;
+}
+
+/* avisos registro mapa */
+.avisos-registro-mapa {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 8px 0;
+}
+
+/* elemento de avisos registro mapa */
+.avisos-registro-mapa span {
+  padding: 4px 6px;
+  color: #725c18;
+  background: #fff4cc;
+  font-size: 0.66em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* aviso de sem sala */
+.avisos-registro-mapa .aviso-sem-sala {
+  color: #842626;
+  background: #fdeaea;
+}
+
+/* abas mapa painel em alto contraste */
+.alto-contraste .abas-mapa-painel,
+.alto-contraste .ferramentas-mapa-painel,
+.alto-contraste .campo-envio-mapa {
+  border-color: #000000;
+}
+
+/* adapta os estilos para telas de até 1050 pixels */
+@media (max-width: 1050px) {
+  /* ferramentas de mapa painel */
+  .ferramentas-mapa-painel {
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* busca de registros mapa */
+  .busca-registros-mapa {
+    /* define o espaço ocupado na grade */
+    grid-column: 1 / -1;
+  }
+}
+
+/* adapta os estilos para telas de até 780 pixels */
+@media (max-width: 780px) {
+  /* botão de abas mapa painel */
+  .abas-mapa-painel button {
+    flex: 1 1 190px;
+  }
+
+  /* item de lista de mapa painel */
+  .lista-mapa-painel > article {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+}
+
+/* adapta os estilos para telas de até 450 pixels */
+@media (max-width: 450px) {
+  /* ferramentas de mapa painel */
+  .ferramentas-mapa-painel {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* busca de registros mapa */
+  .busca-registros-mapa,
+  .acoes-dados-mapa {
+    /* define o espaço ocupado na grade */
+    grid-column: auto;
+  }
+
+  /* botão de ações de dados mapa */
+  .acoes-dados-mapa button,
+  .abas-mapa-painel button {
+    width: 100%;
+    flex-basis: 100%;
+  }
+}
+
+/* tela de entrada do painel */
+.pagina-login {
+  min-height: 72vh;
+  display: grid;
+  place-items: center;
+  padding: 48px 20px;
+  background: #eef3f5;
+}
+
+/* cartão de entrada */
+.cartao-login {
+  /* calcula o tamanho conforme o espaço disponível */
+  width: min(100%, 440px);
+  padding: 36px;
+  border-radius: 18px;
+  background: #fff;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 18px 45px rgba(12, 51, 76, 0.14);
+}
+
+/* imagem de cartão de entrada */
+.cartao-login > img {
+  width: 74px;
+  height: 74px;
+  /* ajusta a imagem dentro do espaço disponível */
+  object-fit: contain;
+  margin-bottom: 18px;
+}
+
+/* título de cartão de entrada */
+.cartao-login h1 {
+  margin: 8px 0 10px;
+  color: #123f63;
+}
+
+/* formulário de cartão de entrada */
+.cartao-login form {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0 18px;
+}
+
+/* rótulo de cartão de entrada */
+.cartao-login label {
+  display: grid;
+  gap: 7px;
+  font-weight: 700;
+}
+
+/* campo de cartão de entrada */
+.cartao-login input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #b8c8d2;
+  border-radius: 8px;
+  font: inherit;
+}
+
+/* botão de cartão de entrada */
+.cartao-login button {
+  padding: 13px 18px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: #126ba0;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* erro login */
+.erro-login {
+  padding: 12px;
+  border-left: 4px solid #b3261e;
+  background: #fff0ef;
+  color: #7c1b16;
+}
+
+/* ajuste das páginas novas para tablet */
+@media (max-width: 1050px) {
+  /* imagem de marca do gecep */
+  .marca-gecep img {
+    width: 160px;
+    height: 72px;
+  }
+
+  /* caixa de busca */
+  .caixa-busca {
+    width: 230px;
+  }
+
+  /* conteúdo inicial */
+  .inicio-conteudo {
+    /* organiza os elementos em colunas */
+    grid-template-columns: minmax(0, 1fr) 290px;
+    gap: 35px;
+  }
+
+  /* imagem de marca da tela inicial */
+  .inicio-marca img {
+    width: 215px;
+    height: 215px;
+  }
+
+  /* órbita um */
+  .orbita-um {
+    width: 270px;
+    height: 270px;
+  }
+
+  /* órbita dois */
+  .orbita-dois {
+    width: 310px;
+    height: 190px;
+  }
+
+  /* seção de introdução */
+  .secao-introducao,
+  .grade-agenda-inicial,
+  .grade-apresentacao-interna,
+  .grade-estatuto-abertura,
+  .grade-formulario-pagina,
+  .grade-formulario-contato {
+    gap: 38px;
+  }
+
+  /* grade de áreas portal */
+  .grade-areas-portal,
+  .grade-cargos,
+  .grade-topicos-estatuto,
+  .grade-arquivo,
+  .grade-relatorios,
+  .grade-canais-contato,
+  .grade-noticias-completa {
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* grade de dados gecep */
+  .grade-dados-gecep,
+  .grade-valores,
+  .linha-tempo,
+  .fluxo-crt,
+  .etapas-projeto,
+  .grade-tipos-agenda,
+  .grade-participacao {
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* convite participação */
+  .convite-participacao {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 140px 1fr auto;
+    gap: 23px;
+  }
+
+  /* imagem de convite participação */
+  .convite-participacao img {
+    width: 135px;
+  }
+}
+
+/* ajuste das páginas novas para celular */
+@media (max-width: 780px) {
+  /* imagem de marca do gecep */
+  .marca-gecep img {
+    width: 135px;
+    height: 62px;
+  }
+
+  /* submenu */
+  .menu-principal.menu-aberto .submenu {
+    position: static;
+    display: none;
+    padding: 0;
+    color: #ffffff;
+    background: #08649d;
+    border: 0;
+    /* cria uma sombra para destacar o elemento */
+    box-shadow: none;
+  }
+
+  /* estado ativo de submenu */
+  .menu-principal.menu-aberto .item-menu.submenu-aberto .submenu {
+    display: block;
+  }
+
+  /* link de submenu */
+  .menu-principal.menu-aberto .submenu a {
+    padding: 10px 31px;
+    color: rgba(255, 255, 255, 0.88);
+    border-color: rgba(255, 255, 255, 0.12);
+    font-size: 12px;
+  }
+
+  /* apresentação inicial */
+  .inicio-apresentacao,
+  .inicio-conteudo {
+    min-height: 0;
+  }
+
+  /* conteúdo inicial */
+  .inicio-conteudo {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding-block: 45px 32px;
+    text-align: center;
+  }
+
+  /* texto inicial */
+  .inicio-texto {
+    padding: 0;
+  }
+
+  /* título de texto inicial */
+  .inicio-texto h1 {
+    margin-inline: auto;
+    font-size: 37px;
+    letter-spacing: -0.7px;
+  }
+
+  /* texto inicial */
+  .inicio-texto p {
+    margin-inline: auto;
+    font-size: 15px;
+  }
+
+  /* botões de início */
+  .botoes-inicio {
+    justify-content: center;
+  }
+
+  /* marca da tela inicial */
+  .inicio-marca {
+    height: 265px;
+  }
+
+  /* imagem de marca da tela inicial */
+  .inicio-marca img {
+    width: 185px;
+    height: 185px;
+  }
+
+  /* órbita um */
+  .orbita-um {
+    width: 230px;
+    height: 230px;
+  }
+
+  /* órbita dois */
+  .orbita-dois {
+    width: 270px;
+    height: 165px;
+  }
+
+  /* seção de introdução */
+  .secao-introducao,
+  .grade-agenda-inicial,
+  .grade-apresentacao-interna,
+  .grade-duas-colunas,
+  .grade-estatuto-abertura,
+  .grade-calendario-pagina,
+  .grade-formulario-pagina,
+  .grade-formulario-contato {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+    gap: 31px;
+  }
+
+  /* seção de introdução */
+  .secao-introducao,
+  .pagina-conteudo,
+  .secao-padrao {
+    padding-block: 52px 60px;
+  }
+
+  /* título de introdução de título */
+  .introducao-titulo h2,
+  .agenda-inicial-titulo h2,
+  .grade-apresentacao-interna h2,
+  .grade-duas-colunas h2,
+  .grade-formulario-pagina h2,
+  .grade-formulario-contato h2,
+  .grade-estatuto-abertura h2 {
+    font-size: 27px;
+  }
+
+  /* grade de áreas portal */
+  .grade-areas-portal,
+  .grade-projetos,
+  .grade-cargos,
+  .grade-documentos-completa,
+  .grade-topicos-estatuto,
+  .grade-arquivo,
+  .lista-eventos-completa,
+  .grade-relatorios,
+  .grade-canais-contato,
+  .grade-faq,
+  .grade-noticias-completa {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* grade de dados gecep */
+  .grade-dados-gecep,
+  .grade-valores,
+  .linha-tempo,
+  .fluxo-crt,
+  .etapas-projeto,
+  .grade-tipos-agenda,
+  .grade-participacao {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* grade de agenda inicial */
+  .grade-agenda-inicial {
+    align-items: stretch;
+  }
+
+  /* convite participação */
+  .convite-participacao,
+  .chamada-interna {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  /* imagem de convite participação */
+  .convite-participacao img {
+    width: 170px;
+  }
+
+  /* topo de página */
+  .topo-pagina {
+    min-height: 210px;
+  }
+
+  /* título de topo de página */
+  .topo-pagina h1 {
+    font-size: 34px;
+  }
+
+  /* ajuste específico de item de grade de dados gecep */
+  .grade-dados-gecep article,
+  .grade-dados-gecep article:first-child {
+    min-height: 105px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  /* detalhe visual de linha de tempo */
+  .linha-tempo::before {
+    top: 0;
+    bottom: 0;
+    left: 12px;
+    width: 2px;
+    height: auto;
+  }
+
+  /* item de linha de tempo */
+  .linha-tempo article {
+    margin-left: 25px;
+  }
+
+  /* detalhe visual de item de linha de tempo */
+  .linha-tempo article::before {
+    top: 19px;
+    left: -21px;
+  }
+
+  /* visualizador pdf */
+  .visualizador-pdf,
+  .visualizador-pdf iframe {
+    min-height: 540px;
+    height: 540px;
+  }
+
+  /* item de lista de eventos completa */
+  .lista-eventos-completa article {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 64px 1fr;
+    gap: 14px;
+    padding: 17px;
+  }
+
+  /* data de lista de eventos completa */
+  .lista-eventos-completa time {
+    width: 61px;
+    height: 71px;
+  }
+
+  /* grade de canais contato */
+  .grade-canais-contato {
+    margin-bottom: 50px;
+  }
+}
+
+/* ajuste final para telas pequenas */
+@media (max-width: 450px) {
+  /* imagem de marca do gecep */
+  .marca-gecep img {
+    width: 108px;
+    height: 52px;
+  }
+
+  /* título de texto inicial */
+  .inicio-texto h1 {
+    font-size: 31px;
+  }
+
+  /* aparência comum dos botões da página */
+  .botao-primario,
+  .botao-secundario,
+  .botao-claro {
+    width: 100%;
+  }
+
+  /* marca da tela inicial */
+  .inicio-marca {
+    height: 235px;
+  }
+
+  /* imagem de marca da tela inicial */
+  .inicio-marca img {
+    width: 160px;
+    height: 160px;
+  }
+
+  /* órbita um */
+  .orbita-um {
+    width: 200px;
+    height: 200px;
+  }
+
+  /* órbita dois */
+  .orbita-dois {
+    width: 230px;
+    height: 145px;
+  }
+
+  /* cartão de área */
+  .cartao-area,
+  .cartao-projeto,
+  .formulario-participacao {
+    padding: 21px;
+  }
+
+  /* evento inicial */
+  .evento-inicial {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 58px 1fr 14px;
+    gap: 10px;
+    padding-inline: 12px;
+  }
+
+  /* data de evento */
+  .data-evento {
+    width: 54px;
+  }
+
+  /* cartão de documento grande */
+  .cartao-documento-grande {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+    padding: 25px;
+  }
+
+  /* elemento de cartão de documento grande */
+  .cartao-documento-grande > span {
+    width: 72px;
+    height: 92px;
+  }
+
+  /* cartão de documento */
+  .grade-documentos-completa .cartao-documento {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 48px 1fr 15px;
+  }
+
+  /* visualizador pdf */
+  .visualizador-pdf,
+  .visualizador-pdf iframe {
+    min-height: 430px;
+    height: 430px;
+  }
+
+  /* aviso de visualizador */
+  .aviso-visualizador {
+    position: static;
+    max-width: none;
+  }
+
+  /* bloco de filtro notícias */
+  .filtro-noticias > div {
+    flex-direction: column;
+  }
+}
+
+/* equipe da gestão */
+.cabecalho-com-margem {
+  margin-top: 68px;
+}
+
+/* grade de equipe */
+.grade-equipe {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+/* cartão de integrante */
+.cartao-integrante {
+  min-height: 430px;
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+  background: #ffffff;
+  border: 1px solid #dbe3e6;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul-claro);
+}
+
+/* imagem de cartão de integrante */
+.cartao-integrante > img,
+.foto-integrante-vazia {
+  width: 100%;
+  height: 205px;
+  margin-bottom: 19px;
+  /* ajusta a imagem dentro do espaço disponível */
+  object-fit: cover;
+  object-position: center;
+  background: #e8f1f4;
+}
+
+/* foto integrante vazia */
+.foto-integrante-vazia {
+  display: grid;
+  place-items: center;
+  color: var(--azul);
+  font-size: 43px;
+  font-weight: 700;
+}
+
+/* texto auxiliar de cartão de integrante */
+.cartao-integrante small {
+  color: var(--azul);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+/* título de cartão de integrante */
+.cartao-integrante h3 {
+  margin: 9px 0 4px;
+  color: #304952;
+  font-size: 21px;
+}
+
+/* destaque de cartão de integrante */
+.cartao-integrante > strong {
+  color: #4c6068;
+}
+
+/* destaque de cartão de integrante */
+.cartao-integrante > b {
+  margin-top: 5px;
+  color: #7a888d;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+/* texto de cartão de integrante */
+.cartao-integrante p {
+  color: #6b7a80;
+  line-height: 1.55;
+}
+
+/* link de cartão de integrante */
+.cartao-integrante a {
+  margin-top: auto;
+  color: var(--azul);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* estado vazio equipe */
+.estado-vazio-equipe {
+  min-height: 160px;
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 75px 1fr;
+  align-items: center;
+  gap: 25px;
+  padding: 27px;
+  background: #eef4f6;
+  border-left: 5px solid var(--azul-claro);
+}
+
+/* elemento de estado vazio equipe */
+.estado-vazio-equipe > span {
+  width: 70px;
+  height: 70px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: var(--azul);
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+/* destaque de estado vazio equipe */
+.estado-vazio-equipe strong {
+  color: #304952;
+  font-size: 18px;
+}
+
+/* texto de estado vazio equipe */
+.estado-vazio-equipe p {
+  margin: 7px 0 0;
+  color: #66767d;
+}
+
+/* link evento */
+.link-evento {
+  display: block;
+  margin-top: 11px;
+  color: var(--azul);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* agenda vazia */
+.agenda-vazia {
+  margin: 0;
+  padding: 35px;
+  color: #65747a;
+}
+
+/* campo de armadilha */
+.campo-armadilha {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+
+/* erro formulário */
+.erro-formulario,
+.erro-painel {
+  padding: 13px 15px;
+  color: #842626;
+  background: #fdeaea;
+  border-left: 4px solid #c94848;
+  font-size: 12px;
+}
+
+/* estado desativado de botão de formulário de participação */
+.formulario-participacao button:disabled,
+.formulario-painel button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+/* link de tabela movimentos */
+.tabela-movimentos td > a {
+  color: var(--azul);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* elemento de tabela movimentos */
+.tabela-movimentos td > span {
+  color: #899398;
+  font-size: 10px;
+}
+
+/* painel da gestão */
+.painel-administrativo {
+  /* calcula o tamanho conforme o espaço disponível */
+  width: min(1380px, calc(100% - 34px));
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 250px minmax(0, 1fr);
+  align-items: start;
+  gap: 28px;
+  margin: 38px auto 80px;
+}
+
+/* menu do painel */
+.menu-painel {
+  position: sticky;
+  top: 18px;
+  overflow: hidden;
+  color: #ffffff;
+  background: #064f7b;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 10px 26px rgba(21, 55, 69, 0.18);
+}
+
+/* usuário de painel */
+.usuario-painel {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 48px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: #043f63;
+}
+
+/* elemento de usuário de painel */
+.usuario-painel > span {
+  width: 45px;
+  height: 45px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* texto auxiliar de usuário de painel */
+.usuario-painel small,
+.usuario-painel strong {
+  display: block;
+}
+
+/* texto auxiliar de usuário de painel */
+.usuario-painel small {
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+/* destaque de usuário de painel */
+.usuario-painel strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
+/* navegação de menu do painel */
+.menu-painel nav {
+  padding-block: 8px;
+}
+
+/* botão de menu do painel */
+.menu-painel nav button,
+.menu-painel nav a {
+  width: 100%;
+  display: block;
+  padding: 12px 20px;
+  border: 0;
+  color: rgba(255, 255, 255, 0.82);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: 12px Arial, Helvetica, sans-serif;
+}
+
+/* interação de botão de menu do painel */
+.menu-painel nav button:hover,
+.menu-painel nav button:focus,
+.menu-painel nav button.ativo,
+.menu-painel nav a:hover,
+.menu-painel nav a:focus {
+  color: #ffffff;
+  background: rgba(0, 169, 224, 0.2);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 4px 0 0 var(--azul-claro);
+}
+
+/* botão de cópia */
+.botao-copia,
+.sair-painel {
+  /* calcula o tamanho conforme o espaço disponível */
+  width: calc(100% - 28px);
+  display: block;
+  margin: 12px 14px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.27);
+  color: #ffffff;
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* sair painel */
+.sair-painel {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  border: 0;
+}
+
+/* conteúdo do painel */
+.conteudo-painel {
+  min-width: 0;
+}
+
+/* topo de painel */
+.topo-painel {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 25px;
+  margin-bottom: 24px;
+  padding: 28px 30px;
+  background: #eef4f6;
+  border-top: 5px solid var(--azul);
+}
+
+/* título de topo de painel */
+.topo-painel h1 {
+  margin: 8px 0 5px;
+  color: #304952;
+  font-size: 31px;
+  font-weight: 500;
+}
+
+/* texto de topo de painel */
+.topo-painel p {
+  margin: 0;
+  color: #68777d;
+}
+
+/* botão de topo de painel */
+.topo-painel > button,
+.acoes-formulario-painel button,
+.acoes-item-painel button {
+  padding: 10px 15px;
+  border: 1px solid var(--azul);
+  color: var(--azul);
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+/* ajuste específico de botão de topo de painel */
+.topo-painel > button,
+.acoes-formulario-painel button:last-child {
+  color: #ffffff;
+  background: var(--azul);
+}
+
+/* lista de painel */
+.lista-painel {
+  display: grid;
+  gap: 11px;
+}
+
+/* item de lista de painel */
+.lista-painel > article {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 78px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #dbe3e6;
+}
+
+/* título de lista de painel */
+.lista-painel h2 {
+  margin: 4px 0;
+  color: #304952;
+  font-size: 17px;
+}
+
+/* texto auxiliar de lista de painel */
+.lista-painel small,
+.lista-painel p {
+  margin: 0;
+  color: #7a878c;
+  font-size: 9px;
+}
+
+/* estado publicado */
+.estado-publicado,
+.estado-rascunho {
+  padding: 5px 7px;
+  color: #176a45;
+  background: #e3f3ea;
+  font-size: 8px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* estado rascunho */
+.estado-rascunho {
+  color: #6f5b1b;
+  background: #fff4cc;
+}
+
+/* ações de item painel */
+.acoes-item-painel {
+  display: flex;
+  gap: 7px;
+}
+
+/* botão de ações de item painel */
+.acoes-item-painel button {
+  padding: 7px 10px;
+  font-size: 10px;
+}
+
+/* ajuste específico de botão de ações de item painel */
+.acoes-item-painel button:last-child {
+  color: #a43434;
+  border-color: #d9a7a7;
+}
+
+/* vazio painel */
+.vazio-painel {
+  padding: 35px;
+  background: #ffffff;
+  border: 1px dashed #bfccd1;
+  text-align: center;
+}
+
+/* destaque de vazio painel */
+.vazio-painel strong {
+  color: #40565f;
+}
+
+/* texto de vazio painel */
+.vazio-painel p {
+  margin-bottom: 0;
+  color: #748187;
+}
+
+/* formulário de painel */
+.formulario-painel {
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid #dbe3e6;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 8px 22px rgba(31, 68, 83, 0.1);
+}
+
+/* título de formulário painel */
+.titulo-formulario-painel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 25px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e0e6e8;
+}
+
+/* texto auxiliar de título de formulário painel */
+.titulo-formulario-painel small {
+  color: var(--azul);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* título de formulário painel */
+.titulo-formulario-painel h2 {
+  margin: 7px 0 0;
+  color: #304952;
+  font-size: 23px;
+}
+
+/* botão de título de formulário painel */
+.titulo-formulario-painel > button {
+  border: 0;
+  color: #65747a;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* grade de campos painel */
+.grade-campos-painel {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 17px;
+}
+
+/* rótulo de campo publicado */
+.grade-campos-painel > label:not(.campo-publicado) {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* elemento de grade de campos painel */
+.grade-campos-painel label > span {
+  color: #475b63;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* campo de grade de campos painel */
+.grade-campos-painel input,
+.grade-campos-painel textarea,
+.grade-campos-painel select,
+.lista-mensagens-painel select {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid #cbd8dc;
+  border-radius: 0;
+  outline: 0;
+  color: #3e535c;
+  background: #ffffff;
+  font: 13px Arial, Helvetica, sans-serif;
+}
+
+/* interação de campo de grade de campos painel */
+.grade-campos-painel input:focus,
+.grade-campos-painel textarea:focus,
+.grade-campos-painel select:focus {
+  border-color: var(--azul);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 0 0 2px rgba(0, 114, 187, 0.12);
+}
+
+/* texto auxiliar de grade de campos painel */
+.grade-campos-painel label > small {
+  color: #7c888d;
+  line-height: 1.4;
+}
+
+/* campo largo */
+.campo-largo {
+  /* define o espaço ocupado na grade */
+  grid-column: 1 / -1;
+}
+
+/* campo publicado */
+.campo-publicado {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px;
+  background: #eef6f8;
+}
+
+/* campo publicado */
+.campo-publicado input {
+  width: auto;
+}
+
+/* entrada arquivo */
+.entrada-arquivo {
+  padding: 7px !important;
+  background: #f3f6f7 !important;
+}
+
+/* ações de formulário painel */
+.acoes-formulario-painel {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 25px;
+  padding-top: 18px;
+  border-top: 1px solid #e1e7e9;
+}
+
+/* mensagens painel */
+.mensagens-painel {
+  min-width: 0;
+}
+
+/* cabeçalho de mensagens */
+.cabecalho-mensagens {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* título de cabeçalho de mensagens */
+.cabecalho-mensagens h2 {
+  margin: 8px 0 5px;
+  color: #304952;
+  font-size: 27px;
+}
+
+/* texto de cabeçalho de mensagens */
+.cabecalho-mensagens p {
+  margin: 0;
+  color: #6a797f;
+}
+
+/* destaque de cabeçalho de mensagens */
+.cabecalho-mensagens > strong {
+  width: 55px;
+  height: 55px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: var(--azul);
+  border-radius: 50%;
+  font-size: 21px;
+}
+
+/* ferramentas de mensagens */
+.ferramentas-mensagens {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: auto minmax(320px, 1fr);
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 20px;
+  padding: 18px;
+  background: #eef4f6;
+  border: 1px solid #dbe4e7;
+}
+
+/* filtros de mensagens */
+.filtros-mensagens {
+  display: flex;
+  gap: 7px;
+}
+
+/* botão de filtros de mensagens */
+.filtros-mensagens button,
+.busca-mensagens button,
+.paginacao-mensagens button {
+  padding: 10px 13px;
+  border: 1px solid #b9cbd2;
+  color: #49616a;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* estado ativo de filtros de mensagens */
+.filtros-mensagens button.ativo,
+.paginacao-mensagens button.ativo {
+  color: #ffffff;
+  background: var(--azul);
+  border-color: var(--azul);
+}
+
+/* busca de mensagens */
+.busca-mensagens {
+  min-width: 0;
+}
+
+/* rótulo de busca de mensagens */
+.busca-mensagens > label {
+  display: block;
+  margin-bottom: 7px;
+  color: #4c626b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* bloco de busca de mensagens */
+.busca-mensagens > div {
+  display: flex;
+}
+
+/* campo de busca de mensagens */
+.busca-mensagens input {
+  min-width: 0;
+  flex: 1;
+  padding: 10px 11px;
+  border: 1px solid #b9cbd2;
+  border-right: 0;
+  border-radius: 0;
+  outline: 0;
+  color: #3e535c;
+  background: #ffffff;
+  font: 13px Arial, Helvetica, sans-serif;
+}
+
+/* interação de campo de busca de mensagens */
+.busca-mensagens input:focus {
+  border-color: var(--azul);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 0 0 1px var(--azul);
+}
+
+/* botão de busca de mensagens */
+.busca-mensagens button[type="submit"] {
+  color: #ffffff;
+  background: var(--azul);
+  border-color: var(--azul);
+}
+
+/* limpar busca */
+.busca-mensagens .limpar-busca {
+  color: #687980;
+  border-inline-width: 0 1px;
+}
+
+/* lista de mensagens painel */
+.lista-mensagens-painel {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+/* item de lista de mensagens painel */
+.lista-mensagens-painel article {
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #dbe3e6;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: inset 0 -4px 0 var(--azul-claro);
+}
+
+/* topo de mensagem */
+.topo-mensagem {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  color: var(--azul);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* data de topo de mensagem */
+.topo-mensagem time {
+  color: #829096;
+  font-weight: 400;
+}
+
+/* assunto mensagem */
+.assunto-mensagem {
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 4px 7px;
+  color: #526970;
+  background: #e9f1f4;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* título de lista de mensagens painel */
+.lista-mensagens-painel h3 {
+  margin: 15px 0 8px;
+  color: #304952;
+}
+
+/* texto de lista de mensagens painel */
+.lista-mensagens-painel p {
+  color: #65757b;
+  line-height: 1.55;
+}
+
+/* texto auxiliar de lista de mensagens painel */
+.lista-mensagens-painel > article > small {
+  margin-top: auto;
+  color: #738187;
+}
+
+/* contato mensagem */
+.lista-mensagens-painel > article > .contato-mensagem {
+  margin-top: 6px;
+  color: #526970;
+  font-weight: 700;
+}
+
+/* ajuste específico de bloco de lista de mensagens painel */
+.lista-mensagens-painel > article > div:last-child {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+/* botão de lista de mensagens painel */
+.lista-mensagens-painel button {
+  padding: 8px 10px;
+  border: 1px solid #d5aaaa;
+  color: #a43434;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+/* paginação mensagens */
+.paginacao-mensagens {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 24px;
+}
+
+/* estado desativado de botão de paginação mensagens */
+.paginacao-mensagens button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* acesso negado ao painel */
+.acesso-negado-painel {
+  /* calcula o tamanho conforme o espaço disponível */
+  width: min(680px, calc(100% - 34px));
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  margin: auto;
+  padding-block: 70px;
+}
+
+/* elemento de acesso negado ao painel */
+.acesso-negado-painel > span {
+  color: var(--azul);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* título de acesso negado ao painel */
+.acesso-negado-painel h1 {
+  margin: 12px 0;
+  color: #304952;
+  font-size: 38px;
+  font-weight: 500;
+}
+
+/* texto de acesso negado ao painel */
+.acesso-negado-painel p {
+  margin: 0 0 25px;
+  color: #6b7a80;
+  line-height: 1.6;
+}
+
+/* notícia completa */
+.noticia-completa {
+  max-width: 850px;
+}
+
+/* dados de notícia */
+.metadados-noticia {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding-bottom: 13px;
+  color: var(--azul);
+  border-bottom: 1px solid #dce4e7;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* texto de notícia completa */
+.noticia-completa > p {
+  color: #52666e;
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+/* link de notícia completa */
+.noticia-completa > a {
+  margin: 20px 12px 0 0;
+}
+
+/* adapta os estilos para telas de até 1050 pixels */
+@media (max-width: 1050px) {
+  /* grade de equipe */
+  .grade-equipe {
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* painel administrativo */
+  .painel-administrativo {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
+/* adapta os estilos para telas de até 780 pixels */
+@media (max-width: 780px) {
+  /* grade de equipe */
+  .grade-equipe,
+  .lista-mensagens-painel {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* painel administrativo */
+  .painel-administrativo {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+    /* calcula o tamanho conforme o espaço disponível */
+    width: min(100% - 24px, 720px);
+    margin-top: 24px;
+  }
+
+  /* menu do painel */
+  .menu-painel {
+    position: static;
+  }
+
+  /* navegação de menu do painel */
+  .menu-painel nav {
+    display: grid;
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* topo de painel */
+  .topo-painel,
+  .cabecalho-mensagens {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  /* ferramentas de mensagens */
+  .ferramentas-mensagens {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  /* item de lista de painel */
+  .lista-painel > article {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* ações de item painel */
+  .acoes-item-painel {
+    justify-content: flex-start;
+  }
+
+  /* grade de campos painel */
+  .grade-campos-painel {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* campo largo */
+  .campo-largo {
+    /* define o espaço ocupado na grade */
+    grid-column: auto;
+  }
+}
+
+/* adapta os estilos para telas de até 450 pixels */
+@media (max-width: 450px) {
+  /* grade de equipe */
+  .grade-equipe {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* estado vazio equipe */
+  .estado-vazio-equipe {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* navegação de menu do painel */
+  .menu-painel nav {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* topo de painel */
+  .topo-painel,
+  .formulario-painel {
+    padding: 21px;
+  }
+
+  /* ações de formulário painel */
+  .acoes-formulario-painel {
+    flex-direction: column-reverse;
+  }
+
+  /* botão de ações de formulário painel */
+  .acoes-formulario-painel button {
+    width: 100%;
+  }
+
+  /* filtros de mensagens */
+  .filtros-mensagens,
+  .busca-mensagens > div {
+    flex-wrap: wrap;
+  }
+
+  /* botão de filtros de mensagens */
+  .filtros-mensagens button {
+    flex: 1;
+  }
+
+  /* campo de busca de mensagens */
+  .busca-mensagens input {
+    width: 100%;
+    flex-basis: 100%;
+    border-right: 1px solid #b9cbd2;
+  }
+
+  /* botão de busca de mensagens */
+  .busca-mensagens button {
+    flex: 1;
+  }
+
+  /* paginação mensagens */
+  .paginacao-mensagens {
+    flex-wrap: wrap;
+  }
+}
+
+/* mapa do colégio */
+.pagina-mapa-colegio {
+  display: grid;
+  gap: 34px;
+}
+
+/* introdução de mapa colégio */
+.introducao-mapa-colegio {
+  max-width: 790px;
+}
+
+/* título de introdução de mapa colégio */
+.introducao-mapa-colegio h2 {
+  margin: 11px 0 13px;
+  color: #304952;
+  font-size: 2.2em;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+/* texto de introdução de mapa colégio */
+.introducao-mapa-colegio p {
+  margin: 0;
+  color: #627279;
+  font-size: 1.08em;
+  line-height: 1.7;
+}
+
+/* cartão de busca mapa */
+.cartao-busca-mapa {
+  min-width: 0;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #dbe3e6;
+  border-top: 5px solid var(--azul);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 8px 22px rgba(31, 68, 83, 0.1);
+}
+
+/* cabeçalho de busca mapa */
+.cabecalho-busca-mapa {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: start;
+  gap: 17px;
+  padding: 27px 29px 22px;
+  background: #eef4f6;
+  border-bottom: 1px solid #dce5e8;
+}
+
+/* elemento de cabeçalho de busca mapa */
+.cabecalho-busca-mapa > span {
+  width: 45px;
+  height: 45px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: var(--azul);
+  font-size: 0.78em;
+  font-weight: 800;
+}
+
+/* título de cabeçalho de busca mapa */
+.cabecalho-busca-mapa h2 {
+  margin: 0 0 7px;
+  color: #304952;
+  font-size: 1.65em;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+/* texto de cabeçalho de busca mapa */
+.cabecalho-busca-mapa p {
+  margin: 0;
+  color: #68777d;
+  line-height: 1.55;
+}
+
+/* formulário de busca mapa */
+.formulario-busca-mapa {
+  padding: 27px 29px 29px;
+}
+
+/* grade de filtros mapa */
+.grade-filtros-mapa {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+/* grade de filtros local */
+.grade-filtros-local {
+  /* organiza os elementos em colunas */
+  grid-template-columns: minmax(280px, 1.4fr) repeat(2, minmax(180px, 0.8fr));
+}
+
+/* rótulo de grade de filtros mapa */
+.grade-filtros-mapa label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* elemento de grade de filtros mapa */
+.grade-filtros-mapa label > span {
+  color: #475b63;
+  font-size: 0.76em;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+/* campo de grade de filtros mapa */
+.grade-filtros-mapa input,
+.grade-filtros-mapa select {
+  width: 100%;
+  min-height: 43px;
+  padding: 10px 11px;
+  border: 1px solid #cbd8dc;
+  border-radius: 0;
+  outline: 0;
+  color: #3e535c;
+  background: #ffffff;
+  font: inherit;
+}
+
+/* interação de campo de grade de filtros mapa */
+.grade-filtros-mapa input:focus,
+.grade-filtros-mapa select:focus {
+  border-color: var(--azul);
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 0 0 2px rgba(0, 114, 187, 0.12);
+}
+
+/* estado desativado de campo de grade de filtros mapa */
+.grade-filtros-mapa input:disabled,
+.grade-filtros-mapa select:disabled {
+  color: #7c898e;
+  background: #edf1f2;
+  cursor: not-allowed;
+}
+
+/* texto auxiliar de grade de filtros mapa */
+.grade-filtros-mapa label > small {
+  min-height: 2.8em;
+  color: #758389;
+  font-size: 0.76em;
+  line-height: 1.4;
+}
+
+/* botão de formulário de busca mapa */
+.formulario-busca-mapa > button,
+.estado-mapa button {
+  padding: 11px 17px;
+  border: 1px solid var(--azul);
+  color: #ffffff;
+  background: var(--azul);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+/* botão de formulário de busca mapa */
+.formulario-busca-mapa > button {
+  margin-top: 19px;
+}
+
+/* interação de botão de formulário de busca mapa */
+.formulario-busca-mapa > button:hover,
+.formulario-busca-mapa > button:focus,
+.estado-mapa button:hover,
+.estado-mapa button:focus {
+  background: var(--azul-escuro);
+}
+
+/* resultados de mapa */
+.resultados-mapa {
+  padding: 0 29px 30px;
+}
+
+/* estado de mapa */
+.estado-mapa {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: 45px minmax(0, 1fr);
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  color: #53676f;
+  background: #f2f6f7;
+  border-left: 5px solid var(--azul-claro);
+}
+
+/* elemento de estado de mapa */
+.estado-mapa > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--azul);
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  font-size: 1.25em;
+  font-weight: 800;
+}
+
+/* destaque de estado de mapa */
+.estado-mapa strong {
+  display: block;
+  color: #3c535c;
+  font-size: 1.08em;
+}
+
+/* texto de estado de mapa */
+.estado-mapa p {
+  margin: 5px 0 0;
+  line-height: 1.55;
+}
+
+/* botão de estado de mapa */
+.estado-mapa button {
+  display: block;
+  margin-top: 13px;
+}
+
+/* estado de mapa erro */
+.estado-mapa-erro {
+  color: #73251f;
+  background: #fff0ef;
+  border-left-color: #b3261e;
+}
+
+/* elemento de estado de mapa erro */
+.estado-mapa-erro > span,
+.estado-mapa-erro strong {
+  color: #8a2922;
+}
+
+/* estado de mapa vazio */
+.estado-mapa-vazio {
+  background: #fff9e4;
+  border-left-color: #e4b926;
+}
+
+/* resumo de resultados mapa */
+.resumo-resultados-mapa {
+  margin: 0 0 13px;
+  color: #63747b;
+}
+
+/* destaque de resumo de resultados mapa */
+.resumo-resultados-mapa strong {
+  color: var(--azul-escuro);
+  font-size: 1.15em;
+}
+
+/* lista de resultados mapa */
+.lista-resultados-mapa {
+  display: grid;
+  gap: 17px;
+}
+
+/* cartão de resultado mapa */
+.cartao-resultado-mapa {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dbe3e6;
+  background: #ffffff;
+  /* cria uma sombra para destacar o elemento */
+  box-shadow: 0 4px 12px rgba(28, 62, 78, 0.07);
+}
+
+/* topo de resultado mapa */
+.topo-resultado-mapa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 21px 23px;
+  color: #ffffff;
+  /* cria o fundo em degradê */
+  background: linear-gradient(135deg, #076ca8, #034971);
+}
+
+/* elemento de topo de resultado mapa */
+.topo-resultado-mapa span {
+  display: block;
+  margin-bottom: 5px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* título de topo de resultado mapa */
+.topo-resultado-mapa h3 {
+  margin: 0;
+  font-size: 1.65em;
+  line-height: 1.2;
+}
+
+/* destaque de topo de resultado mapa */
+.topo-resultado-mapa > b {
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  color: #21404d;
+  background: #f2ca3c;
+  font-size: 0.76em;
+  text-transform: uppercase;
+}
+
+/* detalhes de mapa */
+.detalhes-mapa {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+/* bloco de detalhes de mapa */
+.detalhes-mapa > div {
+  min-width: 0;
+  padding: 16px 18px;
+  border-right: 1px solid #dde5e8;
+  border-bottom: 1px solid #dde5e8;
+}
+
+/* ajuste específico de bloco de detalhes de mapa */
+.detalhes-mapa > div:nth-child(3n) {
+  border-right: 0;
+}
+
+/* nome do detalhe de detalhes de mapa */
+.detalhes-mapa dt {
+  margin-bottom: 6px;
+  color: #6f7e84;
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+/* valor do detalhe de detalhes de mapa */
+.detalhes-mapa dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #3d535c;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+/* detalhes de destaque mapa */
+.detalhes-destaque-mapa {
+  background: #eef4f6;
+}
+
+/* detalhes complementares mapa */
+.detalhes-complementares-mapa {
+  border-top: 1px solid #dde5e8;
+}
+
+/* blocos de informação mapa */
+.blocos-informacao-mapa,
+.grade-observacoes-mapa {
+  display: grid;
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: #dfe7ea;
+}
+
+/* bloco de blocos de informação mapa */
+.blocos-informacao-mapa > section,
+.grade-observacoes-mapa > section {
+  padding: 19px 21px;
+  background: #ffffff;
+}
+
+/* título de blocos de informação mapa */
+.blocos-informacao-mapa h4,
+.grade-observacoes-mapa h4,
+.observacoes-mapa > h4,
+.usos-local-mapa > h4 {
+  margin: 0 0 8px;
+  color: #3f5660;
+  font-size: 0.78em;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+/* texto de blocos de informação mapa */
+.blocos-informacao-mapa p,
+.grade-observacoes-mapa p {
+  margin: 0;
+  color: #627279;
+  line-height: 1.62;
+  white-space: pre-line;
+}
+
+/* observações de mapa */
+.observacoes-mapa {
+  padding: 21px;
+  background: #fff8dc;
+  border-top: 1px solid #eadba3;
+  border-bottom: 1px solid #eadba3;
+}
+
+/* título de observações de mapa */
+.observacoes-mapa > h4 {
+  color: #665418;
+}
+
+/* grade de observações mapa */
+.grade-observacoes-mapa {
+  /* organiza os elementos em colunas */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: #eadba3;
+}
+
+/* bloco de grade de observações mapa */
+.grade-observacoes-mapa > section {
+  background: rgba(255, 255, 255, 0.68);
+}
+
+/* informação de ausente mapa */
+.informacao-ausente-mapa {
+  color: #7b888d !important;
+  font-weight: 400 !important;
+  font-style: italic;
+}
+
+/* usos de local mapa */
+.usos-local-mapa {
+  padding: 23px;
+  border-top: 1px solid #dde5e8;
+}
+
+/* lista de usos de local mapa */
+.usos-local-mapa ul {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* item de usos de local mapa */
+.usos-local-mapa li {
+  padding: 14px 16px;
+  background: #eef4f6;
+  border-left: 4px solid var(--azul-claro);
+}
+
+/* bloco de usos de local mapa */
+.usos-local-mapa li > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+/* destaque de usos de local mapa */
+.usos-local-mapa li strong {
+  color: #304952;
+}
+
+/* elemento de usos de local mapa */
+.usos-local-mapa li span {
+  color: #61747c;
+  font-size: 0.82em;
+}
+
+/* texto de usos de local mapa */
+.usos-local-mapa li p {
+  margin: 9px 0 0;
+  color: #5e6e74;
+  line-height: 1.5;
+}
+
+/* imagem de local mapa */
+.imagem-local-mapa {
+  margin: 0;
+  padding: 23px;
+  border-top: 1px solid #dde5e8;
+}
+
+/* imagem de local mapa */
+.imagem-local-mapa img {
+  width: 100%;
+  max-height: 520px;
+  display: block;
+  /* ajusta a imagem dentro do espaço disponível */
+  object-fit: contain;
+  background: #f0f3f4;
+}
+
+/* legenda de imagem de local mapa */
+.imagem-local-mapa figcaption {
+  margin-top: 8px;
+  color: #748187;
+  font-size: 0.76em;
+}
+
+/* atualização de mapa */
+.atualizacao-mapa {
+  margin: 0;
+  padding: 13px 22px;
+  color: #728087;
+  background: #f4f7f8;
+  border-top: 1px solid #dde5e8;
+  font-size: 0.76em;
+  text-align: right;
+}
+
+/* cartão de busca mapa em alto contraste */
+.alto-contraste .cartao-busca-mapa,
+.alto-contraste .cartao-resultado-mapa,
+.alto-contraste .grade-filtros-mapa input,
+.alto-contraste .grade-filtros-mapa select {
+  border-color: #000000;
+}
+
+/* adapta os estilos para telas de até 1050 pixels */
+@media (max-width: 1050px) {
+  /* grade de filtros mapa */
+  .grade-filtros-mapa,
+  .grade-filtros-local {
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* ajuste específico de rótulo de grade de filtros turma */
+  .grade-filtros-turma > label:last-child,
+  .campo-busca-local {
+    /* define o espaço ocupado na grade */
+    grid-column: 1 / -1;
+  }
+}
+
+/* adapta os estilos para telas de até 780 pixels */
+@media (max-width: 780px) {
+  /* página do mapa do colégio */
+  .pagina-mapa-colegio {
+    gap: 25px;
+  }
+
+  /* cabeçalho de busca mapa */
+  .cabecalho-busca-mapa {
+    padding: 23px 21px 19px;
+  }
+
+  /* formulário de busca mapa */
+  .formulario-busca-mapa {
+    padding: 22px 21px 24px;
+  }
+
+  /* resultados de mapa */
+  .resultados-mapa {
+    padding: 0 21px 24px;
+  }
+
+  /* grade de filtros mapa */
+  .grade-filtros-mapa,
+  .grade-filtros-local {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* ajuste específico de rótulo de grade de filtros turma */
+  .grade-filtros-turma > label:last-child,
+  .campo-busca-local {
+    /* define o espaço ocupado na grade */
+    grid-column: auto;
+  }
+
+  /* texto auxiliar de grade de filtros mapa */
+  .grade-filtros-mapa label > small {
+    min-height: 0;
+  }
+
+  /* detalhes de mapa */
+  .detalhes-mapa {
+    /* organiza os elementos em colunas */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* ajuste específico de bloco de detalhes de mapa */
+  .detalhes-mapa > div:nth-child(3n) {
+    border-right: 1px solid #dde5e8;
+  }
+
+  /* ajuste específico de bloco de detalhes de mapa */
+  .detalhes-mapa > div:nth-child(2n) {
+    border-right: 0;
+  }
+
+  /* grade de observações mapa */
+  .grade-observacoes-mapa {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+}
+
+/* adapta os estilos para telas de até 450 pixels */
+@media (max-width: 450px) {
+  /* título de introdução de mapa colégio */
+  .introducao-mapa-colegio h2 {
+    font-size: 1.8em;
+  }
+
+  /* cabeçalho de busca mapa */
+  .cabecalho-busca-mapa {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 12px;
+    padding-inline: 17px;
+  }
+
+  /* elemento de cabeçalho de busca mapa */
+  .cabecalho-busca-mapa > span {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* título de cabeçalho de busca mapa */
+  .cabecalho-busca-mapa h2 {
+    font-size: 1.4em;
+  }
+
+  /* formulário de busca mapa */
+  .formulario-busca-mapa,
+  .resultados-mapa {
+    padding-inline: 17px;
+  }
+
+  /* botão de formulário de busca mapa */
+  .formulario-busca-mapa > button {
+    width: 100%;
+  }
+
+  /* estado de mapa */
+  .estado-mapa {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* topo de resultado mapa */
+  .topo-resultado-mapa,
+  .usos-local-mapa li > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  /* detalhes de mapa */
+  .detalhes-mapa,
+  .blocos-informacao-mapa {
+    /* organiza os elementos em colunas */
+    grid-template-columns: 1fr;
+  }
+
+  /* ajuste específico de bloco de detalhes de mapa */
+  .detalhes-mapa > div,
+  .detalhes-mapa > div:nth-child(2n),
+  .detalhes-mapa > div:nth-child(3n) {
+    border-right: 0;
+  }
+
+  /* observações de mapa */
+  .observacoes-mapa,
+  .usos-local-mapa,
+  .imagem-local-mapa {
+    padding: 18px;
+  }
+}

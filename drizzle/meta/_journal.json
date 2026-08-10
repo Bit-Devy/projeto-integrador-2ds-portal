@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784408562043,
+      "tag": "0000_smart_quasar",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784483406787,
+      "tag": "0001_damp_mockingbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784594096079,
+      "tag": "0002_sleepy_mandarin",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784598000000,
+      "tag": "0003_reclassificar_mapa_2026",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786150000000,
+      "tag": "0004_sistema_eventos",
+      "breakpoints": true
+    }
+  ]
+}

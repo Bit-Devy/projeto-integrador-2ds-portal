@@ -1,0 +1,26 @@
+{
+  // usa o formato oficial da configuração
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // identifica o servidor do portal
+  "name": "portal-gecep",
+  "main": "worker/index.ts",
+  // define a versão e os recursos de compatibilidade
+  "compatibility_date": "2026-05-20",
+  "compatibility_flags": ["nodejs_compat"],
+  // conecta o banco de dados do portal
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "portal-gecep-local",
+      "database_id": "00000000-0000-4000-8000-000000000000",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  // conecta o espaço de arquivos do portal
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "portal-gecep-arquivos"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# senha usada para entrar em /painel
+ADMIN_PASSWORD=troque-esta-senha
+
+# use uma frase longa e diferente da senha
+SESSION_SECRET=troque-por-uma-frase-longa-e-unica
