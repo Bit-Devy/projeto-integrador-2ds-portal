@@ -34,6 +34,7 @@ const executavel = join(raiz, "node_modules", ".bin", nomeExecutavel);
 const processo = spawn(executavel, argumentos, {
   cwd: raiz,
   stdio: "inherit",
+  shell: process.platform === "win32",
   env: {
     ...process.env,
     HOME: pastaTemporaria,
