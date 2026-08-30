@@ -93,8 +93,8 @@ a {
 /* barra de cima */
 .barra-governo {
   height: 46px;
-  /* cria o fundo em degradê */
-  background: linear-gradient(115deg, var(--cinza-topo) 0 69%, #ffffff 69.1%);
+  /* a área institucional ocupa toda a faixa; os atalhos delimitam a área clara */
+  background: var(--cinza-topo);
   font-size: 12px;
 }
 
@@ -118,10 +118,37 @@ a {
 
 /* atalhos acessibilidade */
 .atalhos-acessibilidade {
+  position: relative;
   display: flex;
   align-items: center;
+  height: 100%;
   gap: 11px;
+  padding-left: 34px;
+  background: #ffffff;
   color: #777777;
+}
+
+/* preserva a transição diagonal entre a área institucional e os atalhos */
+.atalhos-acessibilidade::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -34px;
+  width: 34px;
+  content: "";
+  background: #ffffff;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* prolonga a área clara até a borda sem depender de uma porcentagem da tela */
+.atalhos-acessibilidade::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 100vw;
+  content: "";
+  background: #ffffff;
 }
 
 /* botão de atalhos acessibilidade */
@@ -3969,7 +3996,6 @@ a {
   /* barra do governo */
   .barra-governo {
     height: 39px;
-    background: #ffffff;
     border-bottom: 1px solid #e2e2e2;
   }
 
@@ -3991,6 +4017,15 @@ a {
   /* conteúdo do cabeçalho */
   .cabecalho-conteudo {
     gap: 10px;
+  }
+
+  .atalhos-acessibilidade {
+    padding-left: 10px;
+  }
+
+  .atalhos-acessibilidade::before {
+    left: -10px;
+    width: 10px;
   }
 
   /* botão do menu celular */
