@@ -93,21 +93,23 @@ a {
 /* barra de cima */
 .barra-governo {
   height: 46px;
-  /* a área institucional ocupa toda a faixa; os atalhos delimitam a área clara */
-  background: var(--cinza-topo);
+  display: flex;
+  background: #ffffff;
   font-size: 12px;
 }
 
 /* conteúdo da barra do governo */
 .barra-governo-conteudo {
-  /* calcula o tamanho conforme o espaço disponível */
-  width: min(1140px, calc(100% - 32px));
+  /* ocupa a área cinza e se reduz antes dos atalhos, sem extrapolar a tela */
+  flex: 1 1 auto;
+  min-width: 0;
   height: 100%;
-  margin-inline: auto;
+  padding-left: clamp(16px, calc((100vw - 1140px) / 2), 1000px);
+  padding-right: 34px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 34px;
+  background: var(--cinza-topo);
 }
 
 /* link de conteúdo da barra do governo */
@@ -124,6 +126,7 @@ a {
   height: 100%;
   gap: 11px;
   padding-left: 34px;
+  padding-right: clamp(16px, calc((100vw - 1140px) / 2), 1000px);
   background: #ffffff;
   color: #777777;
 }
@@ -134,21 +137,12 @@ a {
   top: 0;
   bottom: 0;
   left: -34px;
-  width: 34px;
+  /* avança 1 px sobre o fundo branco para não deixar uma linha de emenda */
+  width: 35px;
   content: "";
   background: #ffffff;
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
-}
-
-/* prolonga a área clara até a borda sem depender de uma porcentagem da tela */
-.atalhos-acessibilidade::after {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 100%;
-  width: 100vw;
-  content: "";
-  background: #ffffff;
+  /* o segundo ponto avança sobre o branco e elimina a emenda vertical */
+  clip-path: polygon(100% 0, calc(100% + 1px) 100%, 0 100%);
 }
 
 /* botão de atalhos acessibilidade */
@@ -3911,6 +3905,10 @@ a {
   background: #000000;
 }
 
+.alto-contraste .barra-governo-conteudo {
+  background: #000000;
+}
+
 /* destaque do foco pelo teclado */
 :focus-visible {
   outline: 3px solid #f2c230;
@@ -4001,7 +3999,7 @@ a {
 
   /* conteúdo da barra do governo */
   .barra-governo-conteudo {
-    justify-content: space-between;
+    justify-content: flex-start;
   }
 
   /* elemento de atalhos acessibilidade */
@@ -4025,7 +4023,7 @@ a {
 
   .atalhos-acessibilidade::before {
     left: -10px;
-    width: 10px;
+    width: 11px;
   }
 
   /* botão do menu celular */
@@ -4272,8 +4270,8 @@ a {
 
   /* tabela responsiva */
   .tabela-responsiva {
-    /* calcula o tamanho conforme o espaço disponível */
-    width: calc(100vw - 32px);
+    /* usa a largura do contêiner, inclusive quando há barra vertical no navegador */
+    width: 100%;
   }
 
   /* grade de contato */
@@ -4304,13 +4302,22 @@ a {
   }
 }
 
+@media (max-width: 520px) {
+  /* em telas muito estreitas, mantemos apenas os controles de tamanho do texto */
+  .atalhos-acessibilidade > button:first-of-type {
+    display: none;
+  }
+}
+
 /* adapta os estilos para telas de até 450 pixels */
 @media (max-width: 450px) {
   /* conteúdo da barra do governo */
   .barra-governo-conteudo {
-    /* calcula o tamanho conforme o espaço disponível */
-    width: calc(100% - 20px);
-    gap: 10px;
+    padding-left: 10px;
+  }
+
+  .atalhos-acessibilidade {
+    padding-right: 10px;
   }
 
   /* link de conteúdo da barra do governo */

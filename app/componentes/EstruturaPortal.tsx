@@ -145,24 +145,24 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
           <a href="https://www.parana.pr.gov.br/" target="_blank" rel="noreferrer">
             GOVERNO DO PARANÁ <span aria-hidden="true">⌄</span>
           </a>
-          {/* botões de acessibilidade */}
-          <div className="atalhos-acessibilidade" aria-label="Opções de acessibilidade">
-            <span>Acessibilidade</span>
-            <button
-              type="button"
-              onClick={() => setContraste((valor) => !valor)}
-              aria-pressed={contraste}
-              title="Alternar contraste"
-            >
-              ◐
-            </button>
-            <button type="button" onClick={() => setTextoMaior(true)} title="Aumentar o texto">
-              A+
-            </button>
-            <button type="button" onClick={() => setTextoMaior(false)} title="Tamanho normal">
-              A
-            </button>
-          </div>
+        </div>
+        {/* botões de acessibilidade */}
+        <div className="atalhos-acessibilidade" aria-label="Opções de acessibilidade">
+          <span>Acessibilidade</span>
+          <button
+            type="button"
+            onClick={() => setContraste((valor) => !valor)}
+            aria-pressed={contraste}
+            title="Alternar contraste"
+          >
+            ◐
+          </button>
+          <button type="button" onClick={() => setTextoMaior(true)} title="Aumentar o texto">
+            A+
+          </button>
+          <button type="button" onClick={() => setTextoMaior(false)} title="Tamanho normal">
+            A
+          </button>
         </div>
       </div>
 
