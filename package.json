@@ -8,9 +8,10 @@
   "scripts": {
     "dev": "node scripts/comando-local.mjs vite",
     "build": "node scripts/comando-local.mjs vinext build",
-    "start": "node scripts/comando-local.mjs vinext start",
+    "start": "node scripts/comando-local.mjs start",
     "test": "npm run build && node --test tests/*.test.mjs",
     "test:local": "node scripts/testar-servidor.mjs",
+    "test:start": "npm run build && node scripts/testar-servidor.mjs --start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .wrangler",
     "typecheck": "tsc --noEmit",
     "db:generate": "node scripts/comando-local.mjs drizzle-kit generate",

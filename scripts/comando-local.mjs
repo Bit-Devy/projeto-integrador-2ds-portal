@@ -1,12 +1,21 @@
 // importa a criação de pastas
-import { mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 // importa a execução de programas
 import { spawn } from "node:child_process";
 // importa a montagem de caminhos
 import { join } from "node:path";
 
 // separa o comando dos seus argumentos
-const [comando, ...argumentos] = process.argv.slice(2);
+const [comandoRecebido, ...argumentosRecebidos] = process.argv.slice(2);
+const iniciarCompilado = comandoRecebido === "start";
+const comando = iniciarCompilado ? "vite" : comandoRecebido;
+const arquivoSegredos = join(process.cwd(), ".dev.vars");
+const portaInformada = argumentosRecebidos.some((argumento) => argumento === "--port" || argumento.startsWith("--port="));
+const argumentos = iniciarCompilado ? [
+  "preview", "--host", "127.0.0.1",
+  ...(portaInformada ? [] : ["--port", "3000"]),
+  ...argumentosRecebidos,
+] : argumentosRecebidos;
 // exige um comando para continuar
 if (!comando) {
   console.error("Informe o comando que deve ser executado.");
@@ -15,6 +24,14 @@ if (!comando) {
 
 // guarda os caminhos usados pela execução local
 const raiz = process.cwd();
+if (iniciarCompilado && !existsSync(join(raiz, "dist/server/wrangler.json"))) {
+  console.error("Execute npm run build antes de npm run start.");
+  process.exit(1);
+}
+// A prévia Cloudflare lê os segredos junto do worker compilado.
+if (iniciarCompilado && existsSync(arquivoSegredos)) {
+  copyFileSync(arquivoSegredos, join(raiz, "dist/server/.dev.vars"));
+}
 const pastaTemporaria = join(raiz, ".wrangler");
 const pastaConfiguracao = join(pastaTemporaria, "config");
 const pastaRegistro = join(pastaTemporaria, "registry");

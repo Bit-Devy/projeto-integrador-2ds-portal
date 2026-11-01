@@ -6,9 +6,11 @@ import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
 // guarda o endereço usado pelos testes
-const endereco = "http://127.0.0.1:5173";
+const testarStart = process.argv.includes("--start");
+const endereco = testarStart ? "http://127.0.0.1:4173" : "http://127.0.0.1:5173";
 // inicia o servidor local
-const servidor = spawn(process.execPath, ["scripts/comando-local.mjs", "vite"], {
+const servidor = spawn(process.execPath, ["scripts/comando-local.mjs", testarStart ? "start" : "vite",
+  ...(testarStart ? ["--port", "4173"] : [])], {
   cwd: process.cwd(),
   env: process.env,
   stdio: ["ignore", "pipe", "pipe"],
@@ -34,6 +36,7 @@ try {
   // verifica a tela de entrada
   const login = await fetch(`${endereco}/login`);
   assert.equal(login.status, 200);
+  await login.text();
 
   // verifica a proteção do painel
   const painelSemLogin = await fetch(`${endereco}/painel`, { redirect: "manual" });
@@ -250,6 +253,7 @@ async function testarSistemaEventosSemLogin() {
   ]) {
     const resposta = await fetch(`${endereco}${rota}`);
     assert.equal(resposta.status, 200, `A rota pública ${rota} deve responder.`);
+    await resposta.text();
   }
 
   // as páginas especializadas mostram as publicações antes do arquivo de filtros

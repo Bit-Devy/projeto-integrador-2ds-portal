@@ -264,6 +264,9 @@ a {
 
 /* botão de caixa de busca */
 .caixa-busca button {
+  min-width: 24px;
+  min-height: 24px;
+  flex-shrink: 0;
   border: 0;
   background: transparent;
   color: #2da765;
