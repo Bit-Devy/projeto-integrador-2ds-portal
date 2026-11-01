@@ -1403,21 +1403,36 @@ export async function duplicarCampeonato(idRecebido: unknown) {
   const id = idPositivo(idRecebido, "campeonato");
   const detalhe = await obterCampeonato(id, true);
   const origem = detalhe.item as CampeonatoAdministrativo;
-  const novo = await criarCampeonato({
+  const novo = validarCampeonato({
     ...origem, slug: `${origem.slug}-copia-${Date.now().toString(36)}`,
     nome: `${origem.nome} — cópia`, situacao: "proximo", faseAtual: "", chavePublicada: false,
-    publicado: false, ativo: true, participantes: [],
-  }) as CampeonatoAdministrativo;
-  const mapaParticipantes = new Map<number, number>();
+    publicado: false, ativo: true,
+  });
+  const d1 = getD1();
+  const comandos = [d1.prepare(sqlInserirCampeonato).bind(...valoresCampeonato(novo))];
+  const mapaParticipantes = new Map(detalhe.participantes.map((item, indice) => [item.id, indice]));
+  const mapaFases = new Map(detalhe.fases.map((item, indice) => [item.id, indice]));
+  const mapaPartidas = new Map(detalhe.partidas.map((item, indice) => [item.id, indice]));
+  const copiaId = "(SELECT id FROM copia)";
+  const preparar = (sql: string) => d1.prepare(`WITH copia AS (SELECT id FROM campeonatos WHERE slug = ?) ${sql}`);
+  // Os IDs da cópia são resolvidos dentro do mesmo lote atômico, sem gravar rascunhos intermediários.
+  const referencia = (tabela: "participantes_campeonato" | "fases_campeonato" | "partidas", indice: number | undefined) => {
+    if (indice === undefined) throw new ErroEventos("A chave contém uma referência indisponível para duplicação.");
+    return `(SELECT id FROM ${tabela} WHERE campeonato_id = ${copiaId} ORDER BY id LIMIT 1 OFFSET ${indice})`;
+  };
   for (const participante of detalhe.participantes) {
-    // A duplicação mantém nomes de edições antigas; novos cadastros usam o padrão atual.
-    const criado = await criarParticipanteCampeonato(novo.id, { ...participante, ativo: true }, participante.nome);
-    mapaParticipantes.set(participante.id, criado.id);
+    const dados = validarParticipante({ ...participante, ativo: true }, participante.nome);
+    comandos.push(preparar(`INSERT INTO participantes_campeonato
+      (campeonato_id, turma_atividade_id, nome, nome_normalizado, nome_exibicao, apelido, posicao_inicial, ativo)
+      VALUES (${copiaId}, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(novo.slug, ...valoresParticipante(dados)));
   }
-  const mapaFases = new Map<number, number>();
   for (const fase of detalhe.fases) {
-    const criada = await criarFaseCampeonato(novo.id, { ...fase, publicado: false, ativo: true });
-    mapaFases.set(fase.id, criada.id);
+    const dados = validarFase({ ...fase, publicado: false, ativo: true });
+    comandos.push(preparar(`INSERT INTO fases_campeonato
+      (campeonato_id, nome, ordem, tipo, quantidade_jogos, publicado, ativo)
+      VALUES (${copiaId}, ?, ?, ?, ?, ?, ?)`)
+      .bind(novo.slug, ...valoresFase(dados)));
   }
   const posicoesAlimentadas = new Map<number, Set<"a" | "b">>();
   for (const partida of detalhe.partidas) {
@@ -1426,31 +1441,51 @@ export async function duplicarCampeonato(idRecebido: unknown) {
     posicoes.add(partida.proximaPosicao);
     posicoesAlimentadas.set(partida.proximaPartidaId, posicoes);
   }
-  const mapaPartidas = new Map<number, number>();
   for (const partida of detalhe.partidas) {
     const alimentadas = posicoesAlimentadas.get(partida.id);
-    const criada = await criarPartidaCampeonato(novo.id, {
-      ...partida, faseId: mapaFases.get(partida.faseId),
-      participanteAId: alimentadas?.has("a") ? null : partida.participanteAId ? mapaParticipantes.get(partida.participanteAId) : null,
-      participanteBId: alimentadas?.has("b") ? null : partida.participanteBId ? mapaParticipantes.get(partida.participanteBId) : null,
-      vencedorId: null, placarA: null, placarB: null, vencedorNome: "", formaVitoria: "",
+    const dados = validarPartida({
+      ...partida,
+      participanteAId: alimentadas?.has("a") ? null : partida.participanteAId,
+      participanteBId: alimentadas?.has("b") ? null : partida.participanteBId,
+      vencedorId: null, placarA: null, placarB: null, formaVitoria: "",
       situacao: partida.data ? "agendada" : "data_a_definir", proximaPartidaId: null,
-      proximaPosicao: partida.proximaPosicao, placarPublicado: false, publicado: false, ativo: true,
+      proximaPosicao: "", placarPublicado: false, publicado: false, ativo: true,
     });
-    mapaPartidas.set(partida.id, criada.id);
+    const participanteA = detalhe.participantes.find((item) => item.id === dados.participanteAId);
+    const participanteB = detalhe.participantes.find((item) => item.id === dados.participanteBId);
+    const faseId = referencia("fases_campeonato", mapaFases.get(dados.faseId));
+    const participanteAId = participanteA ? referencia("participantes_campeonato", mapaParticipantes.get(participanteA.id)) : "NULL";
+    const participanteBId = participanteB ? referencia("participantes_campeonato", mapaParticipantes.get(participanteB.id)) : "NULL";
+    comandos.push(preparar(`INSERT INTO partidas (
+      campeonato_id, fase_id, rodada, ordem, participante_a_id, participante_b_id, participante_a_nome, participante_b_nome,
+      placar_a, placar_b, vencedor_id, vencedor_nome, forma_vitoria, data, horario, local, situacao, placar_publicado,
+      resumo, destaques, observacoes_publicas, observacoes_internas, proxima_partida_id, proxima_posicao, publicado, ativo
+    ) VALUES (${copiaId}, ${faseId}, ?, ?, ${participanteAId}, ${participanteBId}, ?, ?,
+      NULL, NULL, NULL, '', '', ?, ?, ?, ?, 0, ?, ?, ?, ?, NULL, '', 0, 1)`)
+      .bind(novo.slug, dados.rodada, dados.ordem,
+        participanteA ? participanteA.nomeExibicao || participanteA.nome : "",
+        participanteB ? participanteB.nomeExibicao || participanteB.nome : "",
+        dados.data, dados.horario, dados.local, dados.situacao,
+        dados.resumo, dados.destaques, dados.observacoesPublicas, dados.observacoesInternas));
   }
   for (const partida of detalhe.partidas) {
-    if (partida.proximaPartidaId) {
-      await atualizarPartidaCampeonato(mapaPartidas.get(partida.id), {
-        ...(await obterPartida(novo.id, mapaPartidas.get(partida.id)!, true)),
-        proximaPartidaId: mapaPartidas.get(partida.proximaPartidaId), proximaPosicao: partida.proximaPosicao,
-      });
-    }
+    if (!partida.proximaPartidaId) continue;
+    validarLigacaoPartida(partida.id, partida.proximaPartidaId, partida.proximaPosicao);
+    const partidaId = referencia("partidas", mapaPartidas.get(partida.id));
+    const proximaId = referencia("partidas", mapaPartidas.get(partida.proximaPartidaId));
+    comandos.push(preparar(`UPDATE partidas SET proxima_partida_id = ${proximaId}, proxima_posicao = ? WHERE id = ${partidaId}`)
+      .bind(novo.slug, partida.proximaPosicao));
   }
   for (const documento of detalhe.documentos) {
-    await criarDocumentoCampeonato(novo.id, { ...documento, publicado: false, ativo: true });
+    const dados = validarDocumento({ ...documento, publicado: false, ativo: true });
+    comandos.push(preparar(`INSERT INTO documentos_campeonato
+      (campeonato_id, titulo, tipo, descricao, arquivo_chave, arquivo_url, link_externo, ordem, publicado, ativo)
+      VALUES (${copiaId}, ?, ?, ?, ?, ?, ?, ?, 0, 1)`)
+      .bind(novo.slug, dados.titulo, dados.tipo, dados.descricao, dados.arquivoChave, dados.arquivoUrl,
+        dados.linkExterno, dados.ordem));
   }
-  return obterCampeonato(novo.id, true);
+  await d1.batch(comandos);
+  return obterCampeonato(novo.slug, true);
 }
 
 export async function criarDocumentoCampeonato(campeonatoIdRecebido: unknown, valor: unknown) {
