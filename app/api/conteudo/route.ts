@@ -6,6 +6,7 @@ import { garantirBanco } from "../../../db/inicializar";
 import type { TipoConteudo } from "../../conteudo/tipos";
 // importa as verificações de administrador e origem
 import { exigirAdministradorApi, origemValida } from "../../lib/autorizacao";
+import { ErroJsonInvalido, lerObjetoJson } from "../../lib/corpo-json";
 
 // lista os tipos aceitos pela api
 const tiposPermitidos: TipoConteudo[] = [
@@ -106,7 +107,7 @@ export async function PUT(request: Request) {
   try {
     // prepara o banco e lê o identificador
     await garantirBanco();
-    const dadosRecebidos = await request.json() as Record<string, unknown>;
+    const dadosRecebidos = await lerObjetoJson(request);
     const id = Number(dadosRecebidos.id);
     if (!Number.isInteger(id) || id <= 0) throw new Error("Registro inválido.");
     // valida o restante do conteúdo
@@ -151,7 +152,7 @@ export async function DELETE(request: Request) {
 // lê e valida o corpo da chamada
 async function lerCorpo(request: Request) {
   // converte o json em objeto antes da validação
-  return validarCorpo(await request.json() as Record<string, unknown>);
+  return validarCorpo(await lerObjetoJson(request));
 }
 
 // valida os dados de um conteúdo
@@ -252,6 +253,7 @@ const ordemMaisRecente = `ORDER BY COALESCE(
 
 // transforma erros em respostas da api
 function respostaErro(erro: unknown) {
+  if (erro instanceof ErroJsonInvalido) return Response.json({ erro: erro.message }, { status: 400 });
   // usa erro de entrada ou erro interno conforme a mensagem
   const mensagem = erro instanceof Error ? erro.message : "Não foi possível concluir a operação.";
   const status = /inválid|informe|preencha/i.test(mensagem) ? 400 : 500;

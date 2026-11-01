@@ -76,6 +76,7 @@ try {
   assert.match(await painelComLogin.text(), /PAINEL DE CONTEÚDO/);
 
   // executa os testes das áreas privadas
+  await testarJsonInvalido(cookie);
   await testarMapa(cookie);
   await testarSistemaEventos(cookie);
   await testarTrocasComFolgas(cookie);
@@ -1498,6 +1499,20 @@ async function testarConteudo(cookie) {
     headers: { cookie },
   });
   assert.equal(respostaExclusao.status, 200);
+}
+
+async function testarJsonInvalido(cookie) {
+  for (const rota of ["/api/conteudo", "/api/mensagens"]) {
+    for (const method of ["POST", "PUT"]) {
+      for (const body of ['{"titulo":', "", "null", "[]"]) {
+        const resposta = await fetch(`${endereco}${rota}`, {
+          method, headers: { ...(rota === "/api/mensagens" && method === "POST" ? {} : { cookie }), "content-type": "application/json" }, body,
+        });
+        assert.equal(resposta.status, 400, `${method} ${rota} deve rejeitar JSON inválido`);
+        assert.match((await resposta.json()).erro, /JSON válido/);
+      }
+    }
+  }
 }
 
 // testa o recebimento e a administração de mensagens

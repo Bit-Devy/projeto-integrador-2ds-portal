@@ -4,6 +4,7 @@ import { getD1 } from "../../../db";
 import { garantirBanco } from "../../../db/inicializar";
 // importa as verificações de administrador e origem
 import { exigirAdministradorApi, origemValida } from "../../lib/autorizacao";
+import { ErroJsonInvalido, lerObjetoJson } from "../../lib/corpo-json";
 
 // define o formato de uma mensagem no banco
 type LinhaMensagem = {
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
   try {
     // prepara o banco e lê o corpo recebido
     await garantirBanco();
-    const corpo = await request.json() as Record<string, unknown>;
+    const corpo = await lerObjetoJson(request);
 
     // campo escondido para bloquear robôs simples
     if (String(corpo.site ?? "").trim()) return new Response(null, { status: 204 });
@@ -134,7 +135,7 @@ export async function PUT(request: Request) {
   try {
     // prepara o banco e lê os dados recebidos
     await garantirBanco();
-    const corpo = await request.json() as { id?: number; status?: string };
+    const corpo = await lerObjetoJson(request);
     // valida o identificador e o novo estado
     const id = Number(corpo.id);
     const status = String(corpo.status ?? "");
@@ -232,6 +233,7 @@ function validarContato(tipo: string, contato: string) {
 
 // transforma erros em respostas da api
 function respostaErro(erro: unknown) {
+  if (erro instanceof ErroJsonInvalido) return Response.json({ erro: erro.message }, { status: 400 });
   console.error("Erro na API de mensagens:", erro);
   return Response.json({ erro: "Não foi possível concluir a operação." }, { status: 500 });
 }

@@ -116,12 +116,13 @@ jogos continuam disponíveis para compartilhar links.
 
 As migrações `0005_long_blob.sql` e `0006_redundant_sir_ram.sql` acrescentam
 a premiação e o limite opcional de séries sem remover registros.
-Em uma base gerenciada desde o início pelo Drizzle, execute
-`npm run db:migrate:local` antes de iniciar a nova versão.
-O inicializador também reconhece bases de prévia criadas automaticamente e
-adiciona as colunas ausentes. Se o histórico local de migrações estiver vazio e
-as tabelas já existirem, não reaplique a migração inicial sobre essa base:
-use o inicializador da prévia ou uma base isolada para validar as migrações.
+Execute `npm run db:migrate:local` antes de iniciar a nova versão, com o
+servidor local parado. O comando salva um backup SQL e a estrutura em
+`.wrangler/backups-migracoes/`, confere colunas, índices, restrições e dados
+das migrações já executadas pelo inicializador e registra esse histórico.
+Depois, aplica normalmente as migrações pendentes pelo Wrangler, também em
+bancos novos. Estruturas incompatíveis interrompem a execução antes de alterar
+o histórico. Para outra base local, use `-- --persist-to <pasta>`.
 
 Execute `npm run typecheck`, `npm run lint`, `npm run build` e
 `npm run test:local`. O teste HTTP cobre cadastro em lote, duplicatas, geração,

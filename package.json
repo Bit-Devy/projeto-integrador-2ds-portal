@@ -14,7 +14,7 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .wrangler",
     "typecheck": "tsc --noEmit",
     "db:generate": "node scripts/comando-local.mjs drizzle-kit generate",
-    "db:migrate:local": "node scripts/comando-local.mjs wrangler d1 migrations apply portal-gecep-local --local",
+    "db:migrate:local": "node scripts/migrar-banco-local.mjs",
     "db:migrate:remote": "node scripts/comando-local.mjs wrangler d1 migrations apply portal-gecep-local --remote",
     "deploy": "npm run build && node scripts/comando-local.mjs wrangler deploy"
   },
