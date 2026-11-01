@@ -242,6 +242,13 @@ async function testarMapaPublicoSemLogin() {
 
 // testa as páginas públicas e a proteção uniforme do domínio de eventos
 async function testarSistemaEventosSemLogin() {
+  for (const area of ["internos", "interclasses", "reunioes"]) {
+    for (const identificador of ["teste-nao-existe-404", "999999999"]) {
+      const resposta = await fetch(`${endereco}/eventos/${area}/${identificador}`);
+      assert.equal(resposta.status, 404, `Detalhe ausente em ${area} deve responder 404.`);
+      await resposta.text();
+    }
+  }
   // todas as entradas principais devem abrir sem sessão
   for (const rota of [
     "/eventos",
@@ -438,6 +445,7 @@ async function testarSistemaEventos(cookie) {
     criados.evento = respostaEvento.item.id;
     const slugEvento = respostaEvento.item.slug;
     await requisicaoPublica(`/api/eventos/${slugEvento}`, 404);
+    assert.equal((await fetch(`${endereco}/eventos/internos/${slugEvento}`)).status, 404);
 
     // publica o evento e confirma o DTO e a página de detalhe públicos
     await requisicaoDominio(cookie, "/api/eventos", "PUT", {
@@ -482,6 +490,7 @@ async function testarSistemaEventos(cookie) {
     criados.campeonato = respostaCampeonato.item.id;
     const slugCampeonato = respostaCampeonato.item.slug;
     await requisicaoPublica(`/api/interclasses/${slugCampeonato}`, 404);
+    assert.equal((await fetch(`${endereco}/eventos/interclasses/${slugCampeonato}`)).status, 404);
 
     // O cadastro em lote rejeita duplicatas sem adicionar parte do lote.
     await requisicaoDominio(cookie, "/api/interclasses", "POST", {
@@ -658,6 +667,7 @@ async function testarSistemaEventos(cookie) {
     criados.reuniao = respostaReuniao.item.id;
     const slugReuniao = respostaReuniao.item.slug;
     await requisicaoPublica(`/api/reunioes/${slugReuniao}`, 404);
+    assert.equal((await fetch(`${endereco}/eventos/reunioes/${slugReuniao}`)).status, 404);
 
     // gera a lista a partir do cadastro e guarda os dados como snapshot
     const geracaoPresencas = await requisicaoDominio(cookie, "/api/reunioes", "PUT", {

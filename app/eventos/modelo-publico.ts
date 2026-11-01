@@ -330,9 +330,13 @@ export function formatarData(valor?: string): string {
 
 export function formatarDataHora(valor?: string): string {
   if (!temTexto(valor)) return "";
-  const data = new Date(valor);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(valor.trim())) return formatarData(valor.trim());
+  // Timestamps sem fuso vindos do SQLite estão em UTC.
+  const timestamp = valor.trim().replace(" ", "T");
+  const semFuso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(timestamp);
+  const data = new Date(semFuso ? `${timestamp}Z` : timestamp);
   if (Number.isNaN(data.getTime())) return formatarData(valor);
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(data);
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(data);
 }
 
 export function normalizarBusca(valor: string): string {
