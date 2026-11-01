@@ -25,6 +25,7 @@ import {
   normalizarTurma,
   normalizarTurno,
 } from "./normalizacao";
+import { normalizarNomeTurma, padraoTurmaInterclasse } from "./interclasse-utilitarios";
 
 export class ErroEventos extends Error {
   status: number;
@@ -140,6 +141,8 @@ export function validarCampeonato(valor: unknown) {
     categoria: texto(dados.categoria, 100),
     turno: turnoOpcional(dados.turno),
     descricao: textoLongo(dados.descricao, 30_000),
+    premiacao: textoLongo(dados.premiacao, 5000),
+    diferencaMaximaAnos: inteiroOpcional(dados.diferencaMaximaAnos, 1, 3, "diferença máxima entre séries"),
     regulamento: textoLongo(dados.regulamento, 30_000),
     organizacao: texto(dados.organizacao, 240),
     locais: textoLongo(dados.locais ?? dados.local, 2000),
@@ -169,9 +172,11 @@ export function validarAtualizacaoCampeonato(valor: unknown) {
   };
 }
 
-export function validarParticipante(valor: unknown) {
+export function validarParticipante(valor: unknown, nomeLegado?: string) {
   const dados = objetoRecebido(valor);
-  const nome = textoObrigatorio(dados.nome, 160, "nome do participante");
+  const recebido = textoObrigatorio(dados.nome, 160, "nome do participante");
+  const nome = recebido === nomeLegado ? recebido : normalizarNomeTurma(recebido);
+  if (recebido !== nomeLegado && !padraoTurmaInterclasse.test(nome)) throw new ErroEventos("Use a série (6 a 9 ou 1 a 3) seguida de 1 a 3 letras, como 6A, 1J ou 2DS.");
   return {
     turmaAtividadeId: idOpcional(dados.turmaAtividadeId, "turma"),
     nome,

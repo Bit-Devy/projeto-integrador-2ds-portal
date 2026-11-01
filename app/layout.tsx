@@ -8,6 +8,7 @@ import "./globals.css";
 import "./eventos.css";
 // importa estilos isolados das novas áreas administrativas
 import "./painel-eventos.css";
+import "./interclasses.css";
 
 // define os dados principais do portal
 export const metadata: Metadata = {

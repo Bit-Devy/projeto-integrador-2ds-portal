@@ -1,4 +1,6 @@
 import {
+  adicionarTurmasCampeonato,
+  trocarTurmasChave,
   arquivarCampeonato,
   arquivarAtualizacaoCampeonato,
   arquivarDocumentoCampeonato,
@@ -11,6 +13,7 @@ import {
   atualizarFaseCampeonato,
   atualizarParticipanteCampeonato,
   atualizarPartidaCampeonato,
+  atualizarJogoPublicado,
   criarAtualizacaoCampeonato,
   criarCampeonato,
   criarDocumentoCampeonato,
@@ -52,6 +55,7 @@ export async function POST(request: Request) {
   if (bloqueio) return bloqueio;
   try {
     const corpo = await lerObjeto(request);
+    if (corpo.acao === "adicionar_turmas") return Response.json(await adicionarTurmasCampeonato(corpo.id, corpo.turmas), { status: 201 });
     if (corpo.acao === "duplicar") {
       const item = await duplicarCampeonato(corpo.id);
       await sincronizarArquivosDoEvento(item.item, { documentos: item.documentos });
@@ -83,11 +87,19 @@ export async function PUT(request: Request) {
   if (bloqueio) return bloqueio;
   try {
     const corpo = await lerObjeto(request);
+    if (corpo.acao === "trocar_turmas") return Response.json(await trocarTurmasChave(corpo.id, corpo.origem, corpo.destino));
     if (corpo.acao === "gerar_chave") {
       return Response.json(await gerarChaveCampeonato(corpo.id, booleano(corpo.confirmar, false)));
     }
-    if (corpo.acao === "registrar_resultado") {
+    // usa o mesmo aviso de impacto no editor completo e na atualização simples
+    if (corpo.acao === "registrar_resultado" || corpo.acao === "atualizar_jogo") {
       try {
+        if (corpo.acao === "atualizar_jogo") {
+          return Response.json(await atualizarJogoPublicado(
+            corpo.id, corpo.partidaId, corpo.dados,
+            booleano(corpo.confirmarImpacto, false), String(corpo.motivo ?? ""),
+          ));
+        }
         return Response.json(await registrarResultadoPartida(
           corpo.partidaId,
           corpo.dados,

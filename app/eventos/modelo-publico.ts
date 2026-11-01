@@ -73,6 +73,9 @@ export type JogoPublico = {
   fase?: string;
   faseNome?: string;
   faseId?: number;
+  participanteAId?: number | null;
+  participanteBId?: number | null;
+  vencedorId?: number | null;
   rodada?: string | number;
   ordem?: number;
   participanteA?: string | ParticipantePublico;
@@ -101,6 +104,7 @@ export type JogoPublico = {
   imagens?: ImagemPublica[];
   proximaPartida?: JogoPublico;
   proximaPartidaId?: number | null;
+  proximaPosicao?: "" | "a" | "b";
   campeonatoNome?: string;
   atualizadoEm?: string;
 };
@@ -150,12 +154,14 @@ export type InterclassePublico = {
   ultimoResultado?: JogoPublico;
   campeao?: string | ParticipantePublico;
   descricao?: string;
+  premiacao?: string;
   descricaoCompleta?: string;
   regulamento?: string;
   organizacao?: string;
   local?: string;
   locais?: string | string[];
   quantidadeEquipes?: number;
+  turmas?: string[];
   quantidadeParticipantes?: number;
   fases?: FasePublica[];
   jogos?: JogoPublico[];

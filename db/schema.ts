@@ -257,6 +257,8 @@ export const campeonatos = sqliteTable(
     categoria: text("categoria").notNull().default(""),
     turno: text("turno").notNull().default(""),
     descricao: text("descricao").notNull().default(""),
+    premiacao: text("premiacao").notNull().default(""),
+    diferencaMaximaAnos: integer("diferenca_maxima_anos"),
     regulamento: text("regulamento").notNull().default(""),
     organizacao: text("organizacao").notNull().default(""),
     locais: text("locais").notNull().default(""),

@@ -12,6 +12,28 @@
 
 # testes
 /coverage
+/test-results/
+/playwright-report/
+/blob-report/
+
+# relatórios, capturas e arquivos temporários locais
+/output/
+/outputs/
+/tmp/
+
+# scripts pontuais da auditoria local
+/scripts/auditar-casos-adicionais.mjs
+/scripts/auditar-interface.mjs
+/scripts/auditar-portal.mjs
+/scripts/gerar-relatorio-auditoria.py
+/scripts/preparar-fixtures-auditoria.py
+/scripts/relatorio-auditoria-visual-*.py
+/scripts/verificar-execucoes.mjs
+
+# caches de compilação
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
 
 # arquivos das páginas
 /.next/
@@ -40,5 +62,4 @@ next-env.d.ts
 /dist/
 /.wrangler/
 /.sites-runtime/
-/outputs/
 /work/

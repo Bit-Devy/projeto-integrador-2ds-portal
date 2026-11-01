@@ -194,6 +194,7 @@ export type CampeonatoPublico = {
   categoria: string;
   turno: string;
   descricao: string;
+  premiacao: string;
   regulamento: string;
   organizacao: string;
   locais: string;
@@ -206,6 +207,7 @@ export type CampeonatoPublico = {
   imagemCapaUrl: string;
   chavePublicada: boolean;
   quantidadeEquipes: number;
+  turmas: string[];
   campeao: CampeaoCampeonato | null;
   proximaPartida: PartidaPublica | null;
   ultimoResultado: PartidaPublica | null;
@@ -213,6 +215,7 @@ export type CampeonatoPublico = {
 };
 
 export type CampeonatoAdministrativo = CampeonatoPublico & {
+  diferencaMaximaAnos: number | null;
   observacoesInternas: string;
   publicado: boolean;
   ativo: boolean;

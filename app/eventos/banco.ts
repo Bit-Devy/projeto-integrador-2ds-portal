@@ -1,6 +1,7 @@
 import { getD1 } from "../../db";
 import { combinarHorario, normalizarTextoBusca, normalizarTurma } from "./normalizacao";
-import { planejarChaveMataMata, validarLigacaoPartida } from "./chave";
+import { planejarChaveMataMata, quantidadeParesProximos, validarLigacaoPartida } from "./chave";
+import { anoEscolarTurma } from "./interclasse-utilitarios";
 import type {
   AtualizacaoCampeonato,
   AtualizacaoCampeonatoAdministrativa,
@@ -647,6 +648,9 @@ export async function obterCampeonato(identificador: string | number, todos = fa
 
 export async function criarCampeonato(valor: unknown) {
   const dados = validarCampeonato(valor);
+  const participantes = (valor as Record<string, unknown>).participantes;
+  // Valida o lote inteiro antes de criar o campeonato, evitando rascunhos pela metade.
+  if (Array.isArray(participantes) && participantes.length) validarLoteParticipantes(participantes);
   if (!dados.slug) throw new ErroEventos("Não foi possível criar o endereço do campeonato.");
   let linha: Linha | null = null;
   try {
@@ -655,11 +659,94 @@ export async function criarCampeonato(valor: unknown) {
     converterErroUnico(erro, "Já existe um campeonato com esse endereço.");
   }
   if (!linha) throw new ErroEventos("Não foi possível criar o campeonato.", 500);
-  const participantes = (valor as Record<string, unknown>).participantes;
   if (Array.isArray(participantes)) {
     for (const participante of participantes) await criarParticipanteCampeonato(linha.id, participante);
   }
   return (await obterCampeonato(numero(linha.id), true)).item;
+}
+
+function validarLoteParticipantes(valores: unknown[]) {
+  if (!valores.length || valores.length > 128) throw new ErroEventos("Informe de 1 a 128 turmas.");
+  const dados = valores.map((item) => validarParticipante(item));
+  const nomes = dados.map((item) => item.nomeNormalizado);
+  if (new Set(nomes).size !== nomes.length) throw new ErroEventos("A lista contém turmas repetidas. Revise antes de adicionar.");
+  return dados;
+}
+
+export async function adicionarTurmasCampeonato(idRecebido: unknown, valores: unknown) {
+  const campeonatoId = idPositivo(idRecebido, "campeonato");
+  await exigirExistente("campeonatos", campeonatoId, "Interclasse não encontrado.");
+  if (!Array.isArray(valores)) throw new ErroEventos("Informe a lista de turmas.");
+  const dados = validarLoteParticipantes(valores);
+  const d1 = getD1();
+  const existentes = await d1.prepare("SELECT nome_normalizado, posicao_inicial FROM participantes_campeonato WHERE campeonato_id = ? AND ativo = 1").bind(campeonatoId).all<Linha>();
+  if (existentes.results.length + dados.length > 128) throw new ErroEventos("O campeonato aceita no máximo 128 turmas.");
+  const nomes = new Set(existentes.results.map((item) => string(item.nome_normalizado)));
+  if (dados.some((item) => nomes.has(item.nomeNormalizado))) throw new ErroEventos("Uma das turmas já está cadastrada neste campeonato.");
+  const ultimaPosicao = Math.max(0, ...existentes.results.map((item) => numero(item.posicao_inicial)));
+  for (const item of dados) await validarTurmaRelacionada(item.turmaAtividadeId);
+  await d1.batch(dados.map((item, indice) => d1.prepare(sqlInserirParticipante).bind(campeonatoId,
+    ...valoresParticipante({ ...item, posicaoInicial: ultimaPosicao + indice + 1 }))));
+  return obterCampeonato(campeonatoId, true);
+}
+
+// troca as turmas de uma vez e preserva os resultados já registrados
+export async function trocarTurmasChave(idRecebido: unknown, origemRecebida: unknown, destinoRecebido: unknown) {
+  const campeonatoId = idPositivo(idRecebido, "campeonato");
+  const detalhe = await obterCampeonato(campeonatoId, true);
+  if (detalhe.item.formato !== "mata_mata") throw new ErroEventos("Use o editor de jogos para ajustar uma chave personalizada.");
+  if (detalhe.partidas.some((jogo) => jogo.situacao === "em_andamento" || jogo.placarA !== null || jogo.placarB !== null || (jogo.vencedorId !== null && jogo.formaVitoria !== "bye"))) {
+    throw new ErroEventos("A chave já tem jogos disputados. Ajuste os participantes no editor do jogo para preservar o histórico.", 409);
+  }
+  const primeiraFase = detalhe.fases[0]?.id;
+  const lerPosicao = (valor: unknown) => {
+    const recebido = objetoRecebido(valor);
+    const id = idPositivo(recebido.partidaId, "partida");
+    const posicao = recebido.posicao;
+    if (posicao !== "a" && posicao !== "b") throw new ErroEventos("Escolha uma posição válida na chave.");
+    const jogo = detalhe.partidas.find((item) => item.id === id && item.faseId === primeiraFase);
+    if (!jogo) throw new ErroEventos("Troque turmas apenas entre os jogos da primeira fase.");
+    return { jogo, posicao };
+  };
+  const origem = lerPosicao(origemRecebida);
+  const destino = lerPosicao(destinoRecebido);
+  if (origem.jogo.id === destino.jogo.id && origem.posicao === destino.posicao) return detalhe;
+  const campoId = (posicao: string) => posicao === "a" ? "participanteAId" : "participanteBId";
+  const campoNome = (posicao: string) => posicao === "a" ? "participanteANome" : "participanteBNome";
+  const idAnterior = origem.jogo[campoId(origem.posicao)];
+  const nomeAnterior = origem.jogo[campoNome(origem.posicao)];
+  origem.jogo[campoId(origem.posicao)] = destino.jogo[campoId(destino.posicao)];
+  origem.jogo[campoNome(origem.posicao)] = destino.jogo[campoNome(destino.posicao)];
+  destino.jogo[campoId(destino.posicao)] = idAnterior;
+  destino.jogo[campoNome(destino.posicao)] = nomeAnterior;
+  // aceita os encontros distantes só quando não houver pares próximos suficientes
+  const limite = (detalhe.item as CampeonatoAdministrativo).diferencaMaximaAnos;
+  if (limite !== null) {
+    const nomeTurma = (id: number | null) => detalhe.participantes.find((item) => item.id === id)?.nome ?? "";
+    validarConfrontosSeries(detalhe.partidas.filter((jogo) => jogo.faseId === primeiraFase).map((jogo) => ({
+      nomeA: nomeTurma(jogo.participanteAId), nomeB: nomeTurma(jogo.participanteBId),
+    })), detalhe.participantes.filter((item) => item.ativo !== false).map((item) => item.nome), limite);
+  }
+  const d1 = getD1();
+  const comandos: D1PreparedStatement[] = [];
+  for (const jogo of new Set([origem.jogo, destino.jogo])) {
+    if (!jogo.participanteAId && !jogo.participanteBId) throw new ErroEventos("Essa troca deixaria um jogo sem nenhuma turma. Escolha outra posição.");
+    const folga = !jogo.participanteAId || !jogo.participanteBId;
+    const vencedorId = folga ? jogo.participanteAId || jogo.participanteBId : null;
+    const vencedorNome = folga ? jogo.participanteANome || jogo.participanteBNome : "";
+    comandos.push(d1.prepare(`UPDATE partidas SET participante_a_id = ?, participante_a_nome = ?,
+      participante_b_id = ?, participante_b_nome = ?, vencedor_id = ?, vencedor_nome = ?,
+      forma_vitoria = ?, situacao = ?, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?`)
+      .bind(jogo.participanteAId, jogo.participanteANome, jogo.participanteBId, jogo.participanteBNome,
+        vencedorId, vencedorNome, folga ? "bye" : "", folga ? "encerrada" : jogo.data ? "agendada" : "data_a_definir", jogo.id));
+    if (jogo.proximaPartidaId && jogo.proximaPosicao) {
+      const coluna = jogo.proximaPosicao === "a" ? "a" : "b";
+      comandos.push(d1.prepare(`UPDATE partidas SET participante_${coluna}_id = ?, participante_${coluna}_nome = ?, atualizado_em = CURRENT_TIMESTAMP WHERE id = ? AND campeonato_id = ?`)
+        .bind(vencedorId, vencedorNome, jogo.proximaPartidaId, campeonatoId));
+    }
+  }
+  await d1.batch(comandos);
+  return obterCampeonato(campeonatoId, true);
 }
 
 export async function atualizarCampeonato(idRecebido: unknown, valor: unknown) {
@@ -709,10 +796,10 @@ export async function excluirRascunhoCampeonato(idRecebido: unknown) {
   return { excluido: true, id };
 }
 
-export async function criarParticipanteCampeonato(campeonatoIdRecebido: unknown, valor: unknown) {
+export async function criarParticipanteCampeonato(campeonatoIdRecebido: unknown, valor: unknown, nomePreservado?: string) {
   const campeonatoId = idPositivo(campeonatoIdRecebido, "campeonato");
   await exigirExistente("campeonatos", campeonatoId, "Interclasse não encontrado.");
-  const dados = validarParticipante(valor);
+  const dados = validarParticipante(valor, nomePreservado);
   await validarTurmaRelacionada(dados.turmaAtividadeId);
   if (dados.ativo) await impedirParticipanteDuplicado(campeonatoId, dados.nomeNormalizado);
   const linha = await getD1().prepare(`${sqlInserirParticipante} RETURNING *`)
@@ -727,7 +814,7 @@ export async function atualizarParticipanteCampeonato(idRecebido: unknown, valor
   const linha = await d1.prepare("SELECT * FROM participantes_campeonato WHERE id = ?").bind(id).first<Linha>();
   if (!linha) throw new ErroEventos("Participante não encontrado.", 404);
   const existente = formatarParticipante(linha);
-  const dados = validarParticipante({ ...existente, ...(valor as object) });
+  const dados = validarParticipante({ ...existente, ...(valor as object) }, existente.nome);
   await validarTurmaRelacionada(dados.turmaAtividadeId);
   if (dados.ativo) await impedirParticipanteDuplicado(numero(linha.campeonato_id), dados.nomeNormalizado, id);
   const nomeAnterior = nomeLinhaParticipante(linha);
@@ -1055,18 +1142,20 @@ export async function arquivarPartidaCampeonato(idRecebido: unknown) {
   return { arquivado: true, id };
 }
 
+// salva a chave sorteada e mantém a estrutura antiga no histórico
 export async function gerarChaveCampeonato(campeonatoIdRecebido: unknown, confirmar = false) {
   const campeonatoId = idPositivo(campeonatoIdRecebido, "campeonato");
   const campeonato = (await obterCampeonato(campeonatoId, true)).item as CampeonatoAdministrativo;
   if (campeonato.formato !== "mata_mata") throw new ErroEventos("A geração automática está disponível para o formato mata-mata.");
   const d1 = getD1();
-  const participantesResultado = await d1.prepare(`SELECT id, COALESCE(NULLIF(nome_exibicao, ''), nome) AS nome,
+  const participantesResultado = await d1.prepare(`SELECT id, nome AS nome_cadastrado, COALESCE(NULLIF(nome_exibicao, ''), nome) AS nome,
     posicao_inicial FROM participantes_campeonato WHERE campeonato_id = ? AND ativo = 1 ORDER BY posicao_inicial, id`)
     .bind(campeonatoId).all<Linha>();
   const participantes = participantesResultado.results.map((linha) => ({
-    id: numero(linha.id), nome: string(linha.nome), posicaoInicial: numero(linha.posicao_inicial),
+    id: numero(linha.id), nome: string(linha.nome), nomeCadastrado: string(linha.nome_cadastrado), posicaoInicial: numero(linha.posicao_inicial),
   }));
-  const fases = planejarChaveMataMata(participantes);
+  // monta cada rodada sem criar vagas extras
+  const fases = planejarChaveMataMata(participantes, campeonato.diferencaMaximaAnos);
   const existentes = await d1.prepare(`SELECT
     (SELECT COUNT(*) FROM fases_campeonato WHERE campeonato_id = ? AND ativo = 1) AS fases,
     (SELECT COUNT(*) FROM partidas WHERE campeonato_id = ? AND ativo = 1) AS partidas,
@@ -1088,10 +1177,12 @@ export async function gerarChaveCampeonato(campeonatoIdRecebido: unknown, confir
       d1.prepare("UPDATE fases_campeonato SET ativo = 0, ordem = -id, atualizado_em = CURRENT_TIMESTAMP WHERE campeonato_id = ? AND ativo = 1").bind(campeonatoId),
     );
   }
+  // cria as fases antes de preencher os jogos
   for (const fase of fases) {
     comandos.push(d1.prepare(`INSERT INTO fases_campeonato (campeonato_id, nome, ordem, tipo, quantidade_jogos, publicado, ativo)
       VALUES (?, ?, ?, 'eliminatoria', ?, 0, 1)`).bind(campeonatoId, fase.nome, fase.ordem, fase.jogos.length));
   }
+  // guarda os confrontos e a única folga da primeira rodada ímpar
   for (const fase of fases) {
     for (const jogo of fase.jogos) {
       const automatico = jogo.vencedorAutomatico;
@@ -1115,7 +1206,7 @@ export async function gerarChaveCampeonato(campeonatoIdRecebido: unknown, confir
       ));
     }
   }
-  // como os INSERTs acima são executados em ordem, corrige os vínculos que apontavam para jogos ainda não criados
+  // liga os jogos depois de criar todas as fases, incluindo os avanços por folga
   for (const fase of fases.slice(0, -1)) {
     for (const jogo of fase.jogos) {
       comandos.push(d1.prepare(`UPDATE partidas SET
@@ -1128,6 +1219,7 @@ export async function gerarChaveCampeonato(campeonatoIdRecebido: unknown, confir
         campeonatoId, jogo.proximaFaseOrdem, jogo.proximaPartidaOrdem, jogo.proximaPosicao,
         campeonatoId, campeonatoId, fase.ordem, jogo.ordem,
       ));
+      // a turma de folga já entra no seu próximo jogo
       if (jogo.vencedorAutomatico) {
         const colunaId = jogo.proximaPosicao === "a" ? "participante_a_id" : "participante_b_id";
         const colunaNome = jogo.proximaPosicao === "a" ? "participante_a_nome" : "participante_b_nome";
@@ -1145,6 +1237,50 @@ export async function gerarChaveCampeonato(campeonatoIdRecebido: unknown, confir
     atualizado_em = CURRENT_TIMESTAMP WHERE id = ?`).bind(fases[0].nome, campeonatoId));
   await d1.batch(comandos);
   return obterCampeonato(campeonatoId, true);
+}
+
+// atualiza os dados públicos sem mudar o caminho da chave
+export async function atualizarJogoPublicado(
+  campeonatoIdRecebido: unknown,
+  partidaIdRecebido: unknown,
+  valor: unknown,
+  confirmarImpacto = false,
+  motivo = "",
+) {
+  // exige um campeonato publicado e um jogo da mesma edição
+  const campeonatoId = idPositivo(campeonatoIdRecebido, "campeonato");
+  const partidaId = idPositivo(partidaIdRecebido, "partida");
+  const linha = await getD1().prepare(`SELECT p.* FROM partidas p
+    INNER JOIN campeonatos c ON c.id = p.campeonato_id
+    WHERE p.id = ? AND c.id = ? AND p.ativo = 1
+      AND c.ativo = 1 AND c.arquivado_em IS NULL AND c.publicado = 1`)
+    .bind(partidaId, campeonatoId).first<Linha>();
+  if (!linha) throw new ErroEventos("Escolha um jogo de um interclasse ativo e publicado.", 404);
+
+  // aceita somente os campos usados para atualizar o jogo
+  const recebido = objetoRecebido(valor);
+  const dados: Record<string, unknown> = { publicado: true, placarPublicado: true };
+  const campos = ["data", "horario", "local", "resumo", "destaques", "observacoesPublicas", "observacoesInternas"];
+  if (string(linha.forma_vitoria) !== "bye") {
+    campos.push("situacao", "placarA", "placarB", "vencedorId", "formaVitoria");
+  }
+  for (const campo of campos) {
+    if (Object.hasOwn(recebido, campo)) dados[campo] = recebido[campo];
+  }
+
+  // só encerra um jogo real quando as duas turmas estão definidas
+  if (string(linha.forma_vitoria) !== "bye") {
+    const alteracao = validarAlteracaoPartida(linha, dados).dados;
+    if (["encerrada", "wo"].includes(alteracao.situacao) && (!alteracao.participanteAId || !alteracao.participanteBId)) {
+      throw new ErroEventos("Aguarde a definição das duas turmas antes de encerrar o jogo.");
+    }
+    if (alteracao.situacao === "encerrada" && (alteracao.placarA === null || alteracao.placarB === null)) {
+      throw new ErroEventos("Informe os dois placares ou escolha vitória por W.O.");
+    }
+  }
+
+  // mantém o histórico e a confirmação das correções
+  return { item: await atualizarPartidaCampeonato(partidaId, dados, confirmarImpacto, motivo) };
 }
 
 export async function registrarResultadoPartida(
@@ -1274,7 +1410,8 @@ export async function duplicarCampeonato(idRecebido: unknown) {
   }) as CampeonatoAdministrativo;
   const mapaParticipantes = new Map<number, number>();
   for (const participante of detalhe.participantes) {
-    const criado = await criarParticipanteCampeonato(novo.id, { ...participante, ativo: true });
+    // A duplicação mantém nomes de edições antigas; novos cadastros usam o padrão atual.
+    const criado = await criarParticipanteCampeonato(novo.id, { ...participante, ativo: true }, participante.nome);
     mapaParticipantes.set(participante.id, criado.id);
   }
   const mapaFases = new Map<number, number>();
@@ -1737,7 +1874,7 @@ async function formatarCampeonatoCompleto(linha: Linha, todos: boolean): Promise
   const filtroChave = chaveVisivel ? "" : "AND 0 = 1";
   const d1 = getD1();
   const [quantidade, campeao, proxima, ultimo] = await d1.batch([
-    d1.prepare("SELECT COUNT(*) AS total FROM participantes_campeonato WHERE campeonato_id = ? AND ativo = 1").bind(id),
+    d1.prepare("SELECT COUNT(*) AS total, json_group_array(COALESCE(NULLIF(nome_exibicao, ''), nome)) AS turmas FROM (SELECT * FROM participantes_campeonato WHERE campeonato_id = ? AND ativo = 1 ORDER BY posicao_inicial, id)").bind(id),
     d1.prepare("SELECT participante_id, nome, definido_em FROM campeoes_campeonato WHERE campeonato_id = ?").bind(id),
     d1.prepare(`SELECT p.*, f.nome AS fase_nome, ? AS campeonato_slug, ? AS campeonato_nome
       FROM partidas p INNER JOIN fases_campeonato f ON f.id = p.fase_id
@@ -1756,12 +1893,13 @@ async function formatarCampeonatoCompleto(linha: Linha, todos: boolean): Promise
   const publico: CampeonatoPublico = {
     id, slug: string(linha.slug), nome: string(linha.nome), edicao: string(linha.edicao),
     ano: nuloNumero(linha.ano), modalidade: string(linha.modalidade), categoria: string(linha.categoria), turno: string(linha.turno),
-    descricao: string(linha.descricao), regulamento: string(linha.regulamento), organizacao: string(linha.organizacao),
+    descricao: string(linha.descricao), premiacao: string(linha.premiacao), regulamento: string(linha.regulamento), organizacao: string(linha.organizacao),
     locais: string(linha.locais), observacoesPublicas: string(linha.observacoes_publicas),
     formato: linha.formato as CampeonatoPublico["formato"], situacao: linha.situacao as CampeonatoPublico["situacao"],
     faseAtual: string(linha.fase_atual), dataInicial: string(linha.data_inicial), dataFinal: string(linha.data_final),
     imagemCapaUrl: string(linha.imagem_capa_url), chavePublicada: bool(linha.chave_publicada),
     quantidadeEquipes: totalDaContagem(quantidade.results as Linha[]),
+    turmas: chaveVisivel ? JSON.parse(string((quantidade.results as Linha[])[0]?.turmas) || "[]") as string[] : [],
     campeao: linhaCampeao ? { participanteId: nuloNumero(linhaCampeao.participante_id), nome: string(linhaCampeao.nome), definidoEm: string(linhaCampeao.definido_em) } : null,
     proximaPartida: chaveVisivel && linhaProxima ? formatarPartida(linhaProxima, todos) as PartidaPublica : null,
     ultimoResultado: chaveVisivel && linhaUltimo ? formatarPartida(linhaUltimo, todos) as PartidaPublica : null,
@@ -1769,7 +1907,7 @@ async function formatarCampeonatoCompleto(linha: Linha, todos: boolean): Promise
   };
   if (!todos) return publico;
   return {
-    ...publico, observacoesInternas: string(linha.observacoes_internas), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
+    ...publico, diferencaMaximaAnos: nuloNumero(linha.diferenca_maxima_anos), observacoesInternas: string(linha.observacoes_internas), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
     arquivadoEm: nuloString(linha.arquivado_em), criadoEm: string(linha.criado_em),
   } satisfies CampeonatoAdministrativo;
 }
@@ -1835,18 +1973,18 @@ function formatarAtualizacao(linha: Linha, todos = false): AtualizacaoCampeonato
 const sqlInserirCampeonato = `INSERT INTO campeonatos (
   slug, nome, edicao, ano, modalidade, categoria, turno, descricao, regulamento, organizacao, locais,
   observacoes_publicas, observacoes_internas, formato, situacao, fase_atual, data_inicial, data_final,
-  imagem_capa_url, chave_publicada, publicado, ativo
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  imagem_capa_url, chave_publicada, publicado, ativo, premiacao, diferenca_maxima_anos
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 const sqlAtualizarCampeonato = `UPDATE campeonatos SET
   slug = ?, nome = ?, edicao = ?, ano = ?, modalidade = ?, categoria = ?, turno = ?, descricao = ?, regulamento = ?,
   organizacao = ?, locais = ?, observacoes_publicas = ?, observacoes_internas = ?, formato = ?, situacao = ?, fase_atual = ?,
-  data_inicial = ?, data_final = ?, imagem_capa_url = ?, chave_publicada = ?, publicado = ?, ativo = ?, atualizado_em = CURRENT_TIMESTAMP`;
+  data_inicial = ?, data_final = ?, imagem_capa_url = ?, chave_publicada = ?, publicado = ?, ativo = ?, premiacao = ?, diferenca_maxima_anos = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
 function valoresCampeonato(dados: ReturnType<typeof validarCampeonato>) {
   return [dados.slug, dados.nome, dados.edicao, dados.ano, dados.modalidade, dados.categoria, dados.turno, dados.descricao,
     dados.regulamento, dados.organizacao, dados.locais, dados.observacoesPublicas, dados.observacoesInternas, dados.formato,
     dados.situacao, dados.faseAtual, dados.dataInicial, dados.dataFinal, dados.imagemCapaUrl, binario(dados.chavePublicada),
-    binario(dados.publicado), binario(dados.ativo)];
+    binario(dados.publicado), binario(dados.ativo), dados.premiacao, dados.diferencaMaximaAnos];
 }
 
 const sqlInserirParticipante = `INSERT INTO participantes_campeonato (
@@ -1899,8 +2037,29 @@ async function validarReferenciasPartida(campeonatoId: number, partidaId: number
   const fase = await getD1().prepare("SELECT id, ordem FROM fases_campeonato WHERE id = ? AND campeonato_id = ?")
     .bind(dados.faseId, campeonatoId).first<Linha>();
   if (!fase) throw new ErroEventos("A fase não pertence a este campeonato.");
-  for (const participanteId of [dados.participanteAId, dados.participanteBId, dados.vencedorId]) {
-    if (participanteId) await exigirParticipanteDoCampeonato(campeonatoId, participanteId);
+  const participantes = new Map<number, Linha>();
+  for (const participanteId of new Set([dados.participanteAId, dados.participanteBId, dados.vencedorId])) {
+    if (participanteId) participantes.set(participanteId, await exigirParticipanteDoCampeonato(campeonatoId, participanteId));
+  }
+  if (dados.participanteAId && dados.participanteBId) {
+    const regras = await getD1().prepare(`SELECT c.formato, c.diferenca_maxima_anos,
+      (SELECT id FROM fases_campeonato WHERE campeonato_id = c.id AND ativo = 1 ORDER BY ordem, id LIMIT 1) AS primeira_fase_id
+      FROM campeonatos c WHERE c.id = ?`).bind(campeonatoId).first<Linha>();
+    const limite = nuloNumero(regras?.diferenca_maxima_anos);
+    if (regras?.formato === "mata_mata" && numero(regras.primeira_fase_id) === dados.faseId && limite !== null) {
+      // compara a rodada inteira para não bloquear um encontro inevitável
+      const [turmas, jogos] = await getD1().batch([
+        getD1().prepare("SELECT nome FROM participantes_campeonato WHERE campeonato_id = ? AND ativo = 1").bind(campeonatoId),
+        getD1().prepare(`SELECT a.nome AS nome_a, b.nome AS nome_b FROM partidas p
+          LEFT JOIN participantes_campeonato a ON a.id = p.participante_a_id
+          LEFT JOIN participantes_campeonato b ON b.id = p.participante_b_id
+          WHERE p.fase_id = ? AND p.ativo = 1 AND p.id <> ?`).bind(dados.faseId, partidaId),
+      ]);
+      validarConfrontosSeries([
+        ...(jogos.results as Linha[]).map((jogo) => ({ nomeA: string(jogo.nome_a), nomeB: string(jogo.nome_b) })),
+        { nomeA: string(participantes.get(dados.participanteAId)!.nome), nomeB: string(participantes.get(dados.participanteBId)!.nome) },
+      ], (turmas.results as Linha[]).map((turma) => string(turma.nome)), limite);
+    }
   }
   validarLigacaoPartida(partidaId, dados.proximaPartidaId, dados.proximaPosicao);
   if (dados.proximaPartidaId) {
@@ -1914,6 +2073,18 @@ async function validarReferenciasPartida(campeonatoId: number, partidaId: number
       .bind(dados.proximaPartidaId, dados.proximaPosicao, partidaId || -1).first();
     if (conflito) throw new ErroEventos("Outra partida já envia seu vencedor para essa posição.", 409);
   }
+}
+
+// não deixa uma edição antecipar encontros que ainda podem ser evitados
+function validarConfrontosSeries(jogos: Array<{ nomeA: string; nomeB: string }>, nomes: string[], limite: number) {
+  const inevitaveis = Math.floor(nomes.length / 2) - quantidadeParesProximos(nomes, limite);
+  const distantes = jogos.filter(({ nomeA, nomeB }) => {
+    if (!nomeA || !nomeB) return false;
+    const anoA = anoEscolarTurma(nomeA);
+    const anoB = anoEscolarTurma(nomeB);
+    return anoA === null || anoB === null || Math.abs(anoA - anoB) > limite;
+  }).length;
+  if (distantes > inevitaveis) throw new ErroEventos(`Essa alteração antecipa confrontos com mais de ${limite} ano(s) de diferença. Escolha turmas próximas ou ajuste a regra do sorteio.`);
 }
 
 async function exigirParticipanteDoCampeonato(campeonatoId: number, participanteId: number) {

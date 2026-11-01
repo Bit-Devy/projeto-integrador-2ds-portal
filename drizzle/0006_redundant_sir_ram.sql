@@ -1,0 +1,1 @@
+ALTER TABLE `campeonatos` ADD `diferenca_maxima_anos` integer;

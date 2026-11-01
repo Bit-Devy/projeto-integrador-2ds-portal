@@ -36,6 +36,20 @@
       "when": 1786150000000,
       "tag": "0004_sistema_eventos",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791597021184,
+      "tag": "0005_long_blob",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791655389503,
+      "tag": "0006_redundant_sir_ram",
+      "breakpoints": true
     }
   ]
 }

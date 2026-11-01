@@ -1,0 +1,1 @@
+ALTER TABLE `campeonatos` ADD `premiacao` text DEFAULT '' NOT NULL;

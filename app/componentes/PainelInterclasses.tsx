@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import ChaveInterativa, { type PosicaoChave } from "./ChaveInterativa";
+import { esportesInterclasse, separarTurmas, normalizarNomeTurma, padraoTurmaInterclasse } from "../eventos/interclasse-utilitarios";
+import { FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   CabecalhoPainel,
   Campo,
@@ -38,10 +40,10 @@ type Partida = {
 };
 type Campeonato = {
   id: Identificador; slug: string; nome: string; edicao: string; ano: number | null; modalidade: string;
-  categoria: string; turno: string; descricao: string; regulamento: string; organizacao: string; locais: string;
+  categoria: string; turno: string; descricao: string; premiacao: string; regulamento: string; organizacao: string; locais: string;
   observacoesPublicas: string; observacoesInternas: string; formato: string; situacao: string; faseAtual: string;
   dataInicial: string; dataFinal: string; imagemCapaUrl: string; chavePublicada: boolean; publicado: boolean;
-  ativo: boolean; campeaoNome: string; atualizadoEm?: string;
+  ativo: boolean; diferencaMaximaAnos: number | null; campeaoNome: string; atualizadoEm?: string;
 };
 type DocumentoCampeonato = {
   id?: Identificador;
@@ -76,7 +78,7 @@ type DetalhesCampeonato = {
   atualizacoes: AtualizacaoCampeonato[];
 };
 type FormularioCampeonato = Omit<Campeonato, "id" | "atualizadoEm" | "campeaoNome">;
-type FormularioFase = Omit<Fase, "id">;
+type FormularioFase = Omit<Fase, "id"> & { id?: Identificador };
 type FormularioPartida = Omit<Partida, "id" | "participanteANome" | "participanteBNome" | "vencedorNome" | "placarA" | "placarB" | "vencedorId" | "formaVitoria" | "situacao" | "placarPublicado" | "resumo" | "destaques">;
 type ResultadoPartida = {
   faseId: string;
@@ -103,21 +105,22 @@ type ResultadoPartida = {
   motivo: string;
 };
 
+// guarda a mensagem mostrada depois de salvar
+type ConfirmacaoSalva = { tipo: "publicado" | "rascunho" | "atualizado"; titulo: string; mensagem: string };
+
 const formularioVazio: FormularioCampeonato = {
   slug: "", nome: "", edicao: "", ano: new Date().getFullYear(), modalidade: "", categoria: "", turno: "",
-  descricao: "", regulamento: "", organizacao: "", locais: "", observacoesPublicas: "", observacoesInternas: "",
+  descricao: "", premiacao: "", regulamento: "", organizacao: "", locais: "", observacoesPublicas: "", observacoesInternas: "",
   formato: "mata_mata", situacao: "proximo", faseAtual: "", dataInicial: "", dataFinal: "", imagemCapaUrl: "",
-  chavePublicada: false, publicado: false, ativo: true,
+  chavePublicada: true, publicado: false, ativo: true, diferencaMaximaAnos: null,
 };
 const faseVazia: FormularioFase = { nome: "", ordem: 1, tipo: "eliminatoria", quantidadeJogos: 1, publicado: false, ativo: true };
 const documentoVazio: DocumentoCampeonato = { titulo: "", tipo: "regulamento", descricao: "", arquivoUrl: "", linkExterno: "", ordem: 0, publicado: false, ativo: true };
 const atualizacaoVazia: FormularioAtualizacao = { titulo: "", texto: "", data: "", ordem: 0, publicacao: "ocultar", ativo: true };
-// A interface oferece apenas os dois formatos completos. O schema mantém os
-// demais valores reservados para uma evolução futura, sem prometer ao gestor
-// uma classificação automática que ainda não existe.
+// mostra apenas os formatos que já podem ser usados no painel
 const formatos = [["mata_mata", "Mata-mata simples"], ["personalizada", "Chave personalizada"]] as const;
 const situacoes = [["proximo", "Próximo"], ["em_andamento", "Em andamento"], ["encerrado", "Encerrado"], ["adiado", "Adiado"], ["cancelado", "Cancelado"]] as const;
-const nomesEtapas = ["Informações", "Modalidade e conteúdo", "Participantes", "Formato", "Fases e jogos", "Revisão", "Publicação"];
+const nomesEtapas = ["Campeonato", "Turmas", "Chaves e jogos", "Revisar e publicar"];
 
 export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?: AoMudarEstadoSujo } = {}) {
   const [itens, setItens] = useState<Campeonato[]>([]);
@@ -125,6 +128,9 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   const [detalhes, setDetalhes] = useState<DetalhesCampeonato | null>(null);
   const [idEditando, setIdEditando] = useState<Identificador | null>(null);
   const [etapa, setEtapa] = useState(0);
+  // separa a atualização dos jogos da criação do campeonato
+  const [atualizandoJogos, setAtualizandoJogos] = useState(false);
+  const [confirmacaoSalva, setConfirmacaoSalva] = useState<ConfirmacaoSalva | null>(null);
   const [participantesLocais, setParticipantesLocais] = useState<Participante[]>([]);
   const [novoParticipante, setNovoParticipante] = useState<Participante>({ nome: "", nomeExibicao: "", apelido: "", posicaoInicial: 1, ativo: true });
   const [fase, setFase] = useState<FormularioFase | null>(null);
@@ -144,6 +150,8 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   const [filtroSituacao, setFiltroSituacao] = useState("");
   const [filtroModalidade, setFiltroModalidade] = useState("");
   const [filtroAno, setFiltroAno] = useState("");
+  // começa mostrando apenas as edições ativas
+  const [filtroArquivo, setFiltroArquivo] = useState("ativos");
 
   useAvisoMudancas(mudou, aoMudarEstadoSujo);
 
@@ -161,7 +169,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
 
   const anos = useMemo(() => Array.from(new Set(itens.map((item) => item.ano).filter((ano): ano is number => ano !== null))).sort((a, b) => b - a), [itens]);
   const modalidades = useMemo(() => Array.from(new Set(itens.map((item) => item.modalidade).filter(Boolean))).sort(), [itens]);
-  const filtrados = useMemo(() => { const termo = normalizarBusca(busca); return itens.filter((item) => (!termo || normalizarBusca(`${item.nome} ${item.edicao} ${item.modalidade} ${item.categoria}`).includes(termo)) && (!filtroSituacao || item.situacao === filtroSituacao) && (!filtroModalidade || item.modalidade === filtroModalidade) && (!filtroAno || String(item.ano) === filtroAno)); }, [busca, filtroAno, filtroModalidade, filtroSituacao, itens]);
+  const filtrados = useMemo(() => { const termo = normalizarBusca(busca); return itens.filter((item) => (filtroArquivo === "todos" || item.ativo === (filtroArquivo === "ativos")) && (!termo || normalizarBusca(`${item.nome} ${item.edicao} ${item.modalidade} ${item.categoria}`).includes(termo)) && (!filtroSituacao || item.situacao === filtroSituacao) && (!filtroModalidade || item.modalidade === filtroModalidade) && (!filtroAno || String(item.ano) === filtroAno)); }, [busca, filtroAno, filtroModalidade, filtroSituacao, filtroArquivo, itens]);
   const participantes = idEditando === null ? participantesLocais : detalhes?.participantes ?? [];
 
   function mudar<K extends keyof FormularioCampeonato>(chave: K, valor: FormularioCampeonato[K]) { setFormulario((atual) => atual ? { ...atual, [chave]: valor } : atual); setMudou(true); setSucesso(""); }
@@ -299,6 +307,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
 
   function novo() {
     if (!confirmarSaida(mudou)) return;
+    setAtualizandoJogos(false);
     setFormulario({ ...formularioVazio, ano: new Date().getFullYear() }); setIdEditando(null); setDetalhes(null);
     setParticipantesLocais([]); setDocumento(null); setAtualizacao(null); setEtapa(0); setMudou(false); setErro(""); setSucesso("");
   }
@@ -308,43 +317,73 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     return normalizarDetalhes(resposta);
   }
 
-  async function editar(item: Campeonato, etapaInicial = 0) {
+  async function editar(item: Campeonato, etapaInicial = 0, atualizarJogos = false) {
     if (!confirmarSaida(mudou)) return;
     setCarregando(true); setErro("");
     try {
       const completo = await carregarDetalhes(item.id);
       const { id: _id, campeaoNome: _campeao, atualizadoEm: _atualizado, ...dados } = completo.item;
       void _id; void _campeao; void _atualizado;
+      // abre a mesma chave em um menu próprio para resultados
+      setAtualizandoJogos(atualizarJogos); setFase(null); setPartida(null); setResultado(null); setPartidaResultado(null); setSucesso("");
       setFormulario(dados); setDetalhes(completo); setIdEditando(item.id); setDocumento(null); setAtualizacao(null); setEtapa(etapaInicial); setMudou(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível abrir o campeonato."); }
     finally { setCarregando(false); }
   }
 
-  async function atualizarDetalhes() { if (idEditando !== null) setDetalhes(await carregarDetalhes(idEditando)); }
+  async function atualizarDetalhes() {
+    if (idEditando === null) return null;
+    const completo = await carregarDetalhes(idEditando);
+    setDetalhes(completo);
+    return completo;
+  }
 
-  function fechar() { if (!confirmarSaida(mudou)) return; setFormulario(null); setDetalhes(null); setIdEditando(null); setMudou(false); setFase(null); setPartida(null); setPartidaResultado(null); setResultado(null); setDocumento(null); setAtualizacao(null); }
+  // fecha os editores depois que os dados já foram salvos
+  function voltarVisaoGeral() {
+    setFormulario(null); setDetalhes(null); setIdEditando(null); setMudou(false); setFase(null); setPartida(null); setPartidaResultado(null); setResultado(null); setDocumento(null); setAtualizacao(null); setAtualizandoJogos(false);
+    setBusca(""); setFiltroSituacao(""); setFiltroModalidade(""); setFiltroAno(""); setFiltroArquivo("ativos");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
-  async function salvarCampeonato(publicar = false) {
-    if (!formulario) return;
-    if (!formulario.nome.trim() || !formulario.modalidade.trim()) { setErro("Informe o nome e a modalidade antes de salvar."); setEtapa(formulario.nome.trim() ? 1 : 0); return; }
-    if (participantes.some((item) => !item.nome.trim())) { setErro("Revise os participantes sem nome."); setEtapa(2); return; }
+  function fechar() { if (salvando || !confirmarSaida(mudou)) return; voltarVisaoGeral(); }
+
+  async function salvarCampeonato(publicar = false, gerandoChave = false, publicacao?: boolean): Promise<Identificador | null> {
+    if (!formulario) return null;
+    if (!formulario.nome.trim() || !formulario.modalidade.trim()) { setErro("Informe o nome e a modalidade antes de salvar."); setEtapa(0); return null; }
+    if (publicar && formulario.chavePublicada && !detalhes?.partidas.length) { setErro("Gere a chave antes de publicar os confrontos."); setEtapa(1); return null; }
+    if (participantes.some((item) => !item.nome.trim())) { setErro("Revise os participantes sem nome."); setEtapa(1); return null; }
     setSalvando(true); setErro(""); setSucesso("");
     try {
-      const dados = { ...formulario, slug: formulario.slug || criarSlug(formulario.nome), publicado: publicar ? true : formulario.publicado, participantes: idEditando === null ? participantesLocais.map(({ id: _id, ...item }) => { void _id; return item; }) : undefined };
+      const dados = { ...formulario, chavePublicada: gerandoChave ? detalhes?.item.chavePublicada ?? false : formulario.chavePublicada, slug: formulario.slug || criarSlug(formulario.nome), publicado: publicacao ?? (publicar ? true : detalhes?.item.publicado ?? false), participantes: idEditando === null ? participantesLocais.map(({ id: _id, ...item }) => { void _id; return item; }) : undefined };
       const resposta = await requisitarPainel<Record<string, unknown>>("/api/interclasses", { method: idEditando === null ? "POST" : "PUT", ...corpoJson(idEditando === null ? { dados } : { id: idEditando, dados }) });
       const itemResposta = resposta.item && typeof resposta.item === "object" ? resposta.item as Record<string, unknown> : null;
       const novoId = itemResposta?.id as Identificador | undefined;
-      setMudou(false); setSucesso(publicar ? "Campeonato publicado com sucesso." : "Rascunho do campeonato salvo.");
+      setMudou(false); setSucesso(dados.publicado ? "Campeonato salvo e publicado com sucesso." : "Rascunho do campeonato salvo.");
       await carregar();
       if (idEditando === null && novoId !== undefined) {
         const completo = await carregarDetalhes(novoId);
         setIdEditando(novoId); setDetalhes(completo);
         const { id: _id, campeaoNome: _campeao, atualizadoEm: _atualizado, ...salvo } = completo.item;
         void _id; void _campeao; void _atualizado; setFormulario(salvo);
-      } else if (idEditando !== null) await atualizarDetalhes();
-    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível salvar o campeonato."); }
+      } else if (idEditando !== null) { await atualizarDetalhes(); setFormulario((atual) => atual ? { ...atual, publicado: dados.publicado } : atual); }
+      return idEditando ?? novoId ?? null;
+    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível salvar o campeonato."); return null; }
     finally { setSalvando(false); }
+  }
+
+  // confirma a gravação e devolve a pessoa para a lista
+  async function salvarEVoltar(publicar: boolean) {
+    // o botão de rascunho não publica uma edição nova
+    const publicado = publicar;
+    if (await salvarCampeonato(publicar, false, publicado) === null) return;
+    voltarVisaoGeral();
+    setSucesso("");
+    setConfirmacaoSalva({
+      tipo: publicado ? "publicado" : "rascunho",
+      titulo: publicado ? "Interclasse publicado!" : "Rascunho salvo!",
+      mensagem: publicado ? "Tudo salvo. O interclasse já está disponível no portal." : "Tudo salvo como rascunho. Você pode continuar a edição quando quiser.",
+    });
   }
 
   async function duplicar(item: Campeonato) {
@@ -364,14 +403,11 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   }
 
   async function adicionarParticipante(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault(); if (!novoParticipante.nome.trim()) return;
-    const dados = { ...novoParticipante, nomeExibicao: novoParticipante.nomeExibicao || novoParticipante.nome, posicaoInicial: participantes.length + 1 };
-    if (participantes.some((item) => normalizarBusca(item.nomeExibicao || item.nome) === normalizarBusca(dados.nomeExibicao))) { setErro("Já existe um participante com esse nome de exibição."); return; }
-    if (idEditando === null) { setParticipantesLocais((atuais) => [...atuais, dados]); setNovoParticipante({ nome: "", nomeExibicao: "", apelido: "", posicaoInicial: participantes.length + 2, ativo: true }); setMudou(true); return; }
-    setSalvando(true); setErro("");
-    try { await requisitarPainel("/api/interclasses", { method: "POST", ...corpoJson({ entidade: "participantes", campeonatoId: idEditando, dados }) }); setNovoParticipante({ nome: "", nomeExibicao: "", apelido: "", posicaoInicial: participantes.length + 2, ativo: true }); setSucesso("Participante adicionado."); await atualizarDetalhes(); }
-    catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível adicionar o participante."); }
-    finally { setSalvando(false); }
+    evento.preventDefault();
+    if (salvando || !novoParticipante.nome.trim()) return;
+    if (await adicionarTurmas([novoParticipante])) {
+      setNovoParticipante({ nome: "", nomeExibicao: "", apelido: "", posicaoInicial: participantes.length + 2, ativo: true });
+    }
   }
 
   async function removerParticipante(item: Participante, indice: number) {
@@ -399,20 +435,68 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     finally { setSalvando(false); }
   }
 
-  async function gerarChave() {
-    if (idEditando === null) { setErro("Salve o rascunho antes de gerar a chave."); return; }
-    if (participantes.filter((item) => item.ativo).length < 2) { setErro("Adicione pelo menos dois participantes antes de gerar a chave."); return; }
-    const substituir = Boolean(detalhes?.fases.length || detalhes?.partidas.length);
-    if (substituir && !window.confirm("Já existe uma chave. Gerar novamente pode alterar confrontos e afetar jogos. Deseja continuar para a confirmação final?")) return;
+  async function adicionarTurmas(recebidas: Participante[]): Promise<boolean> {
+    if (salvando) return false;
+    if (!recebidas.length || recebidas.length + participantes.length > 128) { setErro("Informe turmas para adicionar. O limite é 128 por campeonato."); return false; }
+    const ultimaPosicao = Math.max(0, ...participantes.map((item) => item.posicaoInicial));
+    const turmas = recebidas.map((item, indice) => ({
+      nome: normalizarNomeTurma(item.nome), nomeExibicao: item.nomeExibicao.trim(), apelido: item.apelido.trim(),
+      posicaoInicial: ultimaPosicao + indice + 1, ativo: true,
+    }));
+    if (turmas.some((item) => !padraoTurmaInterclasse.test(item.nome))) { setErro("Use a série (6 a 9 ou 1 a 3) seguida de 1 a 3 letras, como 6A, 1J ou 2DS."); return false; }
+    const nomes = turmas.map((item) => normalizarBusca(item.nome));
+    const exibidos = turmas.map((item) => normalizarBusca(item.nomeExibicao || item.nome));
+    if (new Set(nomes).size !== nomes.length || new Set(exibidos).size !== exibidos.length || participantes.some((item) => nomes.includes(normalizarBusca(item.nome)) || exibidos.includes(normalizarBusca(item.nomeExibicao || item.nome)))) {
+      setErro("Há turmas repetidas na lista ou já cadastradas. Revise os nomes."); return false;
+    }
+    setErro(""); setSucesso("");
+    const mensagem = `${turmas.length} ${turmas.length === 1 ? "turma adicionada" : "turmas adicionadas"} à lista de participantes.`;
+    if (idEditando === null) {
+      setParticipantesLocais((atuais) => [...atuais, ...turmas]); setMudou(true); setSucesso(mensagem); return true;
+    }
+    setSalvando(true);
+    try {
+      const resposta = await requisitarPainel<Record<string, unknown>>("/api/interclasses", { method: "POST", ...corpoJson({ acao: "adicionar_turmas", id: idEditando, turmas }) });
+      setDetalhes(normalizarDetalhes(resposta));
+      setSucesso(`${mensagem} Gere a chave para incluir todas nos confrontos.`); return true;
+    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível adicionar as turmas."); return false; }
+    finally { setSalvando(false); }
+  }
+
+  async function adicionarLote(nomes: string[]): Promise<boolean> {
+    return adicionarTurmas(nomes.map((nome) => ({ nome, nomeExibicao: "", apelido: "", posicaoInicial: 0, ativo: true })));
+  }
+
+  async function trocarTurmas(origem: PosicaoChave, destino: PosicaoChave) {
+    if (idEditando === null || salvando) return;
+    if (resultado || partida || fase) { setErro("Salve ou feche o editor do jogo antes de trocar posições."); return; }
     setSalvando(true); setErro("");
-    try { await requisitarPainel("/api/interclasses", { method: "PUT", ...corpoJson({ acao: "gerar_chave", id: idEditando, confirmar: substituir }) }); setSucesso("Chave inicial gerada. Revise a prévia antes de publicar."); await atualizarDetalhes(); setEtapa(4); }
-    catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível gerar a chave."); }
+    try {
+      const resposta = await requisitarPainel<Record<string, unknown>>("/api/interclasses", { method: "PUT", ...corpoJson({ acao: "trocar_turmas", id: idEditando, origem, destino }) });
+      setDetalhes(normalizarDetalhes(resposta)); setSucesso("Posições trocadas. As folgas e os avanços foram atualizados.");
+    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível trocar as posições."); }
+    finally { setSalvando(false); }
+  }
+
+  async function gerarChave() {
+    if (participantes.filter((item) => item.ativo).length < 2) { setErro("Adicione pelo menos duas turmas antes de gerar a chave."); return; }
+    const substituir = Boolean(detalhes?.fases.length || detalhes?.partidas.length);
+    if (substituir && !window.confirm("Gerar uma nova chave? A chave anterior e seus resultados serão arquivados. A nova chave precisará ser publicada novamente.")) return;
+    const id = await salvarCampeonato(false, true);
+    if (id === null) return;
+    setSalvando(true); setErro("");
+    try {
+      const resposta = await requisitarPainel<Record<string, unknown>>("/api/interclasses", { method: "PUT", ...corpoJson({ acao: "gerar_chave", id, confirmar: substituir }) });
+      const completo = normalizarDetalhes(resposta); setDetalhes(completo);
+      setFormulario((atual) => atual ? { ...atual, chavePublicada: true, faseAtual: completo.item.faseAtual } : atual);
+      setSucesso("Chave gerada. Arraste as turmas para ajustar os confrontos e toque em um jogo para editar os detalhes."); setEtapa(2);
+    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível gerar a chave."); }
     finally { setSalvando(false); }
   }
 
   async function salvarFase(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault(); if (!fase || idEditando === null) return; setSalvando(true); setErro("");
-    try { await requisitarPainel("/api/interclasses", { method: "POST", ...corpoJson({ entidade: "fases", campeonatoId: idEditando, dados: fase }) }); setFase(null); setMudou(false); setSucesso("Fase adicionada."); await atualizarDetalhes(); }
+    try { await requisitarPainel("/api/interclasses", { method: fase.id === undefined ? "POST" : "PUT", ...corpoJson({ entidade: "fases", campeonatoId: idEditando, ...(fase.id === undefined ? {} : { id: fase.id }), dados: fase }) }); setFase(null); setMudou(false); setSucesso(fase.id === undefined ? "Fase adicionada." : "Fase atualizada."); await atualizarDetalhes(); }
     catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível adicionar a fase."); }
     finally { setSalvando(false); }
   }
@@ -427,29 +511,42 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   }
 
   function abrirResultado(jogo: Partida) {
+    if (mudou) { setErro("Salve as alterações do campeonato antes de abrir um jogo."); return; }
+    setErro(""); setSucesso("");
     setPartidaResultado(jogo); setResultado({ faseId: String(jogo.faseId), rodada: jogo.rodada, ordem: jogo.ordem, participanteAId: jogo.participanteAId === null ? "" : String(jogo.participanteAId), participanteBId: jogo.participanteBId === null ? "" : String(jogo.participanteBId), placarA: jogo.placarA === null ? "" : String(jogo.placarA), placarB: jogo.placarB === null ? "" : String(jogo.placarB), vencedorId: jogo.vencedorId === null ? "" : String(jogo.vencedorId), formaVitoria: jogo.formaVitoria, situacao: jogo.situacao, placarPublicado: jogo.placarPublicado, data: jogo.data, horario: jogo.horario, local: jogo.local, proximaPartidaId: jogo.proximaPartidaId === null ? "" : String(jogo.proximaPartidaId), proximaPosicao: jogo.proximaPosicao, publicado: jogo.publicado, resumo: jogo.resumo, destaques: jogo.destaques, observacoesPublicas: jogo.observacoesPublicas, observacoesInternas: jogo.observacoesInternas, motivo: "" }); setMudou(false);
+  }
+
+  // evita fechar o jogo enquanto o envio está em andamento
+  function fecharResultado() {
+    if (salvando || !confirmarSaida(mudou)) return;
+    setResultado(null); setPartidaResultado(null); setMudou(false); setErro("");
   }
 
   async function registrarResultado(evento: FormEvent<HTMLFormElement>, confirmarImpacto = false) {
     evento.preventDefault(); if (!partidaResultado || !resultado || idEditando === null) return;
+    if (salvando && !confirmarImpacto) return;
     if (resultado.participanteAId && resultado.participanteBId && resultado.participanteAId === resultado.participanteBId) { setErro("Uma equipe não pode jogar contra ela mesma."); return; }
     if (!resultado.faseId) { setErro("Escolha a fase da partida."); return; }
     if (resultado.proximaPartidaId === String(partidaResultado.id)) { setErro("Uma partida não pode encaminhar o vencedor para ela mesma."); return; }
     if (resultado.proximaPartidaId && !resultado.proximaPosicao) { setErro("Escolha a posição do vencedor na próxima partida."); return; }
     const participantesValidos = [resultado.participanteAId, resultado.participanteBId].filter(Boolean);
     if (resultado.vencedorId && !participantesValidos.includes(resultado.vencedorId)) { setErro("O vencedor precisa ser um dos participantes deste jogo."); return; }
-    const resultadoFinal = resultado.situacao === "encerrada" || resultado.situacao === "wo";
+    // a folga mantém seu avanço automático ao editar os detalhes
+    const folgaAutomatica = atualizandoJogos && partidaResultado.formaVitoria === "bye";
+    const resultadoFinal = !folgaAutomatica && (resultado.situacao === "encerrada" || resultado.situacao === "wo");
+    // permite mostrar o placar durante um jogo em andamento
+    const podeTerPlacar = resultadoFinal || (atualizandoJogos && resultado.situacao === "em_andamento");
     if (resultadoFinal && resultado.situacao !== "wo" && (resultado.placarA === "" || resultado.placarB === "")) { setErro("Informe os dois placares ou escolha vitória por W.O."); return; }
     if (resultadoFinal && !resultado.vencedorId) { setErro("Escolha o vencedor para concluir a partida."); return; }
-    const corrigindo = partidaResultado.vencedorId !== null || partidaResultado.placarA !== null || partidaResultado.placarB !== null;
+    const corrigindo = !folgaAutomatica && (partidaResultado.vencedorId !== null || partidaResultado.placarA !== null || partidaResultado.placarB !== null);
     if (corrigindo && !resultado.motivo.trim()) { setErro("Informe o motivo da correção para preservar o histórico."); return; }
     setSalvando(true); setErro("");
     try {
-      if (!resultadoFinal && !corrigindo) {
+      if (!atualizandoJogos && !resultadoFinal && !corrigindo) {
         await requisitarPainel("/api/interclasses", { method: "PUT", ...corpoJson({ entidade: "partidas", campeonatoId: idEditando, id: partidaResultado.id, dados: { faseId: resultado.faseId, participanteAId: resultado.participanteAId || null, participanteBId: resultado.participanteBId || null, rodada: resultado.rodada, ordem: resultado.ordem, data: resultado.data, horario: resultado.horario, local: resultado.local, situacao: resultado.situacao, placarPublicado: resultado.placarPublicado, resumo: resultado.resumo, destaques: resultado.destaques, observacoesPublicas: resultado.observacoesPublicas, observacoesInternas: resultado.observacoesInternas, proximaPartidaId: resultado.proximaPartidaId || null, proximaPosicao: resultado.proximaPartidaId ? resultado.proximaPosicao : "", publicado: resultado.publicado } }) });
         setPartidaResultado(null); setResultado(null); setMudou(false); setSucesso(`Jogo marcado como ${statusLegivel(resultado.situacao).toLowerCase()}.`); await atualizarDetalhes(); return;
       }
-      const resposta = await fetch("/api/interclasses", { method: "PUT", ...corpoJson({ acao: "registrar_resultado", id: idEditando, partidaId: partidaResultado.id, confirmarImpacto, motivo: resultado.motivo, dados: { ...resultado, proximaPartidaId: resultado.proximaPartidaId || null, proximaPosicao: resultado.proximaPartidaId ? resultado.proximaPosicao : "", placarA: resultadoFinal && resultado.placarA !== "" ? Number(resultado.placarA) : null, placarB: resultadoFinal && resultado.placarB !== "" ? Number(resultado.placarB) : null, vencedorId: resultadoFinal && resultado.vencedorId ? Number(resultado.vencedorId) : null, formaVitoria: resultadoFinal ? resultado.formaVitoria : "" } }) });
+      const resposta = await fetch("/api/interclasses", { method: "PUT", ...corpoJson({ acao: atualizandoJogos ? "atualizar_jogo" : "registrar_resultado", id: idEditando, partidaId: partidaResultado.id, confirmarImpacto, motivo: resultado.motivo, dados: { ...resultado, proximaPartidaId: resultado.proximaPartidaId || null, proximaPosicao: resultado.proximaPartidaId ? resultado.proximaPosicao : "", placarA: podeTerPlacar && resultado.placarA !== "" ? Number(resultado.placarA) : null, placarB: podeTerPlacar && resultado.placarB !== "" ? Number(resultado.placarB) : null, vencedorId: resultadoFinal && resultado.vencedorId ? Number(resultado.vencedorId) : null, formaVitoria: resultadoFinal ? resultado.formaVitoria : "" } }) });
       const dados = await resposta.json() as { erro?: string; mensagem?: string; impacto?: { mensagem?: string; partidasAfetadas?: Array<{ fase?: string; participanteAtual?: string; resultadoPosteriorPreenchido?: boolean }> }; exigeConfirmacao?: boolean };
       if (!resposta.ok) {
         const exige = resposta.status === 409 || dados.exigeConfirmacao || dados.impacto;
@@ -461,7 +558,16 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
         }
         throw new Error(dados.erro || dados.mensagem || "Não foi possível registrar o resultado.");
       }
-      setPartidaResultado(null); setResultado(null); setMudou(false); setSucesso(corrigindo ? "Resultado corrigido. Revise os jogos seguintes indicados pela chave." : "Resultado registrado e vencedor encaminhado à fase seguinte."); await atualizarDetalhes();
+      // mostra a confirmação somente depois que o servidor salvar
+      if (atualizandoJogos) {
+        await carregar();
+        voltarVisaoGeral(); setSucesso("");
+        setConfirmacaoSalva({ tipo: "atualizado", titulo: "Atualização enviada!", mensagem: "Os dados do jogo foram salvos e publicados no portal. A chave já está atualizada." });
+        return;
+      }
+      setPartidaResultado(null); setResultado(null); setMudou(false); setSucesso(corrigindo ? "Resultado corrigido. Revise os jogos seguintes indicados pela chave." : "Resultado registrado e vencedor encaminhado à fase seguinte.");
+      const completo = await atualizarDetalhes();
+      if (completo) setFormulario((atual) => atual ? { ...atual, faseAtual: completo.item.faseAtual } : atual);
     } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível registrar o resultado."); }
     finally { setSalvando(false); }
   }
@@ -471,13 +577,12 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     const nome = participantes.find((item) => String(item.id) === campeaoSelecionado)?.nomeExibicao || participantes.find((item) => String(item.id) === campeaoSelecionado)?.nome || "participante escolhido";
     if (!window.confirm(`Encerrar o campeonato e registrar “${nome}” como campeão? Confira todos os resultados antes de continuar.`)) return;
     setSalvando(true); setErro("");
-    try { await requisitarPainel("/api/interclasses", { method: "PUT", ...corpoJson({ acao: "definir_campeao", id: idEditando, participanteId: Number(campeaoSelecionado) }) }); setSucesso("Campeão registrado e campeonato encerrado."); await atualizarDetalhes(); await carregar(); }
+    try { await requisitarPainel("/api/interclasses", { method: "PUT", ...corpoJson({ acao: "definir_campeao", id: idEditando, participanteId: Number(campeaoSelecionado) }) }); setSucesso("Campeão registrado e campeonato encerrado."); setFormulario((atual) => atual ? { ...atual, situacao: "encerrado" } : atual); await atualizarDetalhes(); await carregar(); }
     catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível encerrar o campeonato."); }
     finally { setSalvando(false); }
   }
 
-  // As sete etapas editam o mesmo rascunho em memória; trocar de etapa não
-  // descarta nem marca como salvas as alterações ainda não enviadas.
+  // mantém as alterações do rascunho ao trocar de etapa
   function irEtapa(nova: number) {
     if (nova !== etapa && (documento || atualizacao || fase || partida || resultado)) {
       setErro("Salve ou cancele o editor aberto antes de mudar de etapa.");
@@ -487,26 +592,43 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   }
 
   return <section className="pev-painel" aria-labelledby="titulo-painel-interclasses">
-    <CabecalhoPainel rotulo="ESPORTE E INTEGRAÇÃO" titulo="Interclasses e campeonatos" descricao="Crie o campeonato em etapas, organize confrontos e publique resultados com confirmação de impactos." acao={formulario ? undefined : novo} nomeAcao="+ Novo campeonato" />
+    <CabecalhoPainel rotulo="ESPORTE E INTEGRAÇÃO" titulo="Interclasses e campeonatos" descricao="Escolha o esporte, adicione as turmas e gere os confrontos. Ajuste a chave visual, registre jogos e publique quando estiver pronto." acao={formulario ? undefined : novo} nomeAcao="+ Novo campeonato" />
     <MensagensPainel erro={erro} sucesso={sucesso} />
-    {formulario ? <div className="pev-editor-completo"><nav className="pev-etapas" aria-label="Etapas do campeonato">{nomesEtapas.map((nome, indice) => <button type="button" className={etapa === indice ? "ativo" : indice < etapa ? "concluida" : ""} aria-current={etapa === indice ? "step" : undefined} onClick={() => irEtapa(indice)} key={nome}><span>{indice + 1}</span>{nome}</button>)}</nav>
-      <div className="pev-formulario"><div className="pev-formulario__topo"><div><small>ETAPA {etapa + 1} DE 7</small><h2 id="titulo-painel-interclasses">{nomesEtapas[etapa]}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>Fechar</button></div>
-        {etapa === 0 && <EtapaInformacoes formulario={formulario} mudar={mudar} enviarCapa={enviarCapa} enviando={enviando === "capa"} />}
-        {etapa === 1 && <EtapaModalidade formulario={formulario} mudar={mudar} detalhes={detalhes} salvo={idEditando !== null} documento={documento} setDocumento={definirDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} arquivarDocumento={arquivarDocumento} atualizacao={atualizacao} setAtualizacao={definirAtualizacao} salvarAtualizacao={salvarAtualizacao} arquivarAtualizacao={arquivarAtualizacao} salvando={salvando} enviandoDocumento={enviando === "documento"} />}
-        {etapa === 2 && <EtapaParticipantes participantes={participantes} novoParticipante={novoParticipante} setNovoParticipante={setNovoParticipante} adicionar={adicionarParticipante} renomear={renomearParticipante} remover={removerParticipante} salvando={salvando} />}
-        {etapa === 3 && <EtapaFormato formulario={formulario} mudar={mudar} participantes={participantes} gerar={gerarChave} podeGerar={idEditando !== null} salvando={salvando} />}
-        {etapa === 4 && <EtapaChave detalhes={detalhes} participantes={participantes} fase={fase} setFase={(valor) => { setFase(valor); setMudou(Boolean(valor)); }} salvarFase={salvarFase} partida={partida} setPartida={(valor) => { setPartida(valor); setMudou(Boolean(valor)); }} salvarPartida={salvarPartida} abrirResultado={abrirResultado} salvando={salvando} />}
-        {etapa === 5 && <EtapaRevisao formulario={formulario} participantes={participantes} detalhes={detalhes} />}
-        {etapa === 6 && <EtapaPublicacao formulario={formulario} mudar={mudar} participantes={participantes} detalhes={detalhes} salvar={() => void salvarCampeonato(true)} campeaoSelecionado={campeaoSelecionado} setCampeaoSelecionado={setCampeaoSelecionado} definirCampeao={definirCampeao} salvando={salvando} />}
-        {resultado && partidaResultado && <FormularioResultado jogo={partidaResultado} fases={detalhes?.fases ?? []} partidas={detalhes?.partidas ?? []} participantes={participantes} resultado={resultado} setResultado={(valor) => { setResultado(valor); setMudou(true); }} salvar={registrarResultado} fechar={() => { if (confirmarSaida(mudou)) { setResultado(null); setPartidaResultado(null); setMudou(false); } }} salvando={salvando} />}
-        {!resultado && !documento && !atualizacao && <div className="pev-navegacao-etapas"><button type="button" className="pev-botao" onClick={() => etapa === 0 ? fechar() : irEtapa(etapa - 1)}>{etapa === 0 ? "Cancelar" : "Voltar"}</button><div><button type="button" className="pev-botao" onClick={() => void salvarCampeonato(false)} disabled={salvando}>{salvando ? "Salvando…" : "Salvar rascunho"}</button>{etapa < 6 && <button type="button" className="pev-botao pev-botao--primario" onClick={() => { if (etapa === 2 && participantes.length < 2) { setErro("Adicione pelo menos dois participantes para continuar."); return; } setEtapa((atual) => Math.min(6, atual + 1)); }}>Continuar</button>}</div></div>}
-      </div>
-    </div> : <><div className="pev-filtros"><label className="pev-filtro--busca"><span>Buscar campeonato</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, edição, modalidade ou categoria" /></label><label><span>Situação</span><select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}><option value="">Todas</option>{situacoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label><label><span>Modalidade</span><select value={filtroModalidade} onChange={(e) => setFiltroModalidade(e.target.value)}><option value="">Todas</option>{modalidades.map((nome) => <option key={nome}>{nome}</option>)}</select></label><label><span>Ano</span><select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}><option value="">Todos</option>{anos.map((ano) => <option key={ano}>{ano}</option>)}</select></label></div>{carregando && <EstadoVazio titulo="Carregando campeonatos…" texto="Aguarde enquanto consultamos chaves e resultados." />}{!carregando && !filtrados.length && <EstadoVazio titulo={itens.length ? "Nenhum campeonato encontrado" : "Nenhum campeonato cadastrado"} texto={itens.length ? "Altere os filtros ou a busca." : "Use “Novo campeonato” para iniciar uma edição."} />}<div className="pev-lista">{filtrados.map((item) => <article className="pev-cartao" key={item.id}><div className="pev-cartao__estados"><span className={classeStatus(item.publicado ? "publicado" : item.ativo ? "rascunho" : "arquivado")}>{item.publicado ? "Publicado" : item.ativo ? "Rascunho" : "Arquivado"}</span><span className={classeStatus(item.situacao)}>{statusLegivel(item.situacao)}</span></div><div className="pev-cartao__conteudo"><h2>{item.nome}</h2><p>{[item.edicao || item.ano, item.modalidade, item.categoria].filter(Boolean).join(" · ")}</p><small>{item.situacao === "encerrado" && item.campeaoNome ? `Campeão: ${item.campeaoNome}` : item.faseAtual ? `Fase atual: ${item.faseAtual}` : item.chavePublicada ? "Chave publicada" : "Chave ainda oculta"}</small></div><div className="pev-cartao__acoes"><button type="button" className="pev-botao" onClick={() => void editar(item)}>Editar</button><button type="button" className="pev-botao" onClick={() => void editar(item, 4)}>Chave e jogos</button><button type="button" className="pev-botao" onClick={() => void duplicar(item)}>Duplicar edição</button>{item.ativo && <button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void arquivar(item)}>Arquivar</button>}</div></article>)}</div></>}
+    {formulario ? <div className="pev-editor-completo">{atualizandoJogos ? <div className="pev-formulario ic-atualizacao">
+      <div className="pev-formulario__topo"><div><small>ATUALIZAR INTERCLASSE · {formulario.modalidade}</small><h2 id="titulo-painel-interclasses">{formulario.nome}</h2></div><button type="button" className="pev-botao" onClick={fechar} disabled={salvando}>Voltar à visão geral</button></div>
+      <p className="pev-introducao">Clique em um jogo para informar o placar, escolher o vencedor ou atualizar data, horário e detalhes. Ao enviar, a atualização aparece no portal e você volta à visão geral.</p>
+      <div className="ic-resumo-atualizacao"><span><strong>{detalhes?.partidas.filter((jogo) => jogo.formaVitoria !== "bye" && (jogo.situacao === "encerrada" || jogo.situacao === "wo")).length ?? 0}</strong> jogos concluídos</span><span><strong>{detalhes?.partidas.filter((jogo) => !["encerrada", "wo", "cancelada"].includes(jogo.situacao)).length ?? 0}</strong> jogos a acompanhar</span><span><strong>{participantes.length}</strong> turmas</span></div>
+      <PreviaChave fases={detalhes?.fases ?? []} partidas={detalhes?.partidas ?? []} abrirResultado={abrirResultado} salvando={salvando} erro={erro} />
+    </div> : <><nav className="pev-etapas" aria-label="Etapas do campeonato">{nomesEtapas.map((nome, indice) => <button type="button" className={etapa === indice ? "ativo" : indice < etapa ? "concluida" : ""} aria-current={etapa === indice ? "step" : undefined} onClick={() => irEtapa(indice)} disabled={salvando} key={nome}><span>{indice + 1}</span>{nome}</button>)}</nav>
+      <div className="pev-formulario"><div className="pev-formulario__topo"><div><small>ETAPA {etapa + 1} DE {nomesEtapas.length}</small><h2 id="titulo-painel-interclasses">{nomesEtapas[etapa]}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>Fechar</button></div>
+        {etapa === 0 && !documento && !atualizacao && <EtapaInformacoes formulario={formulario} mudar={mudar} enviarCapa={enviarCapa} enviando={enviando === "capa"} />}
+        {etapa === 0 && <EtapaModalidade formulario={formulario} mudar={mudar} detalhes={detalhes} salvo={idEditando !== null} documento={documento} setDocumento={definirDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} arquivarDocumento={arquivarDocumento} atualizacao={atualizacao} setAtualizacao={definirAtualizacao} salvarAtualizacao={salvarAtualizacao} arquivarAtualizacao={arquivarAtualizacao} salvando={salvando} enviandoDocumento={enviando === "documento"} />}
+        {etapa === 1 && <EtapaParticipantes participantes={participantes} novoParticipante={novoParticipante} setNovoParticipante={setNovoParticipante} adicionar={adicionarParticipante} adicionarLote={adicionarLote} renomear={renomearParticipante} remover={removerParticipante} salvando={salvando} />}
+        {etapa === 1 && <EtapaFormato formulario={formulario} mudar={mudar} participantes={participantes} gerar={gerarChave} podeGerar={true} salvando={salvando} temChave={Boolean(detalhes?.fases.length)} />}
+        {etapa === 2 && <EtapaFormato formulario={formulario} mudar={mudar} participantes={participantes} gerar={gerarChave} podeGerar={true} salvando={salvando || Boolean(fase || partida || resultado)} temChave={Boolean(detalhes?.fases.length)} mostrarFormatos={false} />}
+        {etapa === 2 && <EtapaChave detalhes={detalhes} participantes={participantes} fase={fase} setFase={(valor) => { if (valor && !fase && mudou) { setErro("Salve o campeonato antes de adicionar uma fase."); return; } if (!valor && mudou && !confirmarSaida(true)) return; setFase(valor); setMudou(Boolean(valor)); }} salvarFase={salvarFase} partida={partida} setPartida={(valor) => { if (valor && !partida && mudou) { setErro("Salve o campeonato antes de adicionar um jogo."); return; } if (!valor && mudou && !confirmarSaida(true)) return; setPartida(valor); setMudou(Boolean(valor)); }} salvarPartida={salvarPartida} abrirResultado={abrirResultado} trocar={trocarTurmas} salvando={salvando} erro={erro} sucesso={sucesso} />}
+        {etapa === 3 && <EtapaRevisao formulario={formulario} participantes={participantes} detalhes={detalhes} />}
+        {etapa === 3 && <EtapaPublicacao formulario={formulario} mudar={mudar} participantes={participantes} detalhes={detalhes} salvar={() => void salvarEVoltar(true)} salvarRascunho={() => void salvarEVoltar(false)} campeaoSelecionado={campeaoSelecionado} setCampeaoSelecionado={setCampeaoSelecionado} definirCampeao={definirCampeao} salvando={salvando} />}
+        {!resultado && !documento && !atualizacao && !fase && !partida && <div className="pev-navegacao-etapas"><button type="button" className="pev-botao" onClick={() => etapa === 0 ? fechar() : irEtapa(etapa - 1)}>{etapa === 0 ? "Cancelar" : "Voltar"}</button><div><button type="button" className="pev-botao" onClick={() => void salvarEVoltar(Boolean(detalhes?.item.publicado))} disabled={salvando}>{salvando ? "Salvando…" : detalhes?.item.publicado ? "Salvar alterações" : "Salvar rascunho"}</button>{etapa < nomesEtapas.length - 1 && <button type="button" className="pev-botao pev-botao--primario" onClick={async () => {
+          if (etapa === 0 && (!formulario.nome.trim() || !formulario.modalidade)) { setErro("Informe o nome do campeonato e selecione o esporte para continuar."); return; }
+          if (etapa === 1) {
+            if (participantes.length < 2) { setErro("Adicione pelo menos duas turmas para continuar."); return; }
+            if (!detalhes?.fases.length && formulario.formato === "mata_mata") { await gerarChave(); return; }
+            if (idEditando === null && await salvarCampeonato(false) === null) return;
+          }
+          setEtapa((atual) => Math.min(nomesEtapas.length - 1, atual + 1));
+        }} disabled={salvando}>Continuar</button>}</div></div>}
+      </div></>}
+    </div> : <><div className="pev-filtros ic-filtros-admin"><label className="pev-filtro--busca"><span>Buscar campeonato</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, edição, modalidade ou categoria" /></label><label><span>Exibir</span><select value={filtroArquivo} onChange={(e) => setFiltroArquivo(e.target.value)}><option value="ativos">Ativos</option><option value="arquivados">Arquivados</option><option value="todos">Todos</option></select></label><label><span>Situação</span><select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}><option value="">Todas</option>{situacoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label><label><span>Modalidade</span><select value={filtroModalidade} onChange={(e) => setFiltroModalidade(e.target.value)}><option value="">Todas</option>{modalidades.map((nome) => <option key={nome}>{nome}</option>)}</select></label><label><span>Ano</span><select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}><option value="">Todos</option>{anos.map((ano) => <option key={ano}>{ano}</option>)}</select></label></div>{carregando && <EstadoVazio titulo="Carregando campeonatos…" texto="Aguarde enquanto consultamos chaves e resultados." />}{!carregando && !filtrados.length && <EstadoVazio titulo={itens.length ? "Nenhum campeonato encontrado" : "Nenhum campeonato cadastrado"} texto={itens.length ? "Altere os filtros ou a busca." : "Use “Novo campeonato” para iniciar uma edição."} />}<div className="pev-lista">{filtrados.map((item) => <article className="pev-cartao" key={item.id}><div className="pev-cartao__estados"><span className={classeStatus(!item.ativo ? "arquivado" : item.publicado ? "publicado" : "rascunho")}>{!item.ativo ? "Arquivado" : item.publicado ? "Publicado" : "Rascunho"}</span><span className={classeStatus(item.situacao)}>{statusLegivel(item.situacao)}</span></div><div className="pev-cartao__conteudo"><h2>{item.nome}</h2><p>{[item.edicao || item.ano, item.modalidade, item.categoria].filter(Boolean).join(" · ")}</p><small>{item.situacao === "encerrado" && item.campeaoNome ? `Campeão: ${item.campeaoNome}` : item.faseAtual ? `Fase atual: ${item.faseAtual}` : item.chavePublicada ? "Chave publicada" : "Chave ainda oculta"}</small></div><div className="pev-cartao__acoes">{item.ativo && item.publicado && <button type="button" className="pev-botao pev-botao--primario" onClick={() => void editar(item, 2, true)} disabled={carregando || salvando}>Atualizar interclasse</button>}<button type="button" className="pev-botao" onClick={() => void editar(item)} disabled={carregando || salvando}>Editar</button><button type="button" className="pev-botao" onClick={() => void editar(item, 2)}>Chave e jogos</button><button type="button" className="pev-botao" onClick={() => void duplicar(item)}>Duplicar edição</button>{item.ativo && <button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void arquivar(item)}>Arquivar</button>}</div></article>)}</div></>}
+    {resultado && partidaResultado && (atualizandoJogos
+      ? <FormularioResultadoRapido jogo={partidaResultado} resultado={resultado} setResultado={(valor) => { setResultado(valor); setMudou(true); }} salvar={registrarResultado} fechar={fecharResultado} salvando={salvando} erro={erro} />
+      : <FormularioResultado jogo={partidaResultado} fases={detalhes?.fases ?? []} partidas={detalhes?.partidas ?? []} participantes={participantes} resultado={resultado} setResultado={(valor) => { setResultado(valor); setMudou(true); }} salvar={registrarResultado} fechar={fecharResultado} salvando={salvando} erro={erro} />)}
+    {confirmacaoSalva && <ConfirmacaoInterclasse confirmacao={confirmacaoSalva} fechar={() => setConfirmacaoSalva(null)} />}
   </section>;
 }
 
 function EtapaInformacoes({ formulario, mudar, enviarCapa, enviando }: { formulario: FormularioCampeonato; mudar: <K extends keyof FormularioCampeonato>(chave: K, valor: FormularioCampeonato[K]) => void; enviarCapa: (arquivo?: File) => void; enviando: boolean }) {
-  return <><p className="pev-introducao">Comece pela identificação pública. Você poderá salvar o rascunho a qualquer momento.</p><div className="pev-grade-campos"><Campo rotulo="Nome do campeonato"><input value={formulario.nome} onChange={(e) => mudar("nome", e.target.value)} required /></Campo><Campo rotulo="Edição"><input value={formulario.edicao} onChange={(e) => mudar("edicao", e.target.value)} placeholder="Ex.: 2026 ou 12ª edição" /></Campo><Campo rotulo="Ano"><input type="number" min={2000} max={2100} value={formulario.ano ?? ""} onChange={(e) => mudar("ano", e.target.value ? Number(e.target.value) : null)} /></Campo><Campo rotulo="Situação"><select value={formulario.situacao} onChange={(e) => mudar("situacao", e.target.value)}>{situacoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><Campo rotulo="Data inicial"><input type="date" value={formulario.dataInicial} onChange={(e) => mudar("dataInicial", e.target.value)} /></Campo><Campo rotulo="Data prevista para encerramento"><input type="date" min={formulario.dataInicial || undefined} value={formulario.dataFinal} onChange={(e) => mudar("dataFinal", e.target.value)} /></Campo><Campo rotulo="Descrição completa" largo><textarea rows={7} value={formulario.descricao} onChange={(e) => mudar("descricao", e.target.value)} /></Campo><Campo rotulo="Organização"><input value={formulario.organizacao} onChange={(e) => mudar("organizacao", e.target.value)} /></Campo><Campo rotulo="Local ou locais"><input value={formulario.locais} onChange={(e) => mudar("locais", e.target.value)} /></Campo><Campo rotulo="Endereço da imagem de capa" dica="Aceita endereço HTTPS ou arquivo interno."><input type="text" value={formulario.imagemCapaUrl} onChange={(e) => mudar("imagemCapaUrl", e.target.value)} placeholder="https:// ou /api/arquivos/…" />{formulario.imagemCapaUrl && <span className="pev-arquivo-salvo"><a href={formulario.imagemCapaUrl} target="_blank" rel="noreferrer">Abrir imagem atual</a><button type="button" onClick={() => mudar("imagemCapaUrl", "")}>Remover</button></span>}</Campo><Campo rotulo="Enviar nova imagem" dica="O upload sempre começa privado e só é associado depois de salvar."><input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void enviarCapa(e.target.files?.[0])} disabled={enviando} /></Campo></div></>;
+  return <><p className="pev-introducao">Comece pela identificação pública. Você poderá salvar o rascunho a qualquer momento.</p><div className="pev-grade-campos"><Campo rotulo="Nome do campeonato"><input value={formulario.nome} onChange={(e) => mudar("nome", e.target.value)} required /></Campo><Campo rotulo="Edição"><input value={formulario.edicao} onChange={(e) => mudar("edicao", e.target.value)} placeholder="Ex.: 2026 ou 12ª edição" /></Campo><Campo rotulo="Ano"><input type="number" min={2000} max={2100} value={formulario.ano ?? ""} onChange={(e) => mudar("ano", e.target.value ? Number(e.target.value) : null)} /></Campo><Campo rotulo="Situação"><select value={formulario.situacao} onChange={(e) => mudar("situacao", e.target.value)}>{situacoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><Campo rotulo="Data inicial"><input type="date" value={formulario.dataInicial} onChange={(e) => mudar("dataInicial", e.target.value)} /></Campo><Campo rotulo="Data prevista para encerramento"><input type="date" min={formulario.dataInicial || undefined} value={formulario.dataFinal} onChange={(e) => mudar("dataFinal", e.target.value)} /></Campo><Campo rotulo="Descrição completa" largo><textarea rows={7} value={formulario.descricao} onChange={(e) => mudar("descricao", e.target.value)} /></Campo><Campo rotulo="Premiação" dica="Informe os prêmios e as colocações. Esta informação aparece acima da chave pública." largo><textarea rows={3} value={formulario.premiacao} onChange={(e) => mudar("premiacao", e.target.value)} placeholder="1º lugar: troféu e medalhas&#10;2º lugar: medalhas" /></Campo><Campo rotulo="Organização"><input value={formulario.organizacao} onChange={(e) => mudar("organizacao", e.target.value)} /></Campo><Campo rotulo="Local ou locais"><input value={formulario.locais} onChange={(e) => mudar("locais", e.target.value)} /></Campo><Campo rotulo="Endereço da imagem de capa" dica="Aceita endereço HTTPS ou arquivo interno."><input type="text" value={formulario.imagemCapaUrl} onChange={(e) => mudar("imagemCapaUrl", e.target.value)} placeholder="https:// ou /api/arquivos/…" />{formulario.imagemCapaUrl && <span className="pev-arquivo-salvo"><a href={formulario.imagemCapaUrl} target="_blank" rel="noreferrer">Abrir imagem atual</a><button type="button" onClick={() => mudar("imagemCapaUrl", "")}>Remover</button></span>}</Campo><Campo rotulo="Enviar nova imagem" dica="O upload sempre começa privado e só é associado depois de salvar."><input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void enviarCapa(e.target.files?.[0])} disabled={enviando} /></Campo></div></>;
 }
 
 function EtapaModalidade({ formulario, mudar, detalhes, salvo, documento, setDocumento, salvarDocumento, enviarDocumento, arquivarDocumento, atualizacao, setAtualizacao, salvarAtualizacao, arquivarAtualizacao, salvando, enviandoDocumento }: {
@@ -526,7 +648,8 @@ function EtapaModalidade({ formulario, mudar, detalhes, salvo, documento, setDoc
   salvando: boolean;
   enviandoDocumento: boolean;
 }) {
-  return <><div className="pev-grade-campos"><Campo rotulo="Modalidade"><input value={formulario.modalidade} onChange={(e) => mudar("modalidade", e.target.value)} placeholder="Ex.: futsal" required /></Campo><Campo rotulo="Categoria"><input value={formulario.categoria} onChange={(e) => mudar("categoria", e.target.value)} placeholder="Ex.: feminino, masculino ou mista" /></Campo><Campo rotulo="Turno"><select value={formulario.turno} onChange={(e) => mudar("turno", e.target.value)}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><Campo rotulo="Fase atual"><input value={formulario.faseAtual} onChange={(e) => mudar("faseAtual", e.target.value)} placeholder="Ex.: quartas de final" /></Campo><Campo rotulo="Regulamento" largo><textarea rows={8} value={formulario.regulamento} onChange={(e) => mudar("regulamento", e.target.value)} /></Campo><Campo rotulo="Observações públicas"><textarea rows={4} value={formulario.observacoesPublicas} onChange={(e) => mudar("observacoesPublicas", e.target.value)} /></Campo><Campo rotulo="Observações internas" dica="Não aparecem no portal."><textarea rows={4} value={formulario.observacoesInternas} onChange={(e) => mudar("observacoesInternas", e.target.value)} /></Campo></div>{salvo && detalhes ? <GestaoConteudoInterclasse detalhes={detalhes} documento={documento} setDocumento={setDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} arquivarDocumento={arquivarDocumento} atualizacao={atualizacao} setAtualizacao={setAtualizacao} salvarAtualizacao={salvarAtualizacao} arquivarAtualizacao={arquivarAtualizacao} salvando={salvando} enviandoDocumento={enviandoDocumento} /> : <p className="pev-aviso pev-aviso--atencao">Salve o campeonato como rascunho para adicionar documentos e atualizações.</p>}</>;
+  if ((documento || atualizacao) && detalhes) return <GestaoConteudoInterclasse detalhes={detalhes} documento={documento} setDocumento={setDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} arquivarDocumento={arquivarDocumento} atualizacao={atualizacao} setAtualizacao={setAtualizacao} salvarAtualizacao={salvarAtualizacao} arquivarAtualizacao={arquivarAtualizacao} salvando={salvando} enviandoDocumento={enviandoDocumento} />;
+  return <><div className="pev-grade-campos"><Campo rotulo="Esporte"><select value={formulario.modalidade} onChange={(e) => mudar("modalidade", e.target.value)} required><option value="">Selecione o esporte</option>{esportesInterclasse.map((esporte) => <option key={esporte.nome} value={esporte.nome}>{esporte.simbolo} {esporte.nome}</option>)}{formulario.modalidade && !esportesInterclasse.some((item) => item.nome === formulario.modalidade) && <option value={formulario.modalidade}>{formulario.modalidade}</option>}</select></Campo><Campo rotulo="Categoria"><input value={formulario.categoria} onChange={(e) => mudar("categoria", e.target.value)} placeholder="Ex.: feminino, masculino ou mista" /></Campo><Campo rotulo="Turno"><select value={formulario.turno} onChange={(e) => mudar("turno", e.target.value)}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><Campo rotulo="Fase atual"><input value={formulario.faseAtual} onChange={(e) => mudar("faseAtual", e.target.value)} placeholder="Ex.: quartas de final" /></Campo><Campo rotulo="Regulamento" largo><textarea rows={8} value={formulario.regulamento} onChange={(e) => mudar("regulamento", e.target.value)} /></Campo><Campo rotulo="Observações públicas"><textarea rows={4} value={formulario.observacoesPublicas} onChange={(e) => mudar("observacoesPublicas", e.target.value)} /></Campo><Campo rotulo="Observações internas" dica="Não aparecem no portal."><textarea rows={4} value={formulario.observacoesInternas} onChange={(e) => mudar("observacoesInternas", e.target.value)} /></Campo></div>{salvo && detalhes ? <GestaoConteudoInterclasse detalhes={detalhes} documento={documento} setDocumento={setDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} arquivarDocumento={arquivarDocumento} atualizacao={atualizacao} setAtualizacao={setAtualizacao} salvarAtualizacao={salvarAtualizacao} arquivarAtualizacao={arquivarAtualizacao} salvando={salvando} enviandoDocumento={enviandoDocumento} /> : <p className="pev-aviso pev-aviso--atencao">Salve o campeonato como rascunho para adicionar documentos e atualizações.</p>}</>;
 }
 
 function GestaoConteudoInterclasse({ detalhes, documento, setDocumento, salvarDocumento, enviarDocumento, arquivarDocumento, atualizacao, setAtualizacao, salvarAtualizacao, arquivarAtualizacao, salvando, enviandoDocumento }: {
@@ -555,10 +678,54 @@ function GestaoConteudoInterclasse({ detalhes, documento, setDocumento, salvarDo
 
   return <div className="pev-grade-campos"><section className="pev-subpainel"><div className="pev-subpainel__topo"><div><h2>Documentos</h2><p>Publique regulamentos, tabelas, comunicados e anexos autorizados.</p></div><button type="button" className="pev-botao pev-botao--primario" onClick={() => setDocumento({ ...documentoVazio, ordem: detalhes.documentos.length })}>+ Adicionar documento</button></div>{!detalhes.documentos.length && <EstadoVazio titulo="Nenhum documento" texto="Adicione somente arquivos e links reais deste campeonato." />}<div className="pev-grade-subitens">{detalhes.documentos.map((item, indice) => <article key={item.id ?? indice}><span className={classeStatus(item.publicado ? "publicado" : "rascunho")}>{item.publicado ? "Público" : "Privado"}</span><h3>{item.titulo}</h3><p>{item.tipo.replaceAll("_", " ")}</p><div>{(item.arquivoUrl || item.linkExterno) && <a className="pev-botao" href={item.arquivoUrl || item.linkExterno} target="_blank" rel="noreferrer">Abrir</a>}<button type="button" className="pev-botao" onClick={() => setDocumento({ ...item })}>Editar</button><button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void arquivarDocumento(item)} disabled={salvando}>Arquivar</button></div></article>)}</div></section><section className="pev-subpainel"><div className="pev-subpainel__topo"><div><h2>Notícias e atualizações</h2><p>Registre mudanças de fase, comunicados e informações públicas do campeonato.</p></div><button type="button" className="pev-botao pev-botao--primario" onClick={() => setAtualizacao({ ...atualizacaoVazia, ordem: detalhes.atualizacoes.length })}>+ Adicionar atualização</button></div>{!detalhes.atualizacoes.length && <EstadoVazio titulo="Nenhuma atualização" texto="Use esta área quando houver uma informação real para registrar." />}<div className="pev-grade-subitens">{detalhes.atualizacoes.map((item, indice) => <article key={item.id ?? indice}><span className={classeStatus(item.publicado === true ? "publicado" : "rascunho")}>{item.publicado === true ? "Pública" : item.publicado === false ? "Rascunho" : "Visibilidade não informada"}</span><h3>{item.titulo}</h3><p>{item.data ? dataLegivel(item.data) : "Sem data informada"}</p><div><button type="button" className="pev-botao" onClick={() => editarAtualizacao(item)}>Editar</button><button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void arquivarAtualizacao(item)} disabled={salvando}>Arquivar</button></div></article>)}</div></section></div>;
 }
-function EtapaParticipantes({ participantes, novoParticipante, setNovoParticipante, adicionar, renomear, remover, salvando }: { participantes: Participante[]; novoParticipante: Participante; setNovoParticipante: (valor: Participante) => void; adicionar: (evento: FormEvent<HTMLFormElement>) => void; renomear: (item: Participante, indice: number) => void; remover: (item: Participante, indice: number) => void; salvando: boolean }) { return <><p className="pev-introducao">Use nomes de exibição claros. A posição inicial define a ordem usada ao gerar o mata-mata.</p><form className="pev-adicionar-inline" onSubmit={adicionar}><label><span>Equipe ou turma</span><input value={novoParticipante.nome} onChange={(e) => setNovoParticipante({ ...novoParticipante, nome: e.target.value })} placeholder="Nome cadastrado" required /></label><label><span>Nome exibido na chave</span><input value={novoParticipante.nomeExibicao} onChange={(e) => setNovoParticipante({ ...novoParticipante, nomeExibicao: e.target.value })} placeholder="Deixe vazio para repetir o nome" /></label><label><span>Apelido opcional</span><input value={novoParticipante.apelido} onChange={(e) => setNovoParticipante({ ...novoParticipante, apelido: e.target.value })} /></label><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>Adicionar participante</button></form>{!participantes.length && <EstadoVazio titulo="Nenhum participante" texto="Adicione as turmas ou equipes que disputarão esta edição." />}<ol className="pev-participantes">{participantes.map((item, indice) => <li key={item.id ?? `${item.nome}-${indice}`}><span>{indice + 1}</span><div><strong>{item.nomeExibicao || item.nome}</strong>{item.apelido && <small>{item.apelido}</small>}</div><div><button type="button" className="pev-botao" onClick={() => void renomear(item, indice)}>Renomear na chave</button><button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void remover(item, indice)}>Remover</button></div></li>)}</ol></>; }
-function EtapaFormato({ formulario, mudar, participantes, gerar, podeGerar, salvando }: { formulario: FormularioCampeonato; mudar: <K extends keyof FormularioCampeonato>(chave: K, valor: FormularioCampeonato[K]) => void; participantes: Participante[]; gerar: () => void; podeGerar: boolean; salvando: boolean }) { const mataMata = formulario.formato === "mata_mata"; return <><div className="pev-formatos">{formatos.map(([valor, nome]) => <label className={formulario.formato === valor ? "ativo" : ""} key={valor}><input type="radio" name="formato" value={valor} checked={formulario.formato === valor} onChange={() => mudar("formato", valor)} /><strong>{nome}</strong><span>{valor === "mata_mata" ? "O vencedor avança automaticamente até a final." : "Você cria fases, confrontos e avanços manualmente."}</span></label>)}</div><div className="pev-gerar-chave"><div><strong>{participantes.filter((item) => item.ativo).length} participantes ativos</strong><p>{mataMata ? (podeGerar ? "A geração usa a ordem mostrada na etapa anterior. Você poderá revisar tudo antes de publicar." : "Salve o rascunho primeiro; depois o painel poderá gerar e persistir a chave.") : "Na chave personalizada, siga para Fases e jogos para montar os confrontos e o caminho dos vencedores."}</p></div>{mataMata && <button type="button" className="pev-botao pev-botao--primario" disabled={!podeGerar || salvando || participantes.filter((item) => item.ativo).length < 2} onClick={() => void gerar()}>{salvando ? "Gerando…" : "Gerar chave inicial"}</button>}</div></>; }
+function EtapaParticipantes({ participantes, novoParticipante, setNovoParticipante, adicionar, adicionarLote, renomear, remover, salvando }: {
+  participantes: Participante[];
+  novoParticipante: Participante;
+  setNovoParticipante: (valor: Participante) => void;
+  adicionar: (evento: FormEvent<HTMLFormElement>) => void;
+  adicionarLote: (nomes: string[]) => Promise<boolean>;
+  renomear: (item: Participante, indice: number) => void;
+  remover: (item: Participante, indice: number) => void;
+  salvando: boolean;
+}) {
+  return <>
+    <EntradaTurmas adicionar={adicionarLote} salvando={salvando} />
+    <p className="pev-introducao">Para cadastrar uma turma individualmente, preencha os campos abaixo e pressione Enter. Nome exibido e apelido são opcionais.</p>
+    <form className="pev-adicionar-inline ic-participante-individual" onSubmit={adicionar} onKeyDown={(evento) => {
+      if (evento.key === "Enter" && !evento.nativeEvent.isComposing) {
+        evento.preventDefault();
+        if (!salvando) evento.currentTarget.requestSubmit();
+      }
+    }} aria-label="Cadastro individual de turma">
+      <label><span>Turma (série + letras)</span><input value={novoParticipante.nome} onChange={(e) => setNovoParticipante({ ...novoParticipante, nome: e.target.value.toUpperCase() })} placeholder="Ex.: 6A ou 2DS" pattern="[1236789][A-Za-z]{1,3}" title="Série 6 a 9 ou 1 a 3, seguida de 1 a 3 letras" required maxLength={4} disabled={salvando} /></label>
+      <label><span>Nome exibido na chave</span><input value={novoParticipante.nomeExibicao} onChange={(e) => setNovoParticipante({ ...novoParticipante, nomeExibicao: e.target.value })} placeholder="Deixe vazio para repetir o nome" maxLength={160} disabled={salvando} /></label>
+      <label><span>Apelido opcional</span><input value={novoParticipante.apelido} onChange={(e) => setNovoParticipante({ ...novoParticipante, apelido: e.target.value })} maxLength={100} disabled={salvando} /></label>
+    </form>
+    {!participantes.length && <EstadoVazio titulo="Nenhum participante" texto="Adicione as turmas ou equipes que disputarão esta edição." />}
+    <ol className="pev-participantes">{participantes.map((item, indice) => <li key={item.id ?? `${item.nome}-${indice}`}><span>{indice + 1}</span><div><strong>{item.nomeExibicao || item.nome}</strong>{item.apelido && <small>{item.apelido}</small>}</div><div><button type="button" className="pev-botao" onClick={() => void renomear(item, indice)} disabled={salvando}>Renomear na chave</button><button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void remover(item, indice)} disabled={salvando}>Remover</button></div></li>)}</ol>
+  </>;
+}
+// mostra o formato e explica como o sorteio aproxima as séries
+function EtapaFormato({ formulario, mudar, participantes, gerar, podeGerar, salvando, temChave = false, mostrarFormatos = true }: { formulario: FormularioCampeonato; mudar: <K extends keyof FormularioCampeonato>(chave: K, valor: FormularioCampeonato[K]) => void; participantes: Participante[]; gerar: () => void; podeGerar: boolean; salvando: boolean; temChave?: boolean; mostrarFormatos?: boolean }) {
+  const mataMata = formulario.formato === "mata_mata";
+  const limitar = formulario.diferencaMaximaAnos !== null;
+  return <>
+    {/* permite escolher o formato do campeonato */}
+    {mostrarFormatos && <div className="pev-formatos">{formatos.map(([valor, nome]) => <label className={formulario.formato === valor ? "ativo" : ""} key={valor}><input type="radio" name="formato" value={valor} checked={formulario.formato === valor} disabled={salvando} onChange={() => mudar("formato", valor)} /><strong>{nome}</strong><span>{valor === "mata_mata" ? "O vencedor avança automaticamente até a final." : "Você cria fases, confrontos e avanços manualmente."}</span></label>)}</div>}
+    {/* permite aproximar as séries durante o sorteio */}
+    {mataMata && <fieldset className="ic-regras-sorteio" disabled={salvando}>
+      <legend>Regras do sorteio</legend>
+      <label className="ic-limitar-series"><input type="checkbox" checked={limitar} onChange={(e) => mudar("diferencaMaximaAnos", e.target.checked ? 1 : null)} /><span><strong>Impedir confrontos entre séries muito distantes</strong><small>Ative apenas quando quiser limitar a diferença entre as turmas.</small></span></label>
+      {limitar && <label className="ic-limite-anos"><span>Diferença máxima desejada</span><select value={formulario.diferencaMaximaAnos ?? 1} onChange={(e) => mudar("diferencaMaximaAnos", Number(e.target.value))}>{[1, 2, 3].map((anos) => <option value={anos} key={anos}>{anos} {anos === 1 ? "ano" : "anos"}</option>)}</select></label>}
+      {/* explica que a regra adia os encontros distantes sem impedir o fim do campeonato */}
+      <p>O sorteio sempre é aleatório. Cada rodada tem folga apenas quando o número de turmas é ímpar. {limitar && "Mesmo com esta opção ativada, turmas de séries distantes terão que competir quando não houver adversários próximos disponíveis. A regra procura adiar esse encontro o máximo possível; ela não impede que ele aconteça. Por exemplo, se restarem apenas turmas do 8º ano e do 3º do ensino médio, elas poderão se enfrentar. A sequência considerada é 6º → 7º → 8º → 9º → 1º → 2º → 3º."}</p>
+    </fieldset>}
+    {/* salva o rascunho e sorteia a chave */}
+    <div className="pev-gerar-chave"><div><strong>{participantes.filter((item) => item.ativo).length} turmas ativas</strong><p>{mataMata ? "Sorteie os confrontos e revise a chave antes de publicar. Para aplicar novas regras à chave existente, sorteie novamente." : "Adicione fases e jogos para montar os confrontos manualmente."}</p></div>{mataMata && <button type="button" className="pev-botao pev-botao--primario" disabled={!podeGerar || salvando || participantes.filter((item) => item.ativo).length < 2} onClick={() => void gerar()}>{salvando ? "Aguarde…" : temChave ? "Sortear novamente" : "Sortear chave inicial"}</button>}</div>
+  </>;
+}
 
-function EtapaChave({ detalhes, participantes, fase, setFase, salvarFase, partida, setPartida, salvarPartida, abrirResultado, salvando }: { detalhes: DetalhesCampeonato | null; participantes: Participante[]; fase: FormularioFase | null; setFase: (valor: FormularioFase | null) => void; salvarFase: (e: FormEvent<HTMLFormElement>) => void; partida: FormularioPartida | null; setPartida: (valor: FormularioPartida | null) => void; salvarPartida: (e: FormEvent<HTMLFormElement>) => void; abrirResultado: (jogo: Partida) => void; salvando: boolean }) {
+function EtapaChave({ detalhes, participantes, fase, setFase, salvarFase, partida, setPartida, salvarPartida, abrirResultado, trocar, salvando, erro, sucesso }: { erro?: string; sucesso?: string; detalhes: DetalhesCampeonato | null; participantes: Participante[]; fase: FormularioFase | null; setFase: (valor: FormularioFase | null) => void; salvarFase: (e: FormEvent<HTMLFormElement>) => void; partida: FormularioPartida | null; setPartida: (valor: FormularioPartida | null) => void; salvarPartida: (e: FormEvent<HTMLFormElement>) => void; abrirResultado: (jogo: Partida) => void; trocar: (origem: PosicaoChave, destino: PosicaoChave) => void; salvando: boolean }) {
   const fases = detalhes?.fases ?? [];
   const jogos = detalhes?.partidas ?? [];
   const chavePublicada = Boolean(detalhes?.item.chavePublicada);
@@ -573,8 +740,9 @@ function EtapaChave({ detalhes, participantes, fase, setFase, salvarFase, partid
       </div>
     </div>
 
+    {!!fases.length && <div className="ic-fases-editor" aria-label="Editar fases do campeonato">{[...fases].sort((a, b) => a.ordem - b.ordem).map((item) => <button type="button" className="pev-botao" key={item.id} onClick={() => setFase({ ...item })} disabled={salvando || Boolean(fase || partida)}>Editar {item.nome}</button>)}</div>}
     {fase && <form className="pev-formulario-inline" onSubmit={salvarFase}>
-      <h3>Nova fase</h3>
+      <h3>{fase.id === undefined ? "Nova fase" : "Editar fase"}</h3>
       <div className="pev-grade-campos pev-grade-campos--quatro">
         <Campo rotulo="Nome"><input value={fase.nome} onChange={(e) => setFase({ ...fase, nome: e.target.value })} required /></Campo>
         <Campo rotulo="Tipo"><select value={fase.tipo} onChange={(e) => setFase({ ...fase, tipo: e.target.value })}><option value="eliminatoria">Eliminatória</option><option value="grupos">Grupos</option><option value="classificacao">Classificação</option><option value="terceiro_lugar">Terceiro lugar</option><option value="personalizada">Personalizada</option></select></Campo>
@@ -602,16 +770,158 @@ function EtapaChave({ detalhes, participantes, fase, setFase, salvarFase, partid
       <div><button type="button" className="pev-botao" onClick={() => setPartida(null)}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>Salvar jogo</button></div>
     </form>}
 
-    <PreviaChave fases={fases} partidas={jogos} abrirResultado={abrirResultado} />
-    {!fases.length && <EstadoVazio titulo="Chave ainda não gerada" texto="Volte à etapa de formato para gerar o mata-mata ou adicione uma fase manualmente." />}
+    <PreviaChave fases={fases} partidas={jogos} abrirResultado={abrirResultado} trocar={trocar} salvando={salvando} erro={erro} sucesso={sucesso} />
+    {!fases.length && <EstadoVazio titulo="Chave ainda não gerada" texto="Volte à etapa de turmas para gerar o mata-mata ou adicione uma fase manualmente." />}
   </>;
 }
 
-function PreviaChave({ fases, partidas, abrirResultado }: { fases: Fase[]; partidas: Partida[]; abrirResultado: (jogo: Partida) => void }) { return <div className="pev-chave" tabIndex={0} aria-label="Prévia rolável da chave do campeonato">{[...fases].sort((a, b) => a.ordem - b.ordem).map((fase) => <section key={fase.id}><h3>{fase.nome}</h3><div>{partidas.filter((jogo) => String(jogo.faseId) === String(fase.id)).sort((a, b) => a.ordem - b.ordem).map((jogo) => <article key={jogo.id}><small>{jogo.rodada || `Jogo ${jogo.ordem}`} · {statusLegivel(jogo.situacao)}</small><p className={String(jogo.vencedorId) === String(jogo.participanteAId) ? "vencedor" : ""}><span>{jogo.participanteANome || "A definir"}</span><strong>{jogo.placarA ?? "—"}</strong></p><p className={String(jogo.vencedorId) === String(jogo.participanteBId) ? "vencedor" : ""}><span>{jogo.participanteBNome || "A definir"}</span><strong>{jogo.placarB ?? "—"}</strong></p>{jogo.vencedorNome && <em>Avança: {jogo.vencedorNome}</em>}<button type="button" className="pev-botao" onClick={() => abrirResultado(jogo)}>{jogo.vencedorId ? "Corrigir resultado" : "Registrar resultado"}</button></article>)}</div></section>)}</div>; }
-function EtapaRevisao({ formulario, participantes, detalhes }: { formulario: FormularioCampeonato; participantes: Participante[]; detalhes: DetalhesCampeonato | null }) { const alertas = [!formulario.nome && "Nome não informado", !formulario.modalidade && "Modalidade não informada", participantes.length < 2 && "Menos de dois participantes", !(detalhes?.fases.length) && "Chave ainda não gerada", !formulario.dataInicial && "Data inicial não informada"].filter(Boolean) as string[]; return <><div className="pev-revisao"><article><span>Campeonato</span><strong>{formulario.nome || "Não informado"}</strong><p>{[formulario.edicao || formulario.ano, formulario.modalidade, formulario.categoria].filter(Boolean).join(" · ") || "Complete as informações básicas."}</p></article><article><span>Participantes</span><strong>{participantes.length}</strong><p>{participantes.map((item) => item.nomeExibicao || item.nome).join(", ") || "Nenhum participante"}</p></article><article><span>Estrutura</span><strong>{detalhes?.fases.length ?? 0} fase(s) · {detalhes?.partidas.length ?? 0} jogo(s)</strong><p>{formatos.find(([valor]) => valor === formulario.formato)?.[1]}</p></article></div>{alertas.length ? <div className="pev-aviso pev-aviso--atencao"><strong>Revise antes de publicar:</strong><ul>{alertas.map((alerta) => <li key={alerta}>{alerta}</li>)}</ul></div> : <p className="pev-aviso pev-aviso--sucesso">Informações essenciais preenchidas. Confira a prévia da chave e siga para a publicação.</p>}<PreviaChave fases={detalhes?.fases ?? []} partidas={detalhes?.partidas ?? []} abrirResultado={() => undefined} /></>; }
-function EtapaPublicacao({ formulario, mudar, participantes, detalhes, salvar, campeaoSelecionado, setCampeaoSelecionado, definirCampeao, salvando }: { formulario: FormularioCampeonato; mudar: <K extends keyof FormularioCampeonato>(chave: K, valor: FormularioCampeonato[K]) => void; participantes: Participante[]; detalhes: DetalhesCampeonato | null; salvar: () => void; campeaoSelecionado: string; setCampeaoSelecionado: (valor: string) => void; definirCampeao: () => void; salvando: boolean }) { const pronto = Boolean(formulario.nome && formulario.modalidade && participantes.length >= 2); return <div className="pev-publicar-campeonato"><h3>Controle de visibilidade</h3><label><input type="checkbox" checked={formulario.chavePublicada} onChange={(e) => mudar("chavePublicada", e.target.checked)} /><span><strong>Publicar a chave e os jogos</strong><small>A página poderá mostrar fases, confrontos e placares marcados como públicos.</small></span></label><label><input type="checkbox" checked={formulario.publicado} onChange={(e) => mudar("publicado", e.target.checked)} /><span><strong>Publicar o campeonato no portal</strong><small>Desmarque para manter todo o campeonato como rascunho.</small></span></label><div className="pev-resumo-publicacao"><strong>{detalhes?.partidas.length ?? 0} jogos · {participantes.length} participantes</strong><p>{pronto ? "Ao publicar, revise cada jogo que ainda está com data ou participante a definir." : "Complete nome, modalidade e ao menos dois participantes."}</p></div><button type="button" className="pev-botao pev-botao--primario" onClick={salvar} disabled={!pronto || salvando}>{salvando ? "Publicando…" : "Salvar e publicar campeonato"}</button><div className="pev-encerrar-campeonato"><h3>Encerrar campeonato</h3><p>Use somente depois de conferir todos os resultados. Esta ação registra o campeão e muda a situação para encerrado.</p><label><span>Campeão</span><select value={campeaoSelecionado} onChange={(e) => setCampeaoSelecionado(e.target.value)}><option value="">Escolha o participante</option>{participantes.filter((item) => item.ativo && item.id !== undefined).map((item) => <option key={item.id} value={String(item.id)}>{item.nomeExibicao || item.nome}</option>)}</select></label><button type="button" className="pev-botao pev-botao--perigoso" onClick={definirCampeao} disabled={!campeaoSelecionado || salvando}>Registrar campeão e encerrar</button></div></div>; }
+function PreviaChave({ fases, partidas, abrirResultado, trocar, salvando, erro, sucesso }: { erro?: string; sucesso?: string; fases: Fase[]; partidas: Partida[]; abrirResultado?: (jogo: Partida) => void; trocar?: (origem: PosicaoChave, destino: PosicaoChave) => void; salvando?: boolean }) {
+  const podeTrocar = trocar && !partidas.some((jogo) => jogo.situacao === "em_andamento" || jogo.placarA !== null || jogo.placarB !== null || (jogo.vencedorId !== null && jogo.formaVitoria !== "bye"));
+  return <ChaveInterativa permitirTelaCheia erro={erro} sucesso={sucesso} fases={fases.map((fase) => ({ ...fase, id: Number(fase.id) }))} partidas={partidas.map((jogo) => ({ ...jogo, id: Number(jogo.id), faseId: Number(jogo.faseId), participanteAId: jogo.participanteAId === null ? null : Number(jogo.participanteAId), participanteBId: jogo.participanteBId === null ? null : Number(jogo.participanteBId), vencedorId: jogo.vencedorId === null ? null : Number(jogo.vencedorId), proximaPartidaId: jogo.proximaPartidaId === null ? null : Number(jogo.proximaPartidaId), placarPublicado: true }))} abrirJogo={abrirResultado ? (jogo) => { const original = partidas.find((item) => String(item.id) === String(jogo.id)); if (original) abrirResultado(original); } : undefined} trocar={podeTrocar ? trocar : undefined} desabilitado={salvando} />;
+}
 
-function FormularioResultado({ jogo, fases, partidas, participantes, resultado, setResultado, salvar, fechar, salvando }: {
+function EntradaTurmas({ adicionar, salvando }: { adicionar: (nomes: string[]) => Promise<boolean>; salvando: boolean }) {
+  const [texto, setTexto] = useState("");
+  const turmas = separarTurmas(texto);
+  const invalidas = turmas.filter((turma) => !padraoTurmaInterclasse.test(turma));
+  return <form className="ic-lote" onSubmit={async (evento) => {
+    evento.preventDefault();
+    if (salvando || !turmas.length || turmas.length > 128 || invalidas.length) return;
+    if (await adicionar(turmas)) setTexto("");
+  }}>
+    <h3>Adicione todas as turmas de uma vez</h3>
+    <p>Separe por espaços ou linhas. Use a série (6 a 9 ou 1 a 3) seguida de 1 a 3 letras, como <strong>6A 9B 1J 2DS</strong>. Ao adicionar, cada nome vira um participante com o nome cadastrado; os campos opcionais ficam vazios.</p>
+    <label><span className="somente-leitor">Lista de turmas</span><textarea rows={4} value={texto} aria-invalid={invalidas.length > 0} aria-describedby="ic-formato-turmas" onChange={(e) => setTexto(e.target.value.toUpperCase())} placeholder="6A 7B 8C 9A 1J 2DS 3C" disabled={salvando} maxLength={12000} /></label>
+    <div className="ic-turmas" aria-label="Turmas que serão adicionadas">{turmas.slice(0, 128).map((turma, indice) => <span className={padraoTurmaInterclasse.test(turma) ? undefined : "ic-turma-invalida"} key={indice}>{turma}</span>)}</div>
+    <p id="ic-formato-turmas" role={invalidas.length ? "alert" : undefined}>{invalidas.length ? `Corrija as turmas destacadas: ${invalidas.slice(0, 8).join(", ")}. Exemplo válido: 2DS.` : "Cada turma será cadastrada com seu nome. Nome exibido e apelido continuam opcionais."}</p>
+    <div className="ic-lote-acoes"><small aria-live="polite">{turmas.length} turmas identificadas · até 128 por campeonato</small><button type="submit" className="pev-botao pev-botao--primario" disabled={!turmas.length || salvando || turmas.length > 128 || invalidas.length > 0}>{salvando ? "Adicionando…" : "Adicionar turmas"}</button></div>
+  </form>;
+}
+
+function EtapaRevisao({ formulario, participantes, detalhes }: { formulario: FormularioCampeonato; participantes: Participante[]; detalhes: DetalhesCampeonato | null }) { const alertas = [!formulario.nome && "Nome não informado", !formulario.modalidade && "Modalidade não informada", participantes.length < 2 && "Menos de dois participantes", !(detalhes?.fases.length) && "Chave ainda não gerada", !formulario.dataInicial && "Data inicial não informada"].filter(Boolean) as string[]; return <><div className="pev-revisao"><article><span>Campeonato</span><strong>{formulario.nome || "Não informado"}</strong><p>{[formulario.edicao || formulario.ano, formulario.modalidade, formulario.categoria].filter(Boolean).join(" · ") || "Complete as informações básicas."}</p></article><article><span>Participantes</span><strong>{participantes.length}</strong><p>{participantes.map((item) => item.nomeExibicao || item.nome).join(", ") || "Nenhum participante"}</p></article><article><span>Estrutura</span><strong>{detalhes?.fases.length ?? 0} fase(s) · {detalhes?.partidas.length ?? 0} jogo(s)</strong><p>{formatos.find(([valor]) => valor === formulario.formato)?.[1]}</p></article></div>{alertas.length ? <div className="pev-aviso pev-aviso--atencao"><strong>Revise antes de publicar:</strong><ul>{alertas.map((alerta) => <li key={alerta}>{alerta}</li>)}</ul></div> : <p className="pev-aviso pev-aviso--sucesso">Informações essenciais preenchidas. Confira a prévia da chave e siga para a publicação.</p>}<PreviaChave fases={detalhes?.fases ?? []} partidas={detalhes?.partidas ?? []}  /></>; }
+// reúne as ações finais sem misturar rascunho e publicação
+function EtapaPublicacao({ formulario, mudar, participantes, detalhes, salvar, salvarRascunho, campeaoSelecionado, setCampeaoSelecionado, definirCampeao, salvando }: {
+  formulario: FormularioCampeonato;
+  mudar: <K extends keyof FormularioCampeonato>(chave: K, valor: FormularioCampeonato[K]) => void;
+  participantes: Participante[];
+  detalhes: DetalhesCampeonato | null;
+  salvar: () => void;
+  salvarRascunho: () => void;
+  campeaoSelecionado: string;
+  setCampeaoSelecionado: (valor: string) => void;
+  definirCampeao: () => void;
+  salvando: boolean;
+}) {
+  const pronto = Boolean(formulario.nome && formulario.modalidade && participantes.length >= 2);
+  return <div className="pev-publicar-campeonato">
+    <h3>Publicar no portal</h3>
+    <label><input type="checkbox" checked={formulario.chavePublicada} onChange={(evento) => mudar("chavePublicada", evento.target.checked)} /><span><strong>Publicar a chave e os jogos</strong><small>A página poderá mostrar fases, confrontos e placares marcados como públicos.</small></span></label>
+    <div className="pev-resumo-publicacao"><strong>{detalhes?.partidas.length ?? 0} jogos · {participantes.length} participantes</strong><p>{pronto ? "Confira os dados e escolha como salvar. Publicar disponibiliza esta edição no portal; salvar rascunho mantém a edição apenas no painel." : "Complete nome, modalidade e ao menos dois participantes."}</p></div>
+    <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={salvarRascunho} disabled={salvando}>{salvando ? "Salvando…" : "Salvar rascunho"}</button><button type="button" className="pev-botao pev-botao--primario" onClick={salvar} disabled={!pronto || salvando}>{salvando ? "Salvando…" : "Salvar e publicar campeonato"}</button></div>
+    <div className="pev-encerrar-campeonato"><h3>Encerrar campeonato</h3><p>Use somente depois de conferir todos os resultados. Esta ação registra o campeão e muda a situação para encerrado.</p><label><span>Campeão</span><select value={campeaoSelecionado} onChange={(evento) => setCampeaoSelecionado(evento.target.value)}><option value="">Escolha o participante</option>{participantes.filter((item) => item.ativo && item.id !== undefined).map((item) => <option key={item.id} value={String(item.id)}>{item.nomeExibicao || item.nome}</option>)}</select></label><button type="button" className="pev-botao pev-botao--perigoso" onClick={definirCampeao} disabled={!campeaoSelecionado || salvando}>Registrar campeão e encerrar</button></div>
+  </div>;
+}
+
+// mostra o resultado da gravação em uma janela centralizada
+function ConfirmacaoInterclasse({ confirmacao, fechar }: { confirmacao: ConfirmacaoSalva; fechar: () => void }) {
+  const dialogo = useRef<HTMLDialogElement>(null);
+  const titulo = useId();
+  const descricao = useId();
+  // abre a janela e devolve o foco ao sair
+  useEffect(() => {
+    const elemento = dialogo.current;
+    elemento?.showModal();
+    return () => {
+      elemento?.close();
+      document.querySelector<HTMLButtonElement>(".pev-painel .pev-cabecalho button")?.focus();
+    };
+  }, []);
+  return <dialog ref={dialogo} className={`ic-modal ic-confirmacao${confirmacao.tipo === "rascunho" ? " ic-confirmacao-rascunho" : ""}`} aria-labelledby={titulo} aria-describedby={descricao} onCancel={fechar}>
+    <span className="ic-confirmacao-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m6 12 4 4 8-8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+    <h2 id={titulo}>{confirmacao.titulo}</h2>
+    <p id={descricao}>{confirmacao.mensagem}</p>
+    <button type="button" className="pev-botao ic-confirmacao-botao" onClick={fechar} autoFocus>OK, continuar</button>
+  </dialog>;
+}
+
+// edita os dados do jogo sem mostrar os controles da chave
+function FormularioResultadoRapido({ jogo, resultado, setResultado, salvar, fechar, salvando, erro }: {
+  jogo: Partida;
+  resultado: ResultadoPartida;
+  setResultado: (valor: ResultadoPartida) => void;
+  salvar: (evento: FormEvent<HTMLFormElement>) => void;
+  fechar: () => void;
+  salvando: boolean;
+  erro: string;
+}) {
+  const dialogo = useRef<HTMLDialogElement>(null);
+  const titulo = useId();
+  // mantém o jogo acima da chave, inclusive em tela cheia
+  useEffect(() => {
+    const elemento = dialogo.current;
+    const focoAnterior = document.activeElement as HTMLElement | null;
+    elemento?.showModal();
+    return () => { elemento?.close(); focoAnterior?.focus(); };
+  }, []);
+  // as folgas mantêm o vencedor automático
+  const folga = jogo.formaVitoria === "bye";
+  const temAdversarios = Boolean(resultado.participanteAId && resultado.participanteBId);
+  const final = resultado.situacao === "encerrada" || resultado.situacao === "wo";
+  const corrigindo = !folga && (jogo.vencedorId !== null || jogo.placarA !== null || jogo.placarB !== null);
+  const nomeA = jogo.participanteANome || "A definir";
+  const nomeB = jogo.participanteBNome || (folga ? "Folga" : "A definir");
+
+  // sugere o vencedor pelo placar e permite escolher em caso de empate
+  function mudarPlacar(campo: "placarA" | "placarB", valor: string) {
+    const novo = { ...resultado, [campo]: valor };
+    if (novo.placarA !== "" && novo.placarB !== "") {
+      novo.vencedorId = Number(novo.placarA) > Number(novo.placarB) ? novo.participanteAId : Number(novo.placarB) > Number(novo.placarA) ? novo.participanteBId : "";
+      novo.situacao = "encerrada";
+      novo.formaVitoria = "Placar";
+    }
+    setResultado(novo);
+  }
+
+  return <dialog ref={dialogo} className="ic-modal ic-modal-admin ic-modal-atualizacao" aria-labelledby={titulo} onCancel={(evento) => { evento.preventDefault(); fechar(); }}>
+    <form className="pev-resultado" onSubmit={salvar}>
+      <div className="pev-formulario__topo"><div><small>ATUALIZAR JOGO · {jogo.rodada || `Jogo ${jogo.ordem}`}</small><h3 id={titulo}>{nomeA} × {nomeB}</h3></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar} disabled={salvando}>Fechar</button></div>
+      <MensagensPainel erro={erro} />
+      {folga && <p className="pev-aviso pev-aviso--atencao">Esta turma avança por folga. Você pode atualizar os detalhes; o avanço permanece automático.</p>}
+      {!folga && !temAdversarios && <p className="pev-aviso pev-aviso--atencao">Os adversários serão preenchidos pelos jogos anteriores. Você já pode informar a data e os detalhes.</p>}
+      {corrigindo && <p className="pev-aviso pev-aviso--atencao">Este jogo já tem resultado. Informe o motivo da correção; se ela afetar outros jogos, você verá uma confirmação antes de enviar.</p>}
+      <fieldset disabled={salvando} className="ic-campos-atualizacao">
+        {!folga && <>
+          <div className="ic-placar-edicao">
+            <Campo rotulo={nomeA}><input type="number" inputMode="numeric" min={0} step={1} value={resultado.placarA} onChange={(evento) => mudarPlacar("placarA", evento.target.value)} disabled={!temAdversarios || resultado.situacao === "wo"} required={final && resultado.situacao !== "wo"} placeholder="—" aria-label={`Placar de ${nomeA}`} /></Campo>
+            <span aria-hidden="true">×</span>
+            <Campo rotulo={nomeB}><input type="number" inputMode="numeric" min={0} step={1} value={resultado.placarB} onChange={(evento) => mudarPlacar("placarB", evento.target.value)} disabled={!temAdversarios || resultado.situacao === "wo"} required={final && resultado.situacao !== "wo"} placeholder="—" aria-label={`Placar de ${nomeB}`} /></Campo>
+          </div>
+          <div className="pev-grade-campos">
+            <Campo rotulo="Situação"><select value={resultado.situacao} onChange={(evento) => setResultado({ ...resultado, situacao: evento.target.value, ...(evento.target.value === "wo" ? { placarA: "", placarB: "", formaVitoria: "W.O." } : { formaVitoria: "" }) })}><option value="data_a_definir">Data a definir</option><option value="agendada">Agendada</option><option value="em_andamento" disabled={!temAdversarios}>Em andamento</option><option value="encerrada" disabled={!temAdversarios}>Encerrada</option><option value="wo" disabled={!temAdversarios}>Vitória por W.O.</option><option value="adiada">Adiada</option><option value="cancelada">Cancelada</option></select></Campo>
+            {final && <Campo rotulo="Vencedor" dica="Em caso de empate, escolha quem avançou no desempate."><select value={resultado.vencedorId} onChange={(evento) => setResultado({ ...resultado, vencedorId: evento.target.value })} required><option value="">Escolha o vencedor</option>{resultado.participanteAId && <option value={resultado.participanteAId}>{nomeA}</option>}{resultado.participanteBId && <option value={resultado.participanteBId}>{nomeB}</option>}</select></Campo>}
+          </div>
+        </>}
+        <div className="pev-grade-campos">
+          <Campo rotulo="Data"><input type="date" value={resultado.data} onChange={(evento) => setResultado({ ...resultado, data: evento.target.value })} /></Campo>
+          <Campo rotulo="Horário"><input type="time" value={resultado.horario} onChange={(evento) => setResultado({ ...resultado, horario: evento.target.value })} /></Campo>
+          <Campo rotulo="Local" largo><input value={resultado.local} onChange={(evento) => setResultado({ ...resultado, local: evento.target.value })} /></Campo>
+          <Campo rotulo="Resumo do jogo" largo><textarea rows={3} value={resultado.resumo} onChange={(evento) => setResultado({ ...resultado, resumo: evento.target.value })} placeholder="Conte como foi a partida…" /></Campo>
+        </div>
+        <details className="ic-detalhes-atualizacao"><summary>Mais informações do jogo</summary><div className="pev-grade-campos">
+          {final && !folga && <Campo rotulo="Forma da vitória" largo><input value={resultado.formaVitoria} onChange={(evento) => setResultado({ ...resultado, formaVitoria: evento.target.value })} placeholder="Placar, pênaltis, desempate…" /></Campo>}
+          <Campo rotulo="Destaques" largo><textarea rows={3} value={resultado.destaques} onChange={(evento) => setResultado({ ...resultado, destaques: evento.target.value })} /></Campo>
+          <Campo rotulo="Observações públicas" largo><textarea rows={3} value={resultado.observacoesPublicas} onChange={(evento) => setResultado({ ...resultado, observacoesPublicas: evento.target.value })} /></Campo>
+          <Campo rotulo="Observações internas" dica="Visíveis apenas no painel." largo><textarea rows={3} value={resultado.observacoesInternas} onChange={(evento) => setResultado({ ...resultado, observacoesInternas: evento.target.value })} /></Campo>
+        </div></details>
+        {corrigindo && <Campo rotulo="Motivo da correção"><textarea rows={2} value={resultado.motivo} onChange={(evento) => setResultado({ ...resultado, motivo: evento.target.value })} required /></Campo>}
+        <p className="ic-aviso-envio">Ao enviar, os dados públicos deste jogo serão atualizados no portal.</p>
+        <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={fechar}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario">{salvando ? "Enviando…" : "Enviar"}</button></div>
+      </fieldset>
+    </form>
+  </dialog>;
+}
+
+function FormularioResultado({ jogo, fases, partidas, participantes, resultado, setResultado, salvar, fechar, salvando, erro }: {
   jogo: Partida;
   fases: Fase[];
   partidas: Partida[];
@@ -621,15 +931,24 @@ function FormularioResultado({ jogo, fases, partidas, participantes, resultado, 
   salvar: (e: FormEvent<HTMLFormElement>) => void;
   fechar: () => void;
   salvando: boolean;
+  erro: string;
 }) {
+  const dialogo = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const elemento = dialogo.current;
+    const focoAnterior = document.activeElement as HTMLElement | null;
+    elemento?.showModal();
+    return () => { elemento?.close(); focoAnterior?.focus(); };
+  }, []);
   const corrigindo = jogo.vencedorId !== null || jogo.placarA !== null || jogo.placarB !== null;
   const final = resultado.situacao === "encerrada" || resultado.situacao === "wo";
   const participantesAtivos = participantes.filter((item) => item.ativo && item.id !== undefined);
   const nomeParticipante = (id: string) => participantesAtivos.find((item) => String(item.id) === id)?.nomeExibicao || participantesAtivos.find((item) => String(item.id) === id)?.nome || "Participante";
   const proximasPartidas = partidas.filter((item) => String(item.id) !== String(jogo.id));
 
-  return <form className="pev-resultado" onSubmit={salvar}>
-    <div className="pev-formulario__topo"><div><small>{corrigindo ? "CORREÇÃO COM HISTÓRICO" : "EDIÇÃO DO JOGO E RESULTADO"}</small><h3>{jogo.participanteANome || "A definir"} × {jogo.participanteBNome || "A definir"}</h3></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>Fechar</button></div>
+  return <dialog ref={dialogo} className="ic-modal ic-modal-admin" aria-labelledby="ic-editor-jogo" onCancel={(e) => { e.preventDefault(); fechar(); }}><form className="pev-resultado" onSubmit={salvar}>
+    <div className="pev-formulario__topo"><div><small>{corrigindo ? "CORREÇÃO COM HISTÓRICO" : "EDIÇÃO DO JOGO E RESULTADO"}</small><h3 id="ic-editor-jogo">{jogo.participanteANome || "A definir"} × {jogo.participanteBNome || "A definir"}</h3></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>Fechar</button></div>
+    <MensagensPainel erro={erro} />
     {corrigindo && <p className="pev-aviso pev-aviso--atencao">Qualquer alteração deste jogo será registrada no histórico e exige um motivo. Mudar vencedor, participantes ou avanço pode afetar partidas posteriores e exigir nova confirmação.</p>}
     {corrigindo && !final && <p className="pev-aviso pev-aviso--atencao">Ao retirar o estado final, o placar, o vencedor e a forma de vitória serão limpos com registro histórico.</p>}
     <div className="pev-grade-campos pev-grade-campos--tres">
@@ -654,10 +973,10 @@ function FormularioResultado({ jogo, fases, partidas, participantes, resultado, 
       {corrigindo && <Campo rotulo="Motivo da correção" dica="Obrigatório para qualquer mudança após existir resultado." largo><textarea rows={3} value={resultado.motivo} onChange={(e) => setResultado({ ...resultado, motivo: e.target.value })} required /></Campo>}
     </div>
     <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={fechar}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>{salvando ? "Verificando impacto…" : corrigindo ? "Verificar e salvar correção" : final ? "Registrar resultado" : "Salvar jogo"}</button></div>
-  </form>;
+  </form></dialog>;
 }
 
-function normalizarCampeonato(item: Record<string, unknown>): Campeonato { const campeao = item.campeao && typeof item.campeao === "object" ? item.campeao as Record<string, unknown> : {}; return { id: (item.id as Identificador) ?? crypto.randomUUID(), slug: obterTexto(item, "slug"), nome: obterTexto(item, "nome", "titulo"), edicao: obterTexto(item, "edicao"), ano: item.ano === null || item.ano === undefined ? null : obterNumero(item, "ano"), modalidade: obterTexto(item, "modalidade"), categoria: obterTexto(item, "categoria"), turno: obterTexto(item, "turno"), descricao: obterTexto(item, "descricao"), regulamento: obterTexto(item, "regulamento"), organizacao: obterTexto(item, "organizacao"), locais: obterTexto(item, "locais", "local"), observacoesPublicas: obterTexto(item, "observacoesPublicas"), observacoesInternas: obterTexto(item, "observacoesInternas"), formato: obterTexto(item, "formato") || "mata_mata", situacao: obterTexto(item, "situacao") || "proximo", faseAtual: obterTexto(item, "faseAtual"), dataInicial: obterTexto(item, "dataInicial"), dataFinal: obterTexto(item, "dataFinal"), imagemCapaUrl: obterTexto(item, "imagemCapaUrl"), chavePublicada: obterBooleano(item, "chavePublicada"), publicado: obterBooleano(item, "publicado"), ativo: obterBooleano(item, "ativo", true), campeaoNome: obterTexto(campeao, "nome") || obterTexto(item, "campeaoNome"), atualizadoEm: obterTexto(item, "atualizadoEm") || undefined }; }
+function normalizarCampeonato(item: Record<string, unknown>): Campeonato { const campeao = item.campeao && typeof item.campeao === "object" ? item.campeao as Record<string, unknown> : {}; return { id: (item.id as Identificador) ?? crypto.randomUUID(), slug: obterTexto(item, "slug"), nome: obterTexto(item, "nome", "titulo"), edicao: obterTexto(item, "edicao"), ano: item.ano === null || item.ano === undefined ? null : obterNumero(item, "ano"), modalidade: obterTexto(item, "modalidade"), categoria: obterTexto(item, "categoria"), turno: obterTexto(item, "turno"), descricao: obterTexto(item, "descricao"), premiacao: obterTexto(item, "premiacao"), regulamento: obterTexto(item, "regulamento"), organizacao: obterTexto(item, "organizacao"), locais: obterTexto(item, "locais", "local"), observacoesPublicas: obterTexto(item, "observacoesPublicas"), observacoesInternas: obterTexto(item, "observacoesInternas"), formato: obterTexto(item, "formato") || "mata_mata", situacao: obterTexto(item, "situacao") || "proximo", faseAtual: obterTexto(item, "faseAtual"), dataInicial: obterTexto(item, "dataInicial"), dataFinal: obterTexto(item, "dataFinal"), imagemCapaUrl: obterTexto(item, "imagemCapaUrl"), chavePublicada: obterBooleano(item, "chavePublicada"), publicado: obterBooleano(item, "publicado"), ativo: obterBooleano(item, "ativo", true), diferencaMaximaAnos: item.diferencaMaximaAnos == null ? null : obterNumero(item, "diferencaMaximaAnos"), campeaoNome: obterTexto(campeao, "nome") || obterTexto(item, "campeaoNome"), atualizadoEm: obterTexto(item, "atualizadoEm") || undefined }; }
 function normalizarDetalhes(resposta: Record<string, unknown>): DetalhesCampeonato { const item = resposta.item && typeof resposta.item === "object" ? resposta.item as Record<string, unknown> : resposta; return { item: normalizarCampeonato(item), participantes: (Array.isArray(resposta.participantes) ? resposta.participantes as Record<string, unknown>[] : []).map((p) => ({ id: p.id as Identificador, nome: obterTexto(p, "nome"), nomeExibicao: obterTexto(p, "nomeExibicao"), apelido: obterTexto(p, "apelido"), posicaoInicial: obterNumero(p, "posicaoInicial"), ativo: obterBooleano(p, "ativo", true) })), fases: (Array.isArray(resposta.fases) ? resposta.fases as Record<string, unknown>[] : []).map((f) => ({ id: f.id as Identificador, nome: obterTexto(f, "nome"), ordem: obterNumero(f, "ordem"), tipo: obterTexto(f, "tipo"), quantidadeJogos: obterNumero(f, "quantidadeJogos"), publicado: obterBooleano(f, "publicado"), ativo: obterBooleano(f, "ativo", true) })), partidas: (Array.isArray(resposta.partidas) ? resposta.partidas as Record<string, unknown>[] : []).map(normalizarPartida), documentos: (Array.isArray(resposta.documentos) ? resposta.documentos as Record<string, unknown>[] : []).map(normalizarDocumentoCampeonato), atualizacoes: (Array.isArray(resposta.atualizacoes) ? resposta.atualizacoes as Record<string, unknown>[] : []).map(normalizarAtualizacaoCampeonato) }; }
 function normalizarPartida(p: Record<string, unknown>): Partida { const numeroOuNulo = (chave: string) => p[chave] === null || p[chave] === undefined ? null : Number(p[chave]); return { id: p.id as Identificador, faseId: p.faseId as Identificador, rodada: obterTexto(p, "rodada"), ordem: obterNumero(p, "ordem"), participanteAId: p.participanteAId as Identificador | null, participanteBId: p.participanteBId as Identificador | null, participanteANome: obterTexto(p, "participanteANome"), participanteBNome: obterTexto(p, "participanteBNome"), placarA: numeroOuNulo("placarA"), placarB: numeroOuNulo("placarB"), vencedorId: p.vencedorId as Identificador | null, vencedorNome: obterTexto(p, "vencedorNome"), formaVitoria: obterTexto(p, "formaVitoria"), data: obterTexto(p, "data"), horario: obterTexto(p, "horario"), local: obterTexto(p, "local"), situacao: obterTexto(p, "situacao") || "agendada", placarPublicado: obterBooleano(p, "placarPublicado"), resumo: obterTexto(p, "resumo"), destaques: obterTexto(p, "destaques"), observacoesPublicas: obterTexto(p, "observacoesPublicas"), observacoesInternas: obterTexto(p, "observacoesInternas"), proximaPartidaId: p.proximaPartidaId as Identificador | null, proximaPosicao: (obterTexto(p, "proximaPosicao") as "" | "a" | "b") || "", publicado: obterBooleano(p, "publicado") }; }
 function normalizarDocumentoCampeonato(item: Record<string, unknown>): DocumentoCampeonato { return { id: item.id as Identificador | undefined, titulo: obterTexto(item, "titulo"), tipo: obterTexto(item, "tipo") || "anexo", descricao: obterTexto(item, "descricao"), arquivoUrl: obterTexto(item, "arquivoUrl", "url"), linkExterno: obterTexto(item, "linkExterno", "link"), ordem: obterNumero(item, "ordem"), publicado: obterBooleano(item, "publicado"), ativo: obterBooleano(item, "ativo", true) }; }

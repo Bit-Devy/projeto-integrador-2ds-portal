@@ -173,6 +173,11 @@
   grid-template-columns: minmax(230px, 2fr) repeat(5, minmax(105px, 1fr));
 }
 
+/* organiza os filtros das reuniões sem misturar o histórico */
+.pev-filtros--reunioes {
+  grid-template-columns: minmax(200px, 2fr) repeat(4, minmax(110px, 1fr));
+}
+
 .pev-filtros label,
 .pev-adicionar-inline label,
 .pev-opcoes-votacao label,
@@ -1064,7 +1069,8 @@
 }
 
 @media (max-width: 1180px) {
-  .pev-filtros--amplos {
+  .pev-filtros--amplos,
+  .pev-filtros--reunioes {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Children, useMemo, useRef, useState } from "react";
+import { Children, useEffect, useMemo, useRef, useState } from "react";
 import type { ClassificacaoPublica, DocumentoPublico, FasePublica, InterclassePublico, JogoPublico, ParticipantePublico, RespostaLista } from "../eventos/modelo-publico";
 import { classeSituacao, extrairItens, formatarData, formatarDataHora, rotuloSituacao, rotuloTurno, temTexto, textoParticipante, urlPublica } from "../eventos/modelo-publico";
 import { useConsultaPublica } from "../eventos/useConsultaPublica";
+import ChaveInterativa from "./ChaveInterativa";
+import { simboloEsporte } from "../eventos/interclasse-utilitarios";
 import CabecalhoPagina from "./CabecalhoPagina";
 import { BlocoTexto, GaleriaPublica, ListaDefinicoes, ListaDocumentos, VoltarPara } from "./ElementosEventos";
 import { EstadoCarregando, EstadoErro, EstadoVazio, PaginacaoPublica } from "./EstadoConsultaPublica";
@@ -55,11 +57,13 @@ function CartaoInterclasse({ campeonato }: { campeonato: InterclassePublico }) {
   const conteudo = <>
     {imagem && <img className="capa-cartao-evento" src={imagem} alt="" />}
     <div className="conteudo-cartao-evento">
+      <div className="ic-esporte"><span aria-hidden="true">{simboloEsporte(campeonato.modalidade)}</span><div><small>{campeonato.edicao || campeonato.ano || "INTERCLASSES"}</small><strong>{campeonato.modalidade || "Campeonato"}</strong></div></div>
       <span className={`selo-situacao situacao-${classeSituacao(campeonato.situacao)}`}>{resumoSituacao(campeonato)}</span>
       <h2>{campeonato.nome || "Interclasse com nome ainda não publicado"}</h2>
       <p className="metadados-interclasse">{[campeonato.edicao || (campeonato.ano !== undefined ? String(campeonato.ano) : ""), campeonato.modalidade, campeonato.categoria, rotuloTurno(campeonato.turno)].filter(temTexto).join(" · ")}</p>
       {proxima && <div className="proxima-partida-cartao"><small>Próximo jogo</small><strong>{nomeJogo(proxima, "a")} × {nomeJogo(proxima, "b")}</strong>{(proxima.data || proxima.horario) && <span>{[formatarData(proxima.data), proxima.horario].filter(Boolean).join(" · ")}</span>}</div>}
-      {destino && <b>Ver campeonato, chave e jogos ›</b>}
+      {!!campeonato.turmas?.length && <div className="ic-turmas">{campeonato.turmas.slice(0, 6).map((turma) => <span key={turma}>{turma}</span>)}{campeonato.turmas.length > 6 && <span>+{campeonato.turmas.length - 6} turmas</span>}</div>}
+      {destino && <div className="ic-cartao-base"><span>Explorar chave e jogos</span><span aria-hidden="true">→</span></div>}
     </div>
   </>;
   return destino ? <Link className="cartao-evento-publico cartao-interclasse" href={destino}>{conteudo}</Link> : <article className="cartao-evento-publico cartao-interclasse">{conteudo}</article>;
@@ -78,9 +82,9 @@ function CartaoResultadoRecente({ campeonato, jogo }: { campeonato: InterclasseP
   return destino ? <Link className="cartao-resumo-central cartao-resultado-recente" href={destino}>{conteudo}</Link> : <article className="cartao-resumo-central cartao-resultado-recente">{conteudo}</article>;
 }
 
-function SecaoInterclasses({ titulo, descricao, destino, vazio, carregando, erro, recarregar, children }: { titulo: string; descricao: string; destino: string; vazio: string; carregando: boolean; erro: string; recarregar: () => void; children?: React.ReactNode }) {
+function SecaoInterclasses({ titulo, descricao, destino, vazio, carregando, erro, recarregar, children, antesDaLista }: { titulo: string; descricao: string; destino: string; vazio: string; carregando: boolean; erro: string; recarregar: () => void; children?: React.ReactNode; antesDaLista?: React.ReactNode }) {
   const possuiConteudo = Children.count(children) > 0;
-  return <section className="secao-central-eventos secao-destaque-publica"><div className="cabecalho-lista-eventos"><div><h2>{titulo}</h2><p>{descricao}</p></div><Link href={destino}>Ver todos ›</Link></div>{carregando && <EstadoCarregando texto={`Carregando ${titulo.toLowerCase()}…`} />}{!carregando && erro && <EstadoErro mensagem={erro} tentarNovamente={recarregar} />}{!carregando && !erro && (possuiConteudo ? <div className="grade-resumos-central">{children}</div> : <EstadoVazio titulo="Nenhuma publicação nesta seção" texto={vazio} />)}</section>;
+  return <section className="secao-central-eventos secao-destaque-publica"><div className="cabecalho-lista-eventos"><div><h2>{titulo}</h2><p>{descricao}</p></div><Link href={destino}>Ver todos ›</Link></div>{antesDaLista}{carregando && <EstadoCarregando texto={`Carregando ${titulo.toLowerCase()}…`} />}{!carregando && erro && <EstadoErro mensagem={erro} tentarNovamente={recarregar} />}{!carregando && !erro && (possuiConteudo ? <div className="grade-resumos-central">{children}</div> : <EstadoVazio titulo="Nenhuma publicação nesta seção" texto={vazio} />)}</section>;
 }
 
 type FiltrosInterclasse = { situacao: string; ano: string; modalidade: string; categoria: string; turno: string; busca: string };
@@ -88,8 +92,9 @@ type FiltrosInterclasse = { situacao: string; ano: string; modalidade: string; c
 export function ListaInterclasses({ filtrosIniciais = {} }: { filtrosIniciais?: Partial<FiltrosInterclasse> }) {
   const [filtros, setFiltros] = useState<FiltrosInterclasse>({ situacao: filtrosIniciais.situacao || "", ano: filtrosIniciais.ano || "", modalidade: filtrosIniciais.modalidade || "", categoria: filtrosIniciais.categoria || "", turno: filtrosIniciais.turno || "", busca: filtrosIniciais.busca || "" });
   const [pagina, setPagina] = useState(1);
+  const [esporteAtivo, setEsporteAtivo] = useState("");
   const [arquivoAberto, setArquivoAberto] = useState(() => Object.values(filtrosIniciais).some(Boolean));
-  const emAndamento = useConsultaPublica<RespostaLista<InterclassePublico> | InterclassePublico[]>("/api/interclasses?situacao=em_andamento&limite=3");
+  const emAndamento = useConsultaPublica<RespostaLista<InterclassePublico> | InterclassePublico[]>("/api/interclasses?situacao=em_andamento&limite=24");
   const proximos = useConsultaPublica<RespostaLista<InterclassePublico> | InterclassePublico[]>("/api/interclasses?situacao=proximo&limite=3");
   const encerrados = useConsultaPublica<RespostaLista<InterclassePublico> | InterclassePublico[]>("/api/interclasses?situacao=encerrado&limite=6");
   const url = useMemo(() => {
@@ -111,11 +116,11 @@ export function ListaInterclasses({ filtrosIniciais = {} }: { filtrosIniciais?: 
   function limpar() { setFiltros({ situacao: "", ano: "", modalidade: "", categoria: "", turno: "", busca: "" }); setPagina(1); }
   return (
     <main id="conteudo">
-      <CabecalhoPagina titulo="Interclasses" resumo="Consulte campeonatos, fases, chaves, partidas, resultados e documentos publicados." caminho="Eventos / Interclasses" />
+      <CabecalhoPagina titulo="Interclasses" resumo="Sua turma em jogo. Acompanhe os confrontos, descubra os próximos jogos e torça até a final." caminho="Eventos / Interclasses" />
       <div className="limite pagina-conteudo pagina-eventos">
         <div className="listas-central-eventos pagina-colecao-publica">
-          <SecaoInterclasses titulo="Interclasses acontecendo agora" descricao="Campeonatos que estão com a chave pública em andamento." destino="/eventos/interclasses?situacao=em_andamento" vazio="Não há interclasses em andamento publicados." carregando={emAndamento.carregando} erro={emAndamento.erro} recarregar={emAndamento.recarregar}>
-            {campeonatosEmAndamento.map((campeonato, indice) => <CartaoInterclasse campeonato={campeonato} key={campeonato.id ?? campeonato.slug ?? indice} />)}
+          <SecaoInterclasses titulo="Interclasses acontecendo agora" descricao="Campeonatos que estão com a chave pública em andamento." destino="/eventos/interclasses?situacao=em_andamento" vazio="Não há interclasses em andamento publicados." carregando={emAndamento.carregando} erro={emAndamento.erro} recarregar={emAndamento.recarregar} antesDaLista={campeonatosEmAndamento.length > 0 && <div className="ic-filtro-esportes" aria-label="Filtrar campeonatos em andamento por esporte"><button type="button" aria-pressed={!esporteAtivo} onClick={() => setEsporteAtivo("")}>Todos os esportes</button>{Array.from(new Set(campeonatosEmAndamento.map((item) => item.modalidade).filter(temTexto))).map((esporte) => <button type="button" key={esporte} aria-pressed={esporteAtivo === esporte} onClick={() => setEsporteAtivo(esporte)}><span aria-hidden="true">{simboloEsporte(esporte)} </span>{esporte}</button>)}</div>}>
+            {campeonatosEmAndamento.filter((item) => !esporteAtivo || item.modalidade === esporteAtivo).map((campeonato, indice) => <CartaoInterclasse campeonato={campeonato} key={campeonato.id ?? campeonato.slug ?? indice} />)}
           </SecaoInterclasses>
           <SecaoInterclasses titulo="Próximos interclasses" descricao="Campeonatos com programação publicada para começar." destino="/eventos/interclasses?situacao=proximo" vazio="Não há próximos interclasses publicados." carregando={proximos.carregando} erro={proximos.erro} recarregar={proximos.recarregar}>
             {campeonatosProximos.map((campeonato, indice) => <CartaoInterclasse campeonato={campeonato} key={campeonato.id ?? campeonato.slug ?? indice} />)}
@@ -150,60 +155,38 @@ export function ListaInterclasses({ filtrosIniciais = {} }: { filtrosIniciais?: 
   );
 }
 
-function fasesComJogos(fases: FasePublica[], partidas: JogoPublico[]) {
-  return [...fases].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0)).map((fase) => ({
-    ...fase,
-    jogos: (fase.jogos?.length ? fase.jogos : fase.partidas?.length ? fase.partidas : partidas.filter((jogo) => jogo.faseId === fase.id || (temTexto(jogo.faseNome || jogo.fase) && (jogo.faseNome || jogo.fase) === fase.nome))).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0)),
-  }));
-}
-
-function PartidaChave({ jogo, campeonatoSlug }: { jogo: JogoPublico; campeonatoSlug: string }) {
-  const vencedor = nomeVencedor(jogo);
-  const destino = caminhoJogo(campeonatoSlug, jogo);
-  const conteudo = <>
-    <div className="cabecalho-partida-chave"><span>{jogo.rodada ? `Rodada ${jogo.rodada}` : "Partida"}</span><small>{rotuloSituacao(jogo.situacao)}</small></div>
-    <div className={`equipe-chave ${vencedor && vencedor === nomeJogo(jogo, "a") ? "equipe-vencedora" : ""}`}><span>{nomeJogo(jogo, "a")}</span>{temPlacar(jogo) && <strong>{jogo.placarA}</strong>}</div>
-    <div className={`equipe-chave ${vencedor && vencedor === nomeJogo(jogo, "b") ? "equipe-vencedora" : ""}`}><span>{nomeJogo(jogo, "b")}</span>{temPlacar(jogo) && <strong>{jogo.placarB}</strong>}</div>
-    {(jogo.data || jogo.horario) && <div className="data-chave">{[formatarData(jogo.data), jogo.horario].filter(Boolean).join(" · ")}</div>}
-    {vencedor && <p className="avanco-chave"><strong>{vencedor}</strong> avançou nesta partida.</p>}
-  </>;
-  return destino ? <Link className="partida-chave" href={destino}>{conteudo}</Link> : <article className="partida-chave">{conteudo}</article>;
-}
-
 function ChaveCampeonato({ fases, partidas, campeonatoSlug }: { fases: FasePublica[]; partidas: JogoPublico[]; campeonatoSlug: string }) {
-  const colunas = fasesComJogos(fases, partidas);
-  const [faseEscolhida, setFaseEscolhida] = useState(String(colunas[0]?.id ?? colunas[0]?.nome ?? ""));
-  const rolagem = useRef<HTMLDivElement>(null);
-  if (!colunas.length) return <EstadoVazio titulo="Chave ainda não publicada" texto="As fases e partidas aparecerão aqui quando forem publicadas." />;
-  const faseMovel = colunas.find((fase) => String(fase.id ?? fase.nome) === faseEscolhida) || colunas[0];
-  const avancaram = partidas.map(nomeVencedor).filter(Boolean);
-  function rolar(distancia: number) {
-    const reduzirMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    rolagem.current?.scrollBy({ left: distancia, behavior: reduzirMovimento ? "auto" : "smooth" });
-  }
-  return (
-    <section aria-labelledby="titulo-chave">
-      <div className="cabecalho-chave"><div><h2 id="titulo-chave">Chave do campeonato</h2><p>As partidas são organizadas por fase. Abra um jogo para consultar todos os detalhes.</p></div><div className="controles-rolagem-chave" aria-label="Mover a chave"><button type="button" onClick={() => rolar(-340)} aria-label="Ver fases anteriores">‹</button><button type="button" onClick={() => rolar(340)} aria-label="Ver próximas fases">›</button></div></div>
-      <div className="chave-desktop" ref={rolagem} tabIndex={0} role="region" aria-label="Chave do campeonato com rolagem horizontal">
-        {colunas.map((fase) => <section className="coluna-fase" key={fase.id ?? fase.nome}><h3>{fase.nome || "Fase"}</h3><div>{fase.jogos?.length ? fase.jogos.map((jogo, indice) => <PartidaChave jogo={jogo} campeonatoSlug={campeonatoSlug} key={jogo.id ?? jogo.slug ?? indice} />) : <p className="fase-sem-jogos">Nenhuma partida publicada nesta fase.</p>}</div></section>)}
-      </div>
-      <div className="chave-mobile">
-        <label htmlFor="fase-chave">Fase exibida</label>
-        <select id="fase-chave" value={faseEscolhida} onChange={(evento) => setFaseEscolhida(evento.target.value)}>{colunas.map((fase) => <option value={String(fase.id ?? fase.nome)} key={fase.id ?? fase.nome}>{fase.nome || "Fase"}</option>)}</select>
-        <section className="coluna-fase"><h3>{faseMovel.nome || "Fase"}</h3>{faseMovel.jogos?.length ? faseMovel.jogos.map((jogo, indice) => <PartidaChave jogo={jogo} campeonatoSlug={campeonatoSlug} key={jogo.id ?? jogo.slug ?? indice} />) : <p className="fase-sem-jogos">Nenhuma partida publicada nesta fase.</p>}</section>
-      </div>
-      <div className="descricao-chave" aria-label="Descrição textual dos classificados"><h3>Caminho dos classificados</h3>{avancaram.length ? <ul>{avancaram.map((nome, indice) => <li key={`${nome}-${indice}`}>{nome} avançou em uma partida concluída.</li>)}</ul> : <p>Nenhum classificado foi publicado até o momento.</p>}</div>
-    </section>
-  );
+  const [jogoAberto, setJogoAberto] = useState<JogoPublico | null>(null);
+  return <><ChaveInterativa fases={fases} partidas={partidas} abrirJogo={setJogoAberto} />{jogoAberto && <ModalJogo campeonato={campeonatoSlug} jogo={jogoAberto} fechar={() => setJogoAberto(null)} />}</>;
+}
+
+function ModalJogo({ campeonato, jogo, fechar }: { campeonato: string; jogo: JogoPublico; fechar: () => void }) {
+  const dialogo = useRef<HTMLDialogElement>(null);
+  const { dados, carregando, erro, recarregar } = useConsultaPublica<{ item: JogoPublico }>(`/api/interclasses/${encodeURIComponent(campeonato)}/jogos/${encodeURIComponent(String(jogo.id || jogo.slug))}`);
+  const partida = dados?.item || jogo;
+  useEffect(() => {
+    const elemento = dialogo.current;
+    const focoAnterior = document.activeElement as HTMLElement | null;
+    elemento?.showModal();
+    return () => { elemento?.close(); focoAnterior?.focus(); };
+  }, []);
+  return <dialog ref={dialogo} className="ic-modal" aria-labelledby="ic-modal-titulo" onClose={fechar} onClick={(e) => { if (e.target === e.currentTarget) { const caixa = e.currentTarget.getBoundingClientRect(); if (e.clientX < caixa.left || e.clientX > caixa.right || e.clientY < caixa.top || e.clientY > caixa.bottom) fechar(); } }}>
+    <div className="ic-modal-topo"><div><span className="ic-sobretitulo">{partida.faseNome || partida.fase || "INTERCLASSE"}</span><h2 id="ic-modal-titulo">Detalhes do jogo</h2></div><button type="button" onClick={fechar} aria-label="Fechar detalhes do jogo" autoFocus>×</button></div>
+    <div className="ic-modal-corpo"><div className="ic-placar"><span className={`selo-situacao situacao-${classeSituacao(partida.situacao)}`}>{partida.formaVitoria === "bye" ? "Avanço direto por folga" : rotuloSituacao(partida.situacao)}</span><div className="ic-placar-equipes"><strong>{nomeJogo(partida, "a")}</strong><b>{temPlacar(partida) ? `${partida.placarA} : ${partida.placarB}` : "×"}</b><strong>{nomeJogo(partida, "b")}</strong></div>{nomeVencedor(partida) && <p className="ic-vitoria"><strong>{nomeVencedor(partida)}</strong> {partida.formaVitoria === "bye" ? "avançou por folga" : "venceu"}{partida.formaVitoria && partida.formaVitoria !== "bye" ? ` · ${partida.formaVitoria}` : ""}</p>}</div>
+    <ListaDefinicoes itens={[{ rotulo: "Data", valor: formatarData(partida.data) || "A definir" }, { rotulo: "Horário", valor: partida.horario || "A definir" }, { rotulo: "Local", valor: partida.local || "A definir" }]} />
+    {carregando && <EstadoCarregando texto="Carregando informações do jogo…" />}{erro && <EstadoErro mensagem={erro} tentarNovamente={recarregar} />}
+    <BlocoTexto titulo="Resumo da partida" conteudo={partida.resumo} /><BlocoTexto titulo="Destaques" conteudo={partida.destaques} /><BlocoTexto titulo="Informações da organização" conteudo={partida.observacoesPublicas || partida.observacoes} />
+    {partida.proximaPartida && <p className="ic-vitoria">O vencedor segue para {partida.proximaPartida.faseNome || "a próxima fase"}.</p>}
+    {caminhoJogo(campeonato, partida) && <Link className="ic-modal-link" href={caminhoJogo(campeonato, partida)}>Abrir página completa do jogo ↗</Link>}</div>
+  </dialog>;
 }
 
 function ListaPartidas({ partidas, campeonatoSlug }: { partidas: JogoPublico[]; campeonatoSlug: string }) {
+  const [aberto, setAberto] = useState<JogoPublico | null>(null);
+  const [filtro, setFiltro] = useState("");
   if (!partidas.length) return <EstadoVazio titulo="Nenhuma partida publicada" texto="Os jogos aparecerão aqui quando forem publicados." />;
-  return <div className="lista-partidas-publicas">{partidas.map((jogo, indice) => {
-    const destino = caminhoJogo(campeonatoSlug, jogo);
-    const conteudo = <><div><span className={`selo-situacao situacao-${classeSituacao(jogo.situacao)}`}>{rotuloSituacao(jogo.situacao)}</span><small>{jogo.faseNome || jogo.fase}</small></div><h3>{nomeJogo(jogo, "a")} <span>×</span> {nomeJogo(jogo, "b")}</h3>{temPlacar(jogo) && <strong className="placar-lista">{jogo.placarA} × {jogo.placarB}</strong>}<p>{[formatarData(jogo.data), jogo.horario, jogo.local].filter(temTexto).join(" · ")}</p>{destino && <b>Ver detalhes da partida ›</b>}</>;
-    return destino ? <Link href={destino} key={jogo.id ?? jogo.slug ?? indice}>{conteudo}</Link> : <article key={jogo.id ?? jogo.slug ?? indice}>{conteudo}</article>;
-  })}</div>;
+  const filtradas = partidas.filter((jogo) => !filtro || (filtro === "resultados" ? ["encerrada", "wo"].includes(jogo.situacao || "") : !["encerrada", "wo", "cancelada"].includes(jogo.situacao || "")));
+  return <><div className="ic-filtro-esportes" aria-label="Filtrar jogos">{[["", "Todos os jogos"], ["proximos", "Próximos jogos"], ["resultados", "Resultados"]].map(([valor, rotulo]) => <button type="button" key={valor} aria-pressed={filtro === valor} onClick={() => setFiltro(valor)}>{rotulo}</button>)}</div><div className="lista-partidas-publicas">{filtradas.map((jogo, indice) => <button type="button" className="ic-lista-jogo" onClick={() => setAberto(jogo)} key={jogo.id ?? indice}><div><span className={`selo-situacao situacao-${classeSituacao(jogo.situacao)}`}>{rotuloSituacao(jogo.situacao)}</span><small>{jogo.faseNome || jogo.fase}</small></div><h3>{nomeJogo(jogo, "a")} <span>×</span> {nomeJogo(jogo, "b")}</h3>{temPlacar(jogo) && <strong className="placar-lista">{jogo.placarA} × {jogo.placarB}</strong>}<p>{[formatarData(jogo.data), jogo.horario, jogo.local].filter(temTexto).join(" · ") || "Data a definir"}</p>{nomeVencedor(jogo) && <p className="ic-vitoria">Vencedor: {nomeVencedor(jogo)}</p>}<b>Ver detalhes da partida ↗</b></button>)}</div>{!filtradas.length && <EstadoVazio titulo="Nenhum jogo nesta seleção" texto="Escolha outro filtro para consultar os jogos publicados." />}{aberto && <ModalJogo campeonato={campeonatoSlug} jogo={aberto} fechar={() => setAberto(null)} />}</>;
 }
 
 function TabelaClassificacao({ linhas }: { linhas: ClassificacaoPublica[] }) {
@@ -220,7 +203,7 @@ export function DetalheInterclasse({ slug, guiaInicial }: { slug: string; guiaIn
   const partidas = campeonato.jogos || [];
   const classificacao = campeonato.classificacao || [];
   const guias = [{ id: "visao-geral", nome: "Visão geral", mostrar: true }, { id: "chave", nome: "Chave", mostrar: fases.length > 0 }, { id: "jogos", nome: "Jogos", mostrar: partidas.length > 0 }, { id: "classificacao", nome: "Classificação", mostrar: classificacao.length > 0 }, { id: "documentos", nome: "Regulamento e documentos", mostrar: temTexto(campeonato.regulamento) || (campeonato.documentos?.length ?? 0) > 0 }].filter((guia) => guia.mostrar);
-  const guia = guias.some((item) => item.id === guiaInicial) ? guiaInicial : "visao-geral";
+  const guia = guias.some((item) => item.id === guiaInicial) ? guiaInicial : fases.length ? "chave" : "visao-geral";
   const campeao = textoParticipante(campeonato.campeao);
   const proxima = campeonato.proximaPartida || campeonato.proximoJogo;
   const imagem = urlPublica(campeonato.imagemCapaUrl || campeonato.imagemUrl || campeonato.imagem);
@@ -231,6 +214,8 @@ export function DetalheInterclasse({ slug, guiaInicial }: { slug: string; guiaIn
         <VoltarPara href="/eventos/interclasses">Voltar para interclasses</VoltarPara>
         <div className="destaques-campeonato"><span className={`selo-situacao situacao-${classeSituacao(campeonato.situacao)}`}>{resumoSituacao(campeonato)}</span>{temTexto(campeonato.faseAtual) && <span><small>Fase atual</small><strong>{campeonato.faseAtual}</strong></span>}{campeao && <span><small>Campeão</small><strong>{campeao}</strong></span>}</div>
         {imagem && <img className="capa-detalhe-campeonato" src={imagem} alt="" />}
+        <div className="ic-campeonato-resumo"><div><small>MODALIDADE</small><strong>{simboloEsporte(campeonato.modalidade)} {campeonato.modalidade}{campeonato.categoria ? ` · ${campeonato.categoria}` : ""}</strong></div><div><small>PERÍODO</small><strong>{formatarData(campeonato.dataInicial) || "A definir"}{campeonato.dataFinal ? ` a ${formatarData(campeonato.dataFinal)}` : ""}</strong></div><div><small>TURMAS NA DISPUTA</small><strong>{campeonato.quantidadeEquipes ?? dados.participantes?.length ?? 0} turmas{campeonato.turno ? ` · ${rotuloTurno(campeonato.turno)}` : ""}</strong></div><div><small>PREMIAÇÃO</small><strong>{campeonato.premiacao || "A divulgar"}</strong></div></div>
+        {temTexto(campeonato.descricao) && <p className="ic-descricao">{campeonato.descricao}</p>}
         <nav className="guias-evento" aria-label="Seções do campeonato">{guias.map((item) => <Link href={`/eventos/interclasses/${encodeURIComponent(slug)}?guia=${item.id}`} aria-current={guia === item.id ? "page" : undefined} key={item.id}>{item.nome}</Link>)}</nav>
         {guia === "visao-geral" && <div className="conteudo-guia">
           <ListaDefinicoes itens={[{ rotulo: "Situação", valor: rotuloSituacao(campeonato.situacao) }, { rotulo: "Fase atual", valor: campeonato.faseAtual }, { rotulo: "Modalidade", valor: campeonato.modalidade }, { rotulo: "Categoria", valor: campeonato.categoria }, { rotulo: "Edição", valor: campeonato.edicao || campeonato.ano }, { rotulo: "Data de início", valor: formatarData(campeonato.dataInicial || campeonato.dataInicio) }, { rotulo: "Data de encerramento", valor: formatarData(campeonato.dataFinal || campeonato.dataFim || campeonato.dataPrevistaEncerramento) }, { rotulo: "Local ou locais", valor: Array.isArray(campeonato.locais) ? campeonato.locais.join(", ") : campeonato.locais || campeonato.local }, { rotulo: "Organização", valor: campeonato.organizacao }, { rotulo: "Equipes ou turmas", valor: campeonato.quantidadeParticipantes ?? campeonato.quantidadeEquipes }]} />

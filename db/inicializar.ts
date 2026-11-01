@@ -169,6 +169,21 @@ async function prepararBanco() {
   );
 
   // aplica ajustes e a carga do mapa
+  const colunasCampeonato = await d1.prepare("PRAGMA table_info(campeonatos)").all<{ name: string }>();
+  if (!colunasCampeonato.results.some((coluna) => coluna.name === "premiacao")) {
+    try {
+      await d1.prepare("ALTER TABLE campeonatos ADD COLUMN premiacao TEXT NOT NULL DEFAULT ''").run();
+    } catch (erro) {
+      if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro;
+    }
+  }
+  if (!colunasCampeonato.results.some((coluna) => coluna.name === "diferenca_maxima_anos")) {
+    try {
+      await d1.prepare("ALTER TABLE campeonatos ADD COLUMN diferenca_maxima_anos INTEGER").run();
+    } catch (erro) {
+      if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro;
+    }
+  }
   await adicionarColunasContato(d1);
   await carregarMapa2026(d1);
 
