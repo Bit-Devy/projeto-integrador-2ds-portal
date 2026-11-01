@@ -80,6 +80,7 @@ try {
 
   // executa os testes das áreas privadas
   await testarJsonInvalido(cookie);
+  await testarDatasEPeriodos(cookie);
   await testarMapa(cookie);
   await testarSistemaEventos(cookie);
   await testarTrocasComFolgas(cookie);
@@ -1515,6 +1516,40 @@ async function testarConteudo(cookie) {
   assert.equal(respostaExclusao.status, 200);
 }
 
+async function testarDatasEPeriodos(cookie) {
+  const dados = { titulo: `Notícia de datas ${Date.now()}`, data: "2024-02-29", categoria: "Teste", resumo: "Notícia temporária." };
+  const invalidas = ["2026-99-99", "2026-02-29", "2026-04-31", "1900-02-29", "2026-00-10", "2026-11-00", "10/11/2026", "2026-11-10T00:00:00Z"];
+  const antes = await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1");
+  for (const data of invalidas) {
+    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados: { ...dados, data } }, 400);
+  }
+  assert.deepEqual(await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1"), antes);
+  const noticia = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados }, 201)).item;
+  try {
+    for (const data of invalidas) {
+      await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: noticia.id, tipo: "noticias", publicado: false, dados: { ...dados, data } }, 400);
+    }
+    const depois = await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1");
+    assert.deepEqual(depois.itens.find((item) => item.id === noticia.id), noticia);
+    const editada = await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: noticia.id, tipo: "noticias", publicado: false, dados: { ...dados, data: "2000-02-29" } });
+    assert.equal(editada.item.dados.data, "2000-02-29");
+  } finally { await requisicaoDominio(cookie, `/api/conteudo?id=${noticia.id}`, "DELETE"); }
+
+  const evento = { titulo: `Evento de horários ${Date.now()}`, dataInicial: "2026-11-10", horarioInicial: "16:00", horarioFinal: "08:00", publicado: false };
+  for (const dataFinal of ["2026-11-10", "2026-11-09", ""]) {
+    await requisicaoDominio(cookie, "/api/eventos", "POST", { dados: { ...evento, dataFinal } }, 400);
+  }
+  const criado = (await requisicaoDominio(cookie, "/api/eventos", "POST", { dados: { ...evento, dataFinal: "2026-11-11" } }, 201)).item;
+  try {
+    for (const dataFinal of ["2026-11-10", "2026-11-09", ""]) {
+      await requisicaoDominio(cookie, "/api/eventos", "PUT", { id: criado.id, dados: { dataFinal } }, 400);
+    }
+    assert.deepEqual((await requisicaoDominio(cookie, `/api/eventos/${criado.id}?todos=1`)).item, criado);
+    const editado = await requisicaoDominio(cookie, "/api/eventos", "PUT", { id: criado.id, dados: { dataFinal: "2026-11-10", horarioFinal: "18:00" } });
+    assert.equal(editado.item.horarioFinal, "18:00");
+  } finally { await requisicaoDominio(cookie, `/api/eventos?id=${criado.id}`, "DELETE"); }
+}
+
 async function testarJsonInvalido(cookie) {
   for (const rota of ["/api/conteudo", "/api/mensagens"]) {
     for (const method of ["POST", "PUT"]) {
@@ -1531,6 +1566,8 @@ async function testarJsonInvalido(cookie) {
 
 // testa o recebimento e a administração de mensagens
 async function testarMensagens(cookie) {
+  const inexistente = await requisicaoDominio(cookie, "/api/mensagens", "PUT", { id: 999999999, status: "respondida" }, 404);
+  assert.equal(inexistente.atualizado, undefined);
   // cria títulos únicos para as mensagens
   const titulo = `Mensagem de teste ${Date.now()}`;
   const tituloSemContato = `Mensagem sem contato ${Date.now()}`;
@@ -1654,6 +1691,8 @@ async function testarMensagens(cookie) {
     body: JSON.stringify({ id: mensagem.id, status: "em_analise" }),
   });
   assert.equal(respostaEstado.status, 200);
+  const repeticao = await requisicaoDominio(cookie, "/api/mensagens", "PUT", { id: mensagem.id, status: "em_analise" });
+  assert.equal(repeticao.atualizado, true);
 
   // arquiva a mensagem
   const respostaArquivamento = await fetch(`${endereco}/api/mensagens`, {

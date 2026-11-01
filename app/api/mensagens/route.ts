@@ -143,7 +143,9 @@ export async function PUT(request: Request) {
       return Response.json({ erro: "Dados inválidos." }, { status: 400 });
     }
     // atualiza o estado da mensagem
-    await getD1().prepare("UPDATE mensagens SET status = ? WHERE id = ?").bind(status, id).run();
+    const resultado = await getD1().prepare("UPDATE mensagens SET status = ? WHERE id = ? RETURNING id")
+      .bind(status, id).first<{ id: number }>();
+    if (!resultado) return Response.json({ erro: "Mensagem não encontrada." }, { status: 404 });
     return Response.json({ atualizado: true });
   } catch (erro) {
     return respostaErro(erro);

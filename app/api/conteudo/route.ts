@@ -172,6 +172,13 @@ function validarCorpo(corpo: Record<string, unknown>) {
   // encontra os campos obrigatórios vazios
   const ausentes = camposObrigatorios[tipo].filter((campo) => dados[campo] === "" || dados[campo] === undefined || dados[campo] === null);
   if (ausentes.length) throw new Error(`Preencha os campos obrigatórios: ${ausentes.join(", ")}.`);
+  if (tipo === "noticias") {
+    const data = String(dados.data);
+    const instante = new Date(`${data}T00:00:00Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || Number.isNaN(instante.getTime()) || instante.toISOString().slice(0, 10) !== data) {
+      throw new Error("Informe uma data válida para a notícia.");
+    }
+  }
   // valida os dados próprios das movimentações
   if (tipo === "movimentos") {
     if (!["entrada", "saida"].includes(String(dados.tipo))) throw new Error("Escolha entrada ou saída.");

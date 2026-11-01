@@ -27,6 +27,29 @@ const resolvedorTypeScript = `
 `;
 register(`data:text/javascript,${encodeURIComponent(resolvedorTypeScript)}`, import.meta.url);
 
+test("valida o intervalo completo do evento, incluindo a passagem da meia-noite", async () => {
+  const { validarEventoInterno } = await importarDominio("validacao");
+  const base = { titulo: "Evento de teste", dataInicial: "2026-11-10", horarioInicial: "16:00" };
+  for (const dados of [
+    { dataFinal: "2026-11-10", horarioFinal: "08:00" },
+    { dataFinal: "", horarioFinal: "08:00" },
+    { dataFinal: "2026-11-09", horarioFinal: "18:00" },
+  ]) {
+    assert.throws(() => validarEventoInterno({ ...base, ...dados }), (erro) => erro.status === 400);
+  }
+  for (const dados of [
+    { dataFinal: "2026-11-10", horarioFinal: "16:00" },
+    { dataFinal: "2026-11-10", horarioFinal: "18:00" },
+    { dataFinal: "", horarioFinal: "18:00" },
+    { dataFinal: "2026-11-11", horarioFinal: "08:00" },
+    { dataFinal: "2026-11-13", horarioFinal: "08:00" },
+    { dataFinal: "2026-11-10", horarioFinal: "" },
+  ]) {
+    assert.doesNotThrow(() => validarEventoInterno({ ...base, ...dados }));
+  }
+  assert.doesNotThrow(() => validarEventoInterno({ titulo: "Data a definir" }));
+});
+
 test("normaliza as formas equivalentes de uma turma", async () => {
   const { normalizarTurma, normalizarTextoBusca, normalizarSlugPublico } = await importarDominio("normalizacao");
   const esperado = normalizarTurma("3J");

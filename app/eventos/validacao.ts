@@ -73,6 +73,11 @@ export function validarEventoInterno(valor: unknown) {
   validarPeriodo(dataInicial, dataFinal, "A data final não pode ser anterior à data inicial.");
   const horarioInicial = horario(dados.horarioInicial ?? dados.horario, "horário inicial");
   const horarioFinal = horario(dados.horarioFinal, "horário final");
+  // Sem data final, o término pertence ao mesmo dia do início.
+  if (dataInicial && horarioInicial && horarioFinal
+    && `${dataFinal || dataInicial}T${horarioFinal}` < `${dataInicial}T${horarioInicial}`) {
+    throw new ErroEventos("O término do evento não pode ser anterior ao início.");
+  }
   const situacao = enumValor(normalizarSituacaoEvento(dados.situacao ?? "proximo"), situacoesEvento, "situação") as SituacaoEvento;
   const turno = turnoOpcional(dados.turno);
   return {
