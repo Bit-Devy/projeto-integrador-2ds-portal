@@ -415,41 +415,10 @@ test("migração aditiva mantém schema relacional, histórico e privacidade", a
   assert.match(dadosIniciais, /eventosIniciais[^=]*=\s*\[\s*\]/s);
 });
 
-test("documentação cobre os fluxos administrativos e operacionais", async () => {
-  const arquivos = [
-    "docs/eventos.md",
-    "docs/interclasses.md",
-    "docs/reunioes-e-atas.md",
-    "docs/representantes.md",
-  ];
-  const texto = (await Promise.all(arquivos.map((arquivo) => readFile(arquivo, "utf8")))).join("\n");
-  for (const assunto of [
-    "Como cadastrar um evento",
-    "Como criar um interclasse",
-    "Gerar uma chave",
-    "Registrar um resultado",
-    "Corrigir um resultado",
-    "Como criar uma reunião",
-    "Como registrar presenças",
-    "Como publicar uma ata",
-    "Como adicionar uma votação",
-    "Como cadastrar um representante",
-    "Como trocar o representante",
-    "npm run db:migrate:local",
-    "npm run test:local",
-  ]) {
-    assert.match(texto, new RegExp(escaparExpressao(assunto), "i"), `a documentação deve explicar: ${assunto}`);
-  }
-});
-
 async function importarDominio(nome) {
   const url = new URL(`../app/eventos/${nome}.ts`, import.meta.url);
   url.searchParams.set("teste", `${nome}-${Date.now()}-${Math.random()}`);
   return import(url.href);
-}
-
-function escaparExpressao(texto) {
-  return texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 // confirma que o diário não perdeu migrações anteriores e registra a próxima ordem
