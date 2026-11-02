@@ -8,3 +8,5 @@
 - use o site oficial do colégio como principal referência visual para novos recursos: https://www.cep.pr.gov.br/
 - mantenha as informações, os conteúdos e o banco de dados próprios do grêmio
 - a referência do colégio orienta a aparência e não substitui a identidade nem os dados do gecep
+- prefira tamanhos de fonte em rem para que os textos acompanhem a acessibilidade do portal
+- mantenha apenas dois tamanhos de texto nos controles de acessibilidade: normal e levemente ampliado

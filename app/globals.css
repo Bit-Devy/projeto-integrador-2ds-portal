@@ -21,6 +21,9 @@
 /* rolagem suave da página */
 html {
   scroll-behavior: smooth;
+  /* usa o tamanho padrão escolhido no navegador */
+  font-size: 100%;
+  --fator-texto: 1;
 }
 
 /* aparência geral da página */
@@ -29,7 +32,7 @@ body {
   background: var(--branco);
   color: var(--cinza-texto);
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 /* fonte dos botões e campos */
@@ -95,7 +98,7 @@ a {
   height: 46px;
   display: flex;
   background: #ffffff;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* conteúdo da barra do governo */
@@ -207,7 +210,7 @@ a {
   border: 4px solid var(--azul);
   border-radius: 50%;
   color: var(--azul);
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 800;
   letter-spacing: -1px;
   /* cria uma sombra para destacar o elemento */
@@ -224,14 +227,14 @@ a {
 /* destaque de nome do gecep */
 .nome-gecep strong {
   color: var(--azul-escuro);
-  font-size: 21px;
+  font-size: 1.3125rem;
 }
 
 /* texto auxiliar de nome do gecep */
 .nome-gecep small {
   margin-top: 5px;
   color: #666666;
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -258,7 +261,7 @@ a {
   border: 0;
   outline: 0;
   color: #444444;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-style: italic;
 }
 
@@ -271,7 +274,7 @@ a {
   background: transparent;
   color: #2da765;
   cursor: pointer;
-  font-size: 28px;
+  font-size: 1.75rem;
   line-height: 1;
 }
 
@@ -321,7 +324,7 @@ a {
   display: flex;
   align-items: center;
   padding: 0 17px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   white-space: nowrap;
   /* suaviza as mudanças visuais */
@@ -376,7 +379,7 @@ a {
   display: block;
   padding: 10px 15px;
   border-bottom: 1px solid #e7e7e7;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 /* interação de link de submenu */
@@ -451,7 +454,7 @@ a {
   padding-left: 12px;
   border-left: 4px solid var(--azul-claro);
   color: var(--azul-escuro);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 1.2px;
 }
@@ -462,7 +465,7 @@ a {
   margin: 0;
   color: #283b44;
   /* ajusta o texto conforme o tamanho da tela */
-  font-size: clamp(30px, 3.15vw, 44px);
+  font-size: clamp(1.875rem, calc(3.15vw * var(--fator-texto)), 2.75rem);
   line-height: 1.08;
   font-weight: 500;
   letter-spacing: -0.8px;
@@ -473,7 +476,7 @@ a {
   max-width: 590px;
   margin: 17px 0 25px;
   color: #55666d;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.55;
 }
 
@@ -525,7 +528,7 @@ a {
 
 /* elemento de círculo grande */
 .circulo-grande span {
-  font-size: 31px;
+  font-size: 1.9375rem;
   font-weight: 800;
   letter-spacing: 1px;
 }
@@ -533,7 +536,7 @@ a {
 /* texto auxiliar de círculo grande */
 .circulo-grande small {
   margin-top: 5px;
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
@@ -567,7 +570,7 @@ a {
   color: #6c7d85;
   background: rgba(255, 255, 255, 0.66);
   cursor: pointer;
-  font-size: 42px;
+  font-size: 2.625rem;
   font-weight: 300;
   /* suaviza as mudanças visuais */
   transition: 150ms ease;
@@ -627,7 +630,7 @@ a {
 /* título de faixa de título */
 .faixa-titulo h2 {
   margin: 0;
-  font-size: 21px;
+  font-size: 1.3125rem;
   font-weight: 500;
 }
 
@@ -672,7 +675,7 @@ a {
   border: 2px solid var(--azul);
   border-radius: 50%;
   color: var(--azul);
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -686,20 +689,20 @@ a {
 .cartao-servico strong {
   margin-bottom: 6px;
   color: #333333;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 /* texto auxiliar de cartão de serviço */
 .cartao-servico small {
   color: #6a7479;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.4;
 }
 
 /* seta serviço */
 .seta-servico {
   color: var(--azul-claro);
-  font-size: 25px;
+  font-size: 1.5625rem;
 }
 
 /* primeira apresentação */
@@ -717,7 +720,7 @@ a {
   padding-left: 10px;
   border-left: 4px solid var(--azul-claro);
   color: var(--azul-escuro);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 1px;
 }
@@ -726,7 +729,7 @@ a {
 .primeira-apresentacao h2 {
   margin: 13px 0 0;
   color: #33474f;
-  font-size: 29px;
+  font-size: 1.8125rem;
   line-height: 1.2;
   font-weight: 500;
 }
@@ -735,7 +738,7 @@ a {
 .primeira-apresentacao p {
   margin: 18px 0 0;
   color: #5f6c72;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.7;
 }
 
@@ -755,7 +758,7 @@ a {
 /* link de item do menu */
 .item-menu > a {
   padding-inline: 11px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* página inicial */
@@ -801,7 +804,7 @@ a {
   margin: 13px 0 17px;
   color: #283f49;
   /* ajusta o texto conforme o tamanho da tela */
-  font-size: clamp(38px, 4.2vw, 56px);
+  font-size: clamp(2.375rem, calc(4.2vw * var(--fator-texto)), 3.5rem);
   line-height: 1.04;
   font-weight: 400;
   letter-spacing: -1.4px;
@@ -812,7 +815,7 @@ a {
   max-width: 660px;
   margin: 0 0 25px;
   color: #5c6c73;
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1.62;
 }
 
@@ -833,7 +836,7 @@ a {
   justify-content: center;
   min-height: 43px;
   padding: 10px 18px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   /* suaviza as mudanças visuais */
   transition: 160ms ease;
@@ -896,7 +899,7 @@ a {
   padding: 6px 12px;
   color: #5b6e76;
   background: rgba(255, 255, 255, 0.84);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 1.3px;
   text-transform: uppercase;
@@ -936,7 +939,7 @@ a {
 .introducao-titulo h2 {
   margin: 13px 0 0;
   color: #304852;
-  font-size: 32px;
+  font-size: 2rem;
   line-height: 1.18;
   font-weight: 500;
 }
@@ -945,7 +948,7 @@ a {
 .introducao-texto p {
   margin: 17px 0 17px;
   color: #617178;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.72;
 }
 
@@ -993,7 +996,7 @@ a {
   top: -18px;
   right: 14px;
   color: #edf3f5;
-  font-size: 92px;
+  font-size: 5.75rem;
   font-weight: 800;
   line-height: 1;
 }
@@ -1010,7 +1013,7 @@ a {
 .cartao-area h3 {
   margin: 50px 0 11px;
   color: #2f4750;
-  font-size: 21px;
+  font-size: 1.3125rem;
 }
 
 /* texto de cartão de área */
@@ -1024,7 +1027,7 @@ a {
 /* destaque de cartão de área */
 .cartao-area b {
   color: var(--azul);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* notícias da tela inicial */
@@ -1087,7 +1090,7 @@ a {
 /* título de agenda inicial título */
 .agenda-inicial-titulo h2 {
   margin: 13px 0 13px;
-  font-size: 32px;
+  font-size: 2rem;
   line-height: 1.18;
   font-weight: 500;
 }
@@ -1095,7 +1098,7 @@ a {
 /* texto de agenda inicial título */
 .agenda-inicial-titulo p {
   color: rgba(255, 255, 255, 0.85);
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.65;
 }
 
@@ -1106,7 +1109,7 @@ a {
   padding: 6px 9px;
   border: 1px solid rgba(255, 255, 255, 0.38);
   color: #ffffff;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -1164,14 +1167,14 @@ a {
 
 /* destaque de data de evento */
 .data-evento strong {
-  font-size: 24px;
+  font-size: 1.5rem;
   line-height: 1;
 }
 
 /* texto auxiliar de data de evento */
 .data-evento small {
   margin-top: 5px;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 /* ajuste específico de elemento de evento inicial */
@@ -1184,27 +1187,27 @@ a {
 /* ajuste específico de texto auxiliar de evento inicial */
 .evento-inicial > span:nth-child(2) small {
   color: var(--azul);
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
 /* ajuste específico de destaque de evento inicial */
 .evento-inicial > span:nth-child(2) strong {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 /* ajuste específico de destaque de evento inicial */
 .evento-inicial > span:nth-child(2) b {
   color: #748187;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 400;
 }
 
 /* evento inicial */
 .evento-inicial i {
   color: var(--azul-claro);
-  font-size: 25px;
+  font-size: 1.5625rem;
   font-style: normal;
 }
 
@@ -1230,7 +1233,7 @@ a {
 .convite-participacao h2 {
   margin: 10px 0 7px;
   color: #304952;
-  font-size: 27px;
+  font-size: 1.6875rem;
   font-weight: 500;
 }
 
@@ -1281,7 +1284,7 @@ a {
   gap: 8px;
   margin-bottom: 22px;
   color: rgba(255, 255, 255, 0.75);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 /* interação de link de migalhas */
@@ -1304,7 +1307,7 @@ a {
 .topo-pagina h1 {
   margin: 0 0 12px;
   /* ajusta o texto conforme o tamanho da tela */
-  font-size: clamp(34px, 4vw, 48px);
+  font-size: clamp(2.125rem, calc(4vw * var(--fator-texto)), 3rem);
   line-height: 1.08;
   font-weight: 400;
 }
@@ -1314,7 +1317,7 @@ a {
   max-width: 760px;
   margin: 0;
   color: rgba(255, 255, 255, 0.86);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.55;
 }
 
@@ -1345,7 +1348,7 @@ a {
 .grade-estatuto-abertura h2 {
   margin: 12px 0 16px;
   color: #304952;
-  font-size: 31px;
+  font-size: 1.9375rem;
   line-height: 1.2;
   font-weight: 500;
 }
@@ -1357,7 +1360,7 @@ a {
 .grade-formulario-contato > div > p,
 .grade-estatuto-abertura p {
   color: #627279;
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.72;
 }
 
@@ -1403,7 +1406,7 @@ a {
 /* destaque de quadro de destaque */
 .quadro-destaque strong {
   max-width: 310px;
-  font-size: 31px;
+  font-size: 1.9375rem;
   line-height: 1.18;
   font-weight: 500;
 }
@@ -1444,7 +1447,7 @@ a {
 
 /* destaque de grade de dados gecep */
 .grade-dados-gecep strong {
-  font-size: 31px;
+  font-size: 1.9375rem;
   font-weight: 500;
 }
 
@@ -1452,7 +1455,7 @@ a {
 .grade-dados-gecep span {
   margin-top: 6px;
   color: rgba(255, 255, 255, 0.76);
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
 }
 
@@ -1476,7 +1479,7 @@ a {
 /* elemento de grade de valores */
 .grade-valores article > span {
   color: var(--azul-claro);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 1px;
 }
@@ -1485,7 +1488,7 @@ a {
 .grade-valores h3 {
   margin: 34px 0 11px;
   color: #304952;
-  font-size: 19px;
+  font-size: 1.1875rem;
 }
 
 /* texto de grade de valores */
@@ -1541,7 +1544,7 @@ a {
 /* data de linha de tempo */
 .linha-tempo time {
   color: var(--azul);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
 }
 
@@ -1555,7 +1558,7 @@ a {
 .linha-tempo p {
   margin: 0;
   color: #6b7a80;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.55;
 }
 
@@ -1574,7 +1577,7 @@ a {
 .chamada-interna h2 {
   margin: 9px 0 6px;
   color: #304952;
-  font-size: 27px;
+  font-size: 1.6875rem;
   font-weight: 500;
 }
 
@@ -1597,13 +1600,13 @@ a {
 .aviso-informativo strong {
   display: block;
   margin-bottom: 5px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 /* texto de aviso informativo */
 .aviso-informativo p {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.55;
 }
 
@@ -1641,7 +1644,7 @@ a {
 /* elemento de grade de cargos */
 .grade-cargos article > span {
   color: #d9eaf0;
-  font-size: 40px;
+  font-size: 2.5rem;
   font-weight: 800;
 }
 
@@ -1649,7 +1652,7 @@ a {
 .grade-cargos h3 {
   margin: 13px 0 10px;
   color: #304952;
-  font-size: 19px;
+  font-size: 1.1875rem;
 }
 
 /* texto de grade de cargos */
@@ -1711,7 +1714,7 @@ a {
   grid-row: span 2;
   align-self: center;
   color: var(--azul);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1762,7 +1765,7 @@ a {
 /* título de fluxo crt */
 .fluxo-crt h3 {
   margin: 30px 0 9px;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 /* texto de fluxo crt */
@@ -1849,7 +1852,7 @@ a {
 /* elemento de topo de projeto */
 .topo-projeto > span {
   color: #d7e8ee;
-  font-size: 44px;
+  font-size: 2.75rem;
   font-weight: 800;
 }
 
@@ -1858,7 +1861,7 @@ a {
   padding: 5px 8px;
   color: #176a45;
   background: #e2f3e9;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1866,7 +1869,7 @@ a {
 /* destaque de cartão de projeto */
 .cartao-projeto > b {
   color: var(--azul);
-  font-size: 10px;
+  font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.6px;
 }
@@ -1875,7 +1878,7 @@ a {
 .cartao-projeto h3 {
   margin: 10px 0 9px;
   color: #304952;
-  font-size: 22px;
+  font-size: 1.375rem;
 }
 
 /* texto de cartão de projeto */
@@ -1888,7 +1891,7 @@ a {
 /* link de cartão de projeto */
 .cartao-projeto a {
   color: var(--azul);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -1911,7 +1914,7 @@ a {
 /* elemento de etapas projeto */
 .etapas-projeto span {
   color: var(--azul-claro);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -1920,7 +1923,7 @@ a {
   display: block;
   margin: 30px 0 8px;
   color: #304952;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 /* texto de etapas projeto */
@@ -1972,7 +1975,7 @@ a {
 
 /* destaque de cartão de documento grande */
 .cartao-documento-grande strong {
-  font-size: 20px;
+  font-size: 1.25rem;
   line-height: 1.35;
 }
 
@@ -2001,7 +2004,7 @@ a {
 /* elemento de grade de tópicos estatuto */
 .grade-topicos-estatuto span {
   color: #d6e9ef;
-  font-size: 40px;
+  font-size: 2.5rem;
   font-weight: 800;
 }
 
@@ -2049,13 +2052,13 @@ a {
 .aviso-visualizador p {
   margin: 0 0 7px;
   color: #68777d;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 /* link de aviso de visualizador */
 .aviso-visualizador a {
   color: var(--azul);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -2077,7 +2080,7 @@ a {
   display: block;
   margin-bottom: 6px;
   color: var(--azul);
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -2086,21 +2089,21 @@ a {
 .cartao-documento span > p {
   margin: 8px 0;
   color: #6e7c82;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.5;
 }
 
 /* destaque de cartão de documento */
 .cartao-documento span > b {
   color: #8a969a;
-  font-size: 9px;
+  font-size: 0.5625rem;
   text-transform: uppercase;
 }
 
 /* cartão de documento */
 .cartao-documento > i {
   color: var(--azul-claro);
-  font-size: 24px;
+  font-size: 1.5rem;
   font-style: normal;
 }
 
@@ -2126,7 +2129,7 @@ a {
 /* destaque de grade de arquivo */
 .grade-arquivo strong {
   color: #304952;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 /* texto de grade de arquivo */
@@ -2140,7 +2143,7 @@ a {
 .grade-arquivo a {
   margin-top: auto;
   color: var(--azul);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -2163,7 +2166,7 @@ a {
   margin: 0;
   text-align: center;
   color: #29434e;
-  font-size: 21px;
+  font-size: 1.3125rem;
   font-weight: 500;
 }
 
@@ -2174,7 +2177,7 @@ a {
   padding: 5px 7px;
   color: #176b46;
   background: #e3f3ea;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -2212,20 +2215,20 @@ a {
 
 /* destaque de lista de eventos completa */
 .lista-eventos-completa time strong {
-  font-size: 27px;
+  font-size: 1.6875rem;
   line-height: 1;
 }
 
 /* elemento de lista de eventos completa */
 .lista-eventos-completa time span {
   margin-top: 5px;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 /* texto auxiliar de lista de eventos completa */
 .lista-eventos-completa small {
   color: var(--azul);
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -2240,14 +2243,14 @@ a {
 .lista-eventos-completa p {
   margin: 0 0 9px;
   color: #6c7a80;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
 /* destaque de lista de eventos completa */
 .lista-eventos-completa b {
   color: #53666e;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 /* grade de tipos agenda */
@@ -2268,7 +2271,7 @@ a {
 /* elemento de grade de tipos agenda */
 .grade-tipos-agenda span {
   color: var(--azul-claro);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -2307,7 +2310,7 @@ a {
 /* elemento de grade de relatórios */
 .grade-relatorios article > span {
   color: #d8e9ef;
-  font-size: 34px;
+  font-size: 2.125rem;
   font-weight: 800;
 }
 
@@ -2315,7 +2318,7 @@ a {
 .grade-relatorios strong {
   margin-top: 12px;
   color: #304952;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 /* texto de grade de relatórios */
@@ -2331,7 +2334,7 @@ a {
   color: #879398;
   background: #f5f7f8;
   text-align: left;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 /* participação e contato */
@@ -2369,7 +2372,7 @@ a {
   border-radius: 50%;
   color: #ffffff;
   background: var(--azul);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -2377,7 +2380,7 @@ a {
 .orientacoes-formulario li p {
   margin: 5px 0 0;
   color: #6d7b80;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
@@ -2392,7 +2395,7 @@ a {
 /* texto de nota de privacidade */
 .nota-privacidade p {
   margin: 5px 0 0;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.5;
 }
 
@@ -2412,7 +2415,7 @@ a {
   gap: 7px;
   margin-bottom: 14px;
   color: #495c64;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -2429,7 +2432,7 @@ a {
   outline: 0;
   color: #3f535b;
   background: #ffffff;
-  font: 13px Arial, Helvetica, sans-serif;
+  font: 0.8125rem Arial, Helvetica, sans-serif;
   text-transform: none;
   letter-spacing: 0;
 }
@@ -2470,7 +2473,7 @@ a {
   border-left: 4px solid var(--azul);
   background: #eef5f9;
   color: #244859;
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.6;
 }
 
@@ -2502,13 +2505,13 @@ a {
 .dialogo-anonimato h2 {
   margin: 12px 0;
   color: var(--azul-escuro);
-  font-size: 24px;
+  font-size: 1.5rem;
 }
 
 /* deixa a explicação fácil de ler */
 .dialogo-anonimato p {
   line-height: 1.7;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 /* mantém os dois caminhos visíveis também em telas menores */
@@ -2570,7 +2573,7 @@ a {
 /* elemento de grade de participação */
 .grade-participacao article > span {
   color: var(--azul-claro);
-  font-size: 27px;
+  font-size: 1.6875rem;
 }
 
 /* título de grade de participação */
@@ -2609,14 +2612,14 @@ a {
 /* elemento de grade de canais contato */
 .grade-canais-contato article > span {
   color: var(--azul);
-  font-size: 25px;
+  font-size: 1.5625rem;
 }
 
 /* título de grade de canais contato */
 .grade-canais-contato h2 {
   margin: 27px 0 8px;
   color: #304952;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 /* texto de grade de canais contato */
@@ -2630,7 +2633,7 @@ a {
 .grade-canais-contato a {
   margin-top: auto;
   color: var(--azul);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -2686,7 +2689,7 @@ a {
   display: block;
   margin-bottom: 8px;
   color: #43565e;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -2719,7 +2722,7 @@ a {
 .filtro-noticias p {
   margin: 9px 0 0;
   color: #6b7a80;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 /* grade de notícias completa */
@@ -2741,7 +2744,7 @@ a {
 .cabecalho-secao h2 {
   margin: 10px 0 0;
   color: #33474f;
-  font-size: 31px;
+  font-size: 1.9375rem;
   line-height: 1.15;
   font-weight: 500;
 }
@@ -2751,7 +2754,7 @@ a {
   max-width: 650px;
   margin: 10px 0 0;
   color: #66747a;
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.6;
 }
 
@@ -2894,14 +2897,14 @@ a {
 
 /* elemento de imagem de notícia */
 .imagem-noticia span {
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.8px;
 }
 
 /* destaque de imagem de notícia */
 .imagem-noticia strong {
   margin-top: 2px;
-  font-size: 24px;
+  font-size: 1.5rem;
 }
 
 /* conteúdo de notícia */
@@ -2912,7 +2915,7 @@ a {
 /* texto auxiliar de conteúdo de notícia */
 .corpo-noticia > small {
   color: var(--azul);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.8px;
 }
@@ -2921,7 +2924,7 @@ a {
 .corpo-noticia h3 {
   margin: 8px 0 10px;
   color: #33464e;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.32;
 }
 
@@ -2929,14 +2932,14 @@ a {
 .corpo-noticia p {
   margin: 0 0 15px;
   color: #6a767b;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.55;
 }
 
 /* link de conteúdo de notícia */
 .corpo-noticia a {
   color: var(--azul-escuro);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -2973,12 +2976,12 @@ a {
 
 /* destaque de aviso de demonstração */
 .aviso-demonstracao strong {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* elemento de aviso de demonstração */
 .aviso-demonstracao span {
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.4;
 }
 
@@ -3008,7 +3011,7 @@ a {
   /* organiza os elementos em colunas */
   grid-template-columns: 13px 1fr;
   color: #33474f;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   line-height: 1.35;
 }
@@ -3016,7 +3019,7 @@ a {
 /* elemento de lista de avisos */
 .lista-avisos a span {
   color: var(--azul-claro);
-  font-size: 20px;
+  font-size: 1.25rem;
   line-height: 0.8;
 }
 
@@ -3031,7 +3034,7 @@ a {
   display: block;
   margin: 7px 0 0 13px;
   color: #899398;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 /* representação */
@@ -3065,7 +3068,7 @@ a {
   top: -17px;
   right: 13px;
   color: #eef3f5;
-  font-size: 92px;
+  font-size: 5.75rem;
   line-height: 1;
   font-weight: 800;
 }
@@ -3082,7 +3085,7 @@ a {
 .grade-representacao h3 {
   margin: 38px 0 13px;
   color: #2d444e;
-  font-size: 21px;
+  font-size: 1.3125rem;
 }
 
 /* texto de grade de representação */
@@ -3095,7 +3098,7 @@ a {
 /* link de grade de representação */
 .grade-representacao a {
   color: var(--azul);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -3127,7 +3130,7 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.45);
   color: #ffffff;
   background: rgba(255, 255, 255, 0.09);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -3167,7 +3170,7 @@ a {
   margin: 0;
   text-align: center;
   color: #29434e;
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 500;
 }
 
@@ -3179,7 +3182,7 @@ a {
   color: var(--azul);
   background: #ffffff;
   cursor: pointer;
-  font-size: 27px;
+  font-size: 1.6875rem;
 }
 
 /* interação de botão de topo de calendário */
@@ -3208,7 +3211,7 @@ a {
   padding: 9px 2px;
   text-align: center;
   color: #77858b;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -3276,7 +3279,7 @@ a {
 /* etiqueta evento */
 .etiqueta-evento {
   color: var(--azul);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 1px;
 }
@@ -3285,7 +3288,7 @@ a {
 .detalhes-evento h3 {
   margin: 11px 0 19px;
   color: #29434e;
-  font-size: 23px;
+  font-size: 1.4375rem;
   line-height: 1.2;
 }
 
@@ -3306,7 +3309,7 @@ a {
 /* nome do detalhe de detalhes de evento */
 .detalhes-evento dt {
   color: #7c898e;
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
 }
 
@@ -3328,7 +3331,7 @@ a {
 .detalhes-evento a {
   margin-top: auto;
   color: var(--azul);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -3371,7 +3374,7 @@ a {
 /* texto auxiliar de resumo financeiro */
 .resumo-financeiro small {
   color: #738086;
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
 }
 
@@ -3379,14 +3382,14 @@ a {
 .resumo-financeiro strong {
   margin: 10px 0 7px;
   color: #29434e;
-  font-size: 23px;
+  font-size: 1.4375rem;
   font-weight: 500;
 }
 
 /* elemento de resumo financeiro */
 .resumo-financeiro span {
   color: #8a9498;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 /* valor entrada */
@@ -3429,14 +3432,14 @@ a {
 .topo-tabela h3 {
   margin: 0;
   color: #314952;
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 
 /* texto de topo de tabela */
 .topo-tabela p {
   margin: 6px 0 0;
   color: #78858a;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* rótulo de topo de tabela */
@@ -3445,7 +3448,7 @@ a {
   align-items: center;
   gap: 8px;
   color: #65747a;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -3467,7 +3470,7 @@ a {
 .tabela-movimentos {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* tabela movimentos */
@@ -3476,7 +3479,7 @@ a {
   color: #ffffff;
   background: var(--azul-escuro);
   text-align: left;
-  font-size: 10px;
+  font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -3504,7 +3507,7 @@ a {
   min-width: 58px;
   padding: 4px 7px;
   text-align: center;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
 }
 
@@ -3532,7 +3535,7 @@ a {
   border: 1px solid #d4dcdf;
   color: #8a9498;
   background: #f5f7f8;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 /* documentos */
@@ -3584,7 +3587,7 @@ a {
   place-items: center;
   color: #ffffff;
   background: var(--azul);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   clip-path: polygon(0 0, 74% 0, 100% 24%, 100% 100%, 0 100%);
 }
@@ -3599,20 +3602,20 @@ a {
 .cartao-documento strong {
   margin-bottom: 8px;
   color: #324a53;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 /* texto auxiliar de cartão de documento */
 .cartao-documento small {
   color: #718086;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.48;
 }
 
 /* destaque de cartão de documento */
 .cartao-documento b {
   color: var(--azul-claro);
-  font-size: 24px;
+  font-size: 1.5rem;
 }
 
 /* formulários */
@@ -3655,7 +3658,7 @@ a {
 /* elemento de grade de formulários */
 .grade-formularios span {
   color: var(--azul-claro);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 1px;
 }
@@ -3664,13 +3667,13 @@ a {
 .grade-formularios strong {
   margin: 30px 0 12px;
   color: #2f4852;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 /* texto auxiliar de grade de formulários */
 .grade-formularios small {
   color: #708086;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.55;
 }
 
@@ -3695,14 +3698,14 @@ a {
 .texto-contato h2 {
   margin: 13px 0 17px;
   color: #2d4650;
-  font-size: 34px;
+  font-size: 2.125rem;
   font-weight: 500;
 }
 
 /* texto de contato */
 .texto-contato p {
   color: #637278;
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.65;
 }
 
@@ -3718,7 +3721,7 @@ a {
   padding: 10px 0;
   border-bottom: 1px solid #cedade;
   color: #53666e;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* formulário de contato */
@@ -3745,7 +3748,7 @@ a {
   gap: 7px;
   margin-bottom: 14px;
   color: #495c64;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -3762,7 +3765,7 @@ a {
   outline: 0;
   color: #3f535b;
   background: #ffffff;
-  font: 13px Arial, Helvetica, sans-serif;
+  font: 0.8125rem Arial, Helvetica, sans-serif;
   text-transform: none;
   letter-spacing: 0;
 }
@@ -3819,7 +3822,7 @@ a {
   color: #14633f;
   background: #e3f4ea;
   border-left: 4px solid #26935e;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* final */
@@ -3832,7 +3835,7 @@ a {
 /* título de acesso rápido */
 .acesso-rapido h2 {
   margin: 0 0 21px;
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 500;
 }
 
@@ -3853,7 +3856,7 @@ a {
   padding: 12px 15px;
   border-right: 1px solid rgba(255, 255, 255, 0.22);
   border-bottom: 1px solid rgba(255, 255, 255, 0.22);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* interação de link de links de acesso rápido */
@@ -3908,7 +3911,7 @@ a {
 
 /* destaque de marcas rodapé */
 .marcas-rodape strong {
-  font-size: 24px;
+  font-size: 1.5rem;
 }
 
 /* elemento de marcas rodapé */
@@ -3916,7 +3919,7 @@ a {
 .endereco-rodape span,
 .redes-rodape a {
   color: rgba(255, 255, 255, 0.86);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.45;
 }
 
@@ -3939,7 +3942,7 @@ a {
   justify-content: space-between;
   gap: 18px;
   color: rgba(255, 255, 255, 0.75);
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 /* botão de voltar topo */
@@ -3957,12 +3960,13 @@ a {
   background: var(--azul);
   /* cria uma sombra para destacar o elemento */
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.23);
-  font-size: 21px;
+  font-size: 1.3125rem;
 }
 
-/* acessibilidade */
-.texto-maior {
-  font-size: 17px;
+/* aumenta os textos em um único nível sem ampliar imagens e larguras */
+html:has(#topo.texto-maior) {
+  font-size: 112.5%;
+  --fator-texto: 1.125;
 }
 
 /* modo de alto contraste */
@@ -3982,6 +3986,13 @@ a {
   background: #000000;
 }
 
+/* indica qual tamanho de texto está ativo */
+.atalhos-acessibilidade button[aria-pressed="true"] {
+  color: var(--azul-escuro);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
 /* destaque do foco pelo teclado */
 :focus-visible {
   outline: 3px solid #f2c230;
@@ -3998,7 +4009,7 @@ a {
   /* link de item do menu */
   .item-menu > a {
     padding-inline: 11px;
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 
   /* link de item do menu com submenu */
@@ -4042,7 +4053,7 @@ a {
   /* link de item do menu */
   .item-menu > a {
     padding-inline: 7px;
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
 
   /* link de item do menu com submenu */
@@ -4110,7 +4121,7 @@ a {
     background: var(--azul);
     color: #ffffff;
     cursor: pointer;
-    font-size: 23px;
+    font-size: 1.4375rem;
     line-height: 1;
   }
 
@@ -4125,12 +4136,12 @@ a {
     width: 46px;
     height: 46px;
     border-width: 3px;
-    font-size: 15px;
+    font-size: 0.9375rem;
   }
 
   /* destaque de nome do gecep */
   .nome-gecep strong {
-    font-size: 18px;
+    font-size: 1.125rem;
   }
 
   /* texto auxiliar de nome do gecep */
@@ -4167,7 +4178,7 @@ a {
     height: auto;
     justify-content: space-between;
     padding-inline: 22px;
-    font-size: 14px;
+    font-size: 0.875rem;
     white-space: normal;
     overflow-wrap: anywhere;
   }
@@ -4213,7 +4224,7 @@ a {
     padding: 12px 31px;
     color: #ffffff;
     border-color: rgba(255, 255, 255, 0.12);
-    font-size: 13px;
+    font-size: 0.8125rem;
     line-height: 1.5;
     overflow-wrap: anywhere;
   }
@@ -4246,7 +4257,7 @@ a {
 
   /* título de texto do banner */
   .texto-banner h1 {
-    font-size: 32px;
+    font-size: 2rem;
   }
 
   /* arte do banner */
@@ -4258,7 +4269,7 @@ a {
   .seta-banner {
     width: 30px;
     height: 54px;
-    font-size: 32px;
+    font-size: 2rem;
   }
 
   /* seta esquerda */
@@ -4303,7 +4314,7 @@ a {
 
   /* título de cabeçalho de seção */
   .cabecalho-secao h2 {
-    font-size: 27px;
+    font-size: 1.6875rem;
   }
 
   /* grade de notícias avisos */
@@ -4404,13 +4415,6 @@ a {
   }
 }
 
-@media (max-width: 520px) {
-  /* em telas muito estreitas, mantemos apenas os controles de tamanho do texto */
-  .atalhos-acessibilidade > button:first-of-type {
-    display: none;
-  }
-}
-
 /* adapta os estilos para telas de até 450 pixels */
 @media (max-width: 450px) {
   /* conteúdo da barra do governo */
@@ -4424,7 +4428,7 @@ a {
 
   /* link de conteúdo da barra do governo */
   .barra-governo-conteudo > a {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
 
   /* imagem de marca do colégio */
@@ -4451,17 +4455,17 @@ a {
 
   /* título de texto do banner */
   .texto-banner h1 {
-    font-size: 27px;
+    font-size: 1.6875rem;
   }
 
   /* texto do banner */
   .texto-banner p {
-    font-size: 15px;
+    font-size: 0.9375rem;
   }
 
   /* título de faixa de título */
   .faixa-titulo h2 {
-    font-size: 19px;
+    font-size: 1.1875rem;
   }
 
   /* cabeçalho de seção */
@@ -4482,7 +4486,7 @@ a {
 
   /* título de topo de calendário */
   .topo-calendario h3 {
-    font-size: 17px;
+    font-size: 1.0625rem;
   }
 
   /* botão de dias calendário */
@@ -4957,14 +4961,14 @@ a {
   /* título de texto inicial */
   .inicio-texto h1 {
     margin-inline: auto;
-    font-size: 37px;
+    font-size: 2.3125rem;
     letter-spacing: -0.7px;
   }
 
   /* texto inicial */
   .inicio-texto p {
     margin-inline: auto;
-    font-size: 15px;
+    font-size: 0.9375rem;
   }
 
   /* botões de início */
@@ -5024,7 +5028,7 @@ a {
   .grade-formulario-pagina h2,
   .grade-formulario-contato h2,
   .grade-estatuto-abertura h2 {
-    font-size: 27px;
+    font-size: 1.6875rem;
   }
 
   /* grade de áreas portal */
@@ -5080,7 +5084,7 @@ a {
 
   /* título de topo de página */
   .topo-pagina h1 {
-    font-size: 34px;
+    font-size: 2.125rem;
   }
 
   /* ajuste específico de item de grade de dados gecep */
@@ -5148,7 +5152,7 @@ a {
 
   /* título de texto inicial */
   .inicio-texto h1 {
-    font-size: 31px;
+    font-size: 1.9375rem;
   }
 
   /* aparência comum dos botões da página */
@@ -5281,14 +5285,14 @@ a {
   display: grid;
   place-items: center;
   color: var(--azul);
-  font-size: 43px;
+  font-size: 2.6875rem;
   font-weight: 700;
 }
 
 /* texto auxiliar de cartão de integrante */
 .cartao-integrante small {
   color: var(--azul);
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   letter-spacing: 0.7px;
   text-transform: uppercase;
@@ -5298,7 +5302,7 @@ a {
 .cartao-integrante h3 {
   margin: 9px 0 4px;
   color: #304952;
-  font-size: 21px;
+  font-size: 1.3125rem;
 }
 
 /* destaque de cartão de integrante */
@@ -5310,7 +5314,7 @@ a {
 .cartao-integrante > b {
   margin-top: 5px;
   color: #7a888d;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 400;
 }
 
@@ -5324,7 +5328,7 @@ a {
 .cartao-integrante a {
   margin-top: auto;
   color: var(--azul);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -5356,7 +5360,7 @@ a {
 /* destaque de estado vazio equipe */
 .estado-vazio-equipe strong {
   color: #304952;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 /* texto de estado vazio equipe */
@@ -5370,7 +5374,7 @@ a {
   display: block;
   margin-top: 11px;
   color: var(--azul);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
 }
 
@@ -5397,7 +5401,7 @@ a {
   color: #842626;
   background: #fdeaea;
   border-left: 4px solid #c94848;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* estado desativado de botão de formulário de participação */
@@ -5410,14 +5414,14 @@ a {
 /* link de tabela movimentos */
 .tabela-movimentos td > a {
   color: var(--azul);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
 }
 
 /* elemento de tabela movimentos */
 .tabela-movimentos td > span {
   color: #899398;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 /* painel da gestão */
@@ -5462,7 +5466,7 @@ a {
   place-items: center;
   border: 2px solid rgba(255, 255, 255, 0.75);
   border-radius: 50%;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -5476,14 +5480,14 @@ a {
 .usuario-painel small {
   margin-bottom: 4px;
   color: rgba(255, 255, 255, 0.65);
-  font-size: 9px;
+  font-size: 0.5625rem;
   text-transform: uppercase;
 }
 
 /* destaque de usuário de painel */
 .usuario-painel strong {
   overflow: hidden;
-  font-size: 12px;
+  font-size: 0.75rem;
   text-overflow: ellipsis;
 }
 
@@ -5503,7 +5507,7 @@ a {
   background: transparent;
   cursor: pointer;
   text-align: left;
-  font: 12px Arial, Helvetica, sans-serif;
+  font: 0.75rem Arial, Helvetica, sans-serif;
 }
 
 /* interação de botão de menu do painel */
@@ -5531,7 +5535,7 @@ a {
   background: transparent;
   cursor: pointer;
   text-align: center;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
 }
 
@@ -5563,7 +5567,7 @@ a {
 .topo-painel h1 {
   margin: 8px 0 5px;
   color: #304952;
-  font-size: 31px;
+  font-size: 1.9375rem;
   font-weight: 500;
 }
 
@@ -5614,7 +5618,7 @@ a {
 .lista-painel h2 {
   margin: 4px 0;
   color: #304952;
-  font-size: 17px;
+  font-size: 1.0625rem;
 }
 
 /* texto auxiliar de lista de painel */
@@ -5622,7 +5626,7 @@ a {
 .lista-painel p {
   margin: 0;
   color: #7a878c;
-  font-size: 9px;
+  font-size: 0.5625rem;
 }
 
 /* estado publicado */
@@ -5631,7 +5635,7 @@ a {
   padding: 5px 7px;
   color: #176a45;
   background: #e3f3ea;
-  font-size: 8px;
+  font-size: 0.5rem;
   font-weight: 700;
   text-align: center;
   text-transform: uppercase;
@@ -5652,7 +5656,7 @@ a {
 /* botão de ações de item painel */
 .acoes-item-painel button {
   padding: 7px 10px;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 /* ajuste específico de botão de ações de item painel */
@@ -5703,7 +5707,7 @@ a {
 /* texto auxiliar de título de formulário painel */
 .titulo-formulario-painel small {
   color: var(--azul);
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
 }
 
@@ -5711,7 +5715,7 @@ a {
 .titulo-formulario-painel h2 {
   margin: 7px 0 0;
   color: #304952;
-  font-size: 23px;
+  font-size: 1.4375rem;
 }
 
 /* botão de título de formulário painel */
@@ -5740,7 +5744,7 @@ a {
 /* elemento de grade de campos painel */
 .grade-campos-painel label > span {
   color: #475b63;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -5757,7 +5761,7 @@ a {
   outline: 0;
   color: #3e535c;
   background: #ffffff;
-  font: 13px Arial, Helvetica, sans-serif;
+  font: 0.8125rem Arial, Helvetica, sans-serif;
 }
 
 /* interação de campo de grade de campos painel */
@@ -5829,7 +5833,7 @@ a {
 .cabecalho-mensagens h2 {
   margin: 8px 0 5px;
   color: #304952;
-  font-size: 27px;
+  font-size: 1.6875rem;
 }
 
 /* texto de cabeçalho de mensagens */
@@ -5847,7 +5851,7 @@ a {
   color: #ffffff;
   background: var(--azul);
   border-radius: 50%;
-  font-size: 21px;
+  font-size: 1.3125rem;
 }
 
 /* ferramentas de mensagens */
@@ -5878,7 +5882,7 @@ a {
   color: #49616a;
   background: #ffffff;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -5900,7 +5904,7 @@ a {
   display: block;
   margin-bottom: 7px;
   color: #4c626b;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -5922,7 +5926,7 @@ a {
   outline: 0;
   color: #3e535c;
   background: #ffffff;
-  font: 13px Arial, Helvetica, sans-serif;
+  font: 0.8125rem Arial, Helvetica, sans-serif;
 }
 
 /* interação de campo de busca de mensagens */
@@ -5971,7 +5975,7 @@ a {
   justify-content: space-between;
   gap: 15px;
   color: var(--azul);
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -5989,7 +5993,7 @@ a {
   padding: 4px 7px;
   color: #526970;
   background: #e9f1f4;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -6068,7 +6072,7 @@ a {
 /* elemento de acesso negado ao painel */
 .acesso-negado-painel > span {
   color: var(--azul);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
 }
 
@@ -6076,7 +6080,7 @@ a {
 .acesso-negado-painel h1 {
   margin: 12px 0;
   color: #304952;
-  font-size: 38px;
+  font-size: 2.375rem;
   font-weight: 500;
 }
 
@@ -6101,7 +6105,7 @@ a {
   padding-bottom: 13px;
   color: var(--azul);
   border-bottom: 1px solid #dce4e7;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -6109,7 +6113,7 @@ a {
 /* texto de notícia completa */
 .noticia-completa > p {
   color: #52666e;
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1.8;
 }
 

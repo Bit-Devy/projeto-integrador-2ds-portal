@@ -1,6 +1,6 @@
-.ic-sobretitulo { display:block; color:var(--azul-escuro); font-size:11px; font-weight:700; letter-spacing:1.6px; margin-bottom:8px; }
+.ic-sobretitulo { display:block; color:var(--azul-escuro); font-size:0.6875rem; font-weight:700; letter-spacing:1.6px; margin-bottom:8px; }
 .ic-chave { border:1px solid #dce5eb; border-radius:16px; background:white; overflow:hidden; margin:24px 0; }
-.ic-tela-cheia-barra { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 24px; background:#f0f6fa; border-bottom:1px solid #dce5eb; color:#45647a; font-size:12px; flex-shrink:0; }
+.ic-tela-cheia-barra { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 24px; background:#f0f6fa; border-bottom:1px solid #dce5eb; color:#45647a; font-size:0.75rem; flex-shrink:0; }
 .ic-chave-tela-cheia { position:fixed; inset:0; width:100dvw; max-width:100dvw; height:100dvh; max-height:100dvh; margin:0; padding:0; border:0; background:white; color:#334f62; overflow:hidden; }
 .ic-chave-tela-cheia::backdrop { background:#09283f99; }
 .ic-chave-tela-cheia[open] { display:flex; }
@@ -8,27 +8,27 @@
 .ic-chave-tela-cheia .ic-visor { flex:1; min-height:0; max-height:none; }
 .ic-chave-tela-cheia .ic-chave-topo { padding-block:16px; }
 .ic-chave-tela-cheia .ic-ferramentas,.ic-chave-tela-cheia .ic-chave-base { flex-shrink:0; }
-.ic-chave-aviso { margin:0; padding:10px 24px; background:#edf8f2; color:#206544; font-size:13px; }
+.ic-chave-aviso { margin:0; padding:10px 24px; background:#edf8f2; color:#206544; font-size:0.8125rem; }
 .ic-chave-aviso-erro { background:#fff0ed; color:#a13a2c; }
 .ic-regras-sorteio { margin:20px 0 0; padding:20px; border:1px solid #dce5eb; border-radius:12px; background:#f8fafc; }
-.ic-regras-sorteio legend { padding:0 8px; font-weight:700; font-size:14px; color:#17374b; }
+.ic-regras-sorteio legend { padding:0 8px; font-weight:700; font-size:0.875rem; color:#17374b; }
 .ic-limitar-series { display:flex; align-items:flex-start; gap:12px; cursor:pointer; }
 .ic-limitar-series input { margin-top:4px; width:18px; height:18px; accent-color:var(--azul); }
 .ic-limitar-series span { display:grid; gap:5px; }
-.ic-limitar-series strong { font-size:14px; }
-.ic-limitar-series small,.ic-regras-sorteio p { color:#647683; font-size:12px; line-height:1.6; }
+.ic-limitar-series strong { font-size:0.875rem; }
+.ic-limitar-series small,.ic-regras-sorteio p { color:#647683; font-size:0.75rem; line-height:1.6; }
 .ic-regras-sorteio p { margin:12px 0 0; }
-.ic-limite-anos { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:16px 0 0 30px; font-size:13px; }
+.ic-limite-anos { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:16px 0 0 30px; font-size:0.8125rem; }
 .ic-limite-anos select { padding:9px 12px; border:1px solid #d5e1e8; border-radius:8px; background:white; }
 .ic-turmas .ic-turma-invalida { color:#a13a2c; background:#fff0ed; border:1px solid #e6aca2; }
 .ic-chave-topo { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:26px; }
-.ic-chave-topo h2 { font-size:24px; letter-spacing:-.6px; margin:0 0 8px; color:#17374b; }
-.ic-chave-topo p { margin:0; color:#647683; font-size:13px; line-height:1.6; max-width:540px; }
-.ic-busca { display:grid; gap:7px; font-size:12px; font-weight:700; color:#405d70; min-width:190px; }
+.ic-chave-topo h2 { font-size:1.5rem; letter-spacing:-.6px; margin:0 0 8px; color:#17374b; }
+.ic-chave-topo p { margin:0; color:#647683; font-size:0.8125rem; line-height:1.6; max-width:540px; }
+.ic-busca { display:grid; gap:7px; font-size:0.75rem; font-weight:700; color:#405d70; min-width:190px; }
 .ic-busca input { width:100%; border:1px solid #d5e1e8; border-radius:8px; padding:11px 13px; background:#f8fafc; font-weight:400; }
 .ic-ferramentas { display:flex; justify-content:space-between; align-items:center; gap:16px; border-top:1px solid #eef2f5; padding:12px 24px; }
 .ic-atalhos-fases { display:flex; gap:7px; overflow-x:auto; }
-.ic-atalhos-fases button { white-space:nowrap; padding:9px 12px; background:#f0f6fa; color:#365c74; border:0; border-radius:7px; font-size:12px; cursor:pointer; }
+.ic-atalhos-fases button { white-space:nowrap; padding:9px 12px; background:#f0f6fa; color:#365c74; border:0; border-radius:7px; font-size:0.75rem; cursor:pointer; }
 .ic-zoom { display:flex; border:1px solid #dce5eb; border-radius:8px; flex-shrink:0; overflow:hidden; }
 .ic-zoom button { border:0; padding:8px 12px; background:white; color:#365c74; cursor:pointer; }
 .ic-zoom button:disabled { opacity:.35; cursor:default; }
@@ -40,8 +40,8 @@
 /* mostra o avanço por folga com uma linha pontilhada */
 .ic-conexoes .ic-conexao-folga { stroke-dasharray:5 4; }
 .ic-conexoes .ic-conexao-destaque { stroke:var(--azul); stroke-width:3; }
-.ic-fase-titulo { position:absolute; top:0; width:280px; margin:0; display:flex; align-items:center; gap:6px; color:#45647a; font-size:13px; font-weight:700; }
-.ic-fase-titulo small { margin-left:auto; color:#7d91a0; font-size:11px; font-weight:400; }
+.ic-fase-titulo { position:absolute; top:0; width:280px; margin:0; display:flex; align-items:center; gap:6px; color:#45647a; font-size:0.8125rem; font-weight:700; }
+.ic-fase-titulo small { margin-left:auto; color:#7d91a0; font-size:0.6875rem; font-weight:400; }
 .ic-fase-final { color:#956b13; }
 /* mantém os cartões do painel e do portal com o mesmo tamanho */
 .ic-jogo { position:absolute; display:flex; flex-direction:column; width:280px; background:white; border:1px solid #d8e3eb; border-radius:10px; box-shadow:0 3px 9px #17374b06; transition:opacity .15s,border-color .15s; overflow:hidden; }
@@ -51,31 +51,31 @@
 .ic-jogo-apagado { opacity:.32; }
 .ic-jogo-encontrado { border-color:var(--azul); box-shadow:0 0 0 2px #0072bb15; }
 .ic-abrir-jogo { display:flex; flex-direction:column; width:100%; height:100%; padding:0; border:0; background:transparent; border-radius:10px; color:inherit; text-align:left; cursor:pointer; }
-.ic-jogo-cabecalho { height:34px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 12px; color:#718796; font-size:10px; letter-spacing:.4px; border-bottom:1px solid #f0f3f6; }
+.ic-jogo-cabecalho { height:34px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 12px; color:#718796; font-size:0.625rem; letter-spacing:.4px; border-bottom:1px solid #f0f3f6; }
 .ic-jogo-cabecalho .ic-ao-vivo { color:#177b45; font-weight:700; }
 .ic-jogo-cabecalho .ic-ao-vivo::before { content:""; display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:#198847; }
-.ic-equipe { height:42px; flex-shrink:0; display:flex; align-items:center; gap:9px; margin:0; padding:0 12px; width:100%; color:#4b6070; background:white; border:0; border-bottom:1px solid #f0f3f6; font-size:13px; text-align:left; }
+.ic-equipe { height:42px; flex-shrink:0; display:flex; align-items:center; gap:9px; margin:0; padding:0 12px; width:100%; color:#4b6070; background:white; border:0; border-bottom:1px solid #f0f3f6; font-size:0.8125rem; text-align:left; }
 button.ic-equipe { cursor:grab; }
-.ic-equipe-inicial { display:grid; place-items:center; width:24px; height:24px; border-radius:6px; background:#f0f4f7; color:#6f8798; font-size:9px; flex-shrink:0; }
+.ic-equipe-inicial { display:grid; place-items:center; width:24px; height:24px; border-radius:6px; background:#f0f4f7; color:#6f8798; font-size:0.5625rem; flex-shrink:0; }
 .ic-equipe-nome { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ic-equipe strong { min-width:22px; text-align:center; font-size:15px; }
+.ic-equipe strong { min-width:22px; text-align:center; font-size:0.9375rem; }
 .ic-ganhador { background:#eef8f2; color:#176d3c; font-weight:700; }
 .ic-ganhador .ic-equipe-inicial { color:#176d3c; background:#dcefe3; }
 .ic-posicao-selecionada { box-shadow:inset 0 0 0 2px var(--azul); background:#e9f5ff; }
 /* mantém a data e o aviso de folga juntos no cartão */
 .ic-jogo-rodape > span:first-child { display:grid; gap:2px; }
-.ic-avanco-folga { color:#80601a; font-size:9px; line-height:1.2; }
-.ic-jogo-rodape { flex:1; min-height:34px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; color:#738899; font-size:10px; gap:8px; }
-.ic-editar-jogo { flex-shrink:0; border:0; border-top:1px solid #e6eef3; width:100%; background:#f4f9fc; color:var(--azul-escuro); padding:7px; border-radius:0 0 10px 10px; font-size:11px; cursor:pointer; }
-.ic-chave-base { padding:12px 24px; display:flex; gap:20px; align-items:center; color:#6d8290; font-size:11px; }
+.ic-avanco-folga { color:#80601a; font-size:0.5625rem; line-height:1.2; }
+.ic-jogo-rodape { flex:1; min-height:34px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; color:#738899; font-size:0.625rem; gap:8px; }
+.ic-editar-jogo { flex-shrink:0; border:0; border-top:1px solid #e6eef3; width:100%; background:#f4f9fc; color:var(--azul-escuro); padding:7px; border-radius:0 0 10px 10px; font-size:0.6875rem; cursor:pointer; }
+.ic-chave-base { padding:12px 24px; display:flex; gap:20px; align-items:center; color:#6d8290; font-size:0.6875rem; }
 .ic-chave-base > span { display:flex; gap:7px; align-items:center; }
 .ic-chave-base i { display:inline-block; width:8px; height:8px; background:var(--verde); border-radius:3px; }
 .ic-chave-base > div { margin-left:auto; display:flex; gap:6px; }
 .ic-chave-base button { width:32px; height:30px; border:1px solid #dce5eb; border-radius:6px; background:white; color:#345b73; cursor:pointer; }
-.ic-selecao,.ic-resultado-busca { margin:0; padding:12px 24px; background:#eaf5fd; color:var(--azul-escuro); font-size:12px; }
+.ic-selecao,.ic-resultado-busca { margin:0; padding:12px 24px; background:#eaf5fd; color:var(--azul-escuro); font-size:0.75rem; }
 .ic-selecao button { border:0; background:none; text-decoration:underline; cursor:pointer; margin-left:10px; }
 .ic-vazio { text-align:center; padding:56px 24px; border:1px dashed #cedde7; border-radius:14px; color:#738899; }
-.ic-vazio > span { font-size:32px; }
+.ic-vazio > span { font-size:2rem; }
 .ic-vazio h3 { color:#35596f; }
 .ic-modal { position:fixed; inset:0; margin:auto; width:min(680px,calc(100% - 24px)); height:fit-content; max-height:90dvh; overflow-y:auto; padding:0; border:0; border-radius:18px; background:white; color:#334f62; box-shadow:0 24px 100px #09283f55; }
 .ic-modal::backdrop { background:#09283f99; backdrop-filter:blur(4px); }
@@ -83,8 +83,8 @@ button.ic-equipe { cursor:grab; }
 .ic-modal-admin .pev-resultado { margin:0; padding:24px; border:0; background:white; }
 /* deixa a confirmação no centro da tela */
 .ic-confirmacao { width:min(420px,calc(100% - 32px)); padding:32px; text-align:center; border-top:5px solid #20a56a; }
-.ic-confirmacao h2 { margin:18px 0 8px; color:#176743; font-size:23px; }
-.ic-confirmacao p { margin:0 0 24px; font-size:14px; line-height:1.7; color:#536b7b; }
+.ic-confirmacao h2 { margin:18px 0 8px; color:#176743; font-size:1.4375rem; }
+.ic-confirmacao p { margin:0 0 24px; font-size:0.875rem; line-height:1.7; color:#536b7b; }
 /* destaca o sucesso com um sinal verde */
 .ic-confirmacao-icone { display:grid; place-items:center; width:72px; height:72px; margin:auto; border-radius:50%; color:#168454; background:#e5f7ed; }
 .ic-confirmacao-icone svg { width:38px; height:38px; }
@@ -98,19 +98,19 @@ button.ic-equipe { cursor:grab; }
 /* organiza os filtros e os dados da atualização */
 .pev-filtros.ic-filtros-admin { grid-template-columns:minmax(200px,2fr) repeat(4,minmax(110px,1fr)); }
 .ic-resumo-atualizacao { display:flex; flex-wrap:wrap; gap:12px; margin:20px 0; }
-.ic-resumo-atualizacao > span { padding:12px 18px; border:1px solid #dce7ef; border-radius:12px; background:#f6fafd; font-size:13px; }
-.ic-resumo-atualizacao strong { margin-right:4px; color:var(--azul); font-size:20px; }
+.ic-resumo-atualizacao > span { padding:12px 18px; border:1px solid #dce7ef; border-radius:12px; background:#f6fafd; font-size:0.8125rem; }
+.ic-resumo-atualizacao strong { margin-right:4px; color:var(--azul); font-size:1.25rem; }
 /* dá espaço ao placar e mantém os detalhes opcionais recolhidos */
 .ic-modal-atualizacao { width:min(720px,calc(100% - 24px)); }
 .ic-campos-atualizacao { min-width:0; margin:0; padding:0; border:0; }
 .ic-placar-edicao { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:18px; padding:22px; margin:16px 0; background:#f2f8fc; border-radius:14px; }
 .ic-placar-edicao .pev-campo { text-align:center; }
-.ic-placar-edicao input { width:100%; text-align:center; font-size:28px; font-weight:700; }
-.ic-placar-edicao > span { padding-top:20px; color:#7c96a8; font-size:24px; }
+.ic-placar-edicao input { width:100%; text-align:center; font-size:1.75rem; font-weight:700; }
+.ic-placar-edicao > span { padding-top:20px; color:#7c96a8; font-size:1.5rem; }
 .ic-detalhes-atualizacao { margin:18px 0; border:1px solid #dce7ef; border-radius:12px; }
-.ic-detalhes-atualizacao summary { padding:14px 18px; cursor:pointer; font-size:13px; font-weight:700; }
+.ic-detalhes-atualizacao summary { padding:14px 18px; cursor:pointer; font-size:0.8125rem; font-weight:700; }
 .ic-detalhes-atualizacao > div { padding:0 18px 18px; }
-.ic-aviso-envio { color:#536b7b; font-size:12px; line-height:1.6; }
+.ic-aviso-envio { color:#536b7b; font-size:0.75rem; line-height:1.6; }
 /* adapta os controles às telas menores */
 @media (max-width:1000px) { .pev-filtros.ic-filtros-admin { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:600px) {
@@ -121,37 +121,37 @@ button.ic-equipe { cursor:grab; }
 }
 .ic-descricao { line-height:1.8; color:#607789; white-space:pre-line; max-width:850px; }
 .ic-modal-topo { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:20px 24px; border-bottom:1px solid #e9eff3; }
-.ic-modal-topo h2 { margin:0; font-size:16px; }
-.ic-modal-topo button { width:36px; height:36px; border:1px solid #dce5eb; border-radius:50%; background:white; color:#45647a; font-size:23px; cursor:pointer; }
+.ic-modal-topo h2 { margin:0; font-size:1rem; }
+.ic-modal-topo button { width:36px; height:36px; border:1px solid #dce5eb; border-radius:50%; background:white; color:#45647a; font-size:1.4375rem; cursor:pointer; }
 .ic-modal-corpo { padding:24px; }
 .ic-placar { padding:24px 16px; background:#f5f9fc; border-radius:12px; text-align:center; }
 .ic-placar-equipes { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; margin:24px 0; }
-.ic-placar-equipes > strong { font-size:clamp(15px,3vw,23px); overflow-wrap:anywhere; }
-.ic-placar-equipes > b { font-size:32px; color:#17374b; white-space:nowrap; }
-.ic-vitoria { color:#177b45; font-size:13px; }
+.ic-placar-equipes > strong { font-size:clamp(0.9375rem,calc(3vw * var(--fator-texto)),1.4375rem); overflow-wrap:anywhere; }
+.ic-placar-equipes > b { font-size:2rem; color:#17374b; white-space:nowrap; }
+.ic-vitoria { color:#177b45; font-size:0.8125rem; }
 .ic-modal-corpo .bloco-conteudo-evento { margin-top:20px; }
-.ic-modal-link { display:inline-block; margin-top:20px; color:var(--azul); font-weight:700; font-size:13px; }
+.ic-modal-link { display:inline-block; margin-top:20px; color:var(--azul); font-weight:700; font-size:0.8125rem; }
 .ic-campeonato-resumo { display:grid; grid-template-columns:repeat(4,1fr); border:1px solid #dce5eb; border-radius:12px; margin:20px 0; background:#fbfdff; }
 .ic-campeonato-resumo > div { padding:20px; border-right:1px solid #e3ebf0; }
 .ic-campeonato-resumo > div:last-child { border:0; }
-.ic-campeonato-resumo small { display:block; color:#738899; font-size:11px; margin-bottom:8px; }
-.ic-campeonato-resumo strong { color:#254b63; font-size:14px; line-height:1.5; white-space:pre-line; overflow-wrap:anywhere; }
+.ic-campeonato-resumo small { display:block; color:#738899; font-size:0.6875rem; margin-bottom:8px; }
+.ic-campeonato-resumo strong { color:#254b63; font-size:0.875rem; line-height:1.5; white-space:pre-line; overflow-wrap:anywhere; }
 .ic-turmas { display:flex; flex-wrap:wrap; gap:7px; margin:14px 0; }
-.ic-turmas > span { padding:6px 9px; border:1px solid #dce8f0; border-radius:6px; background:#f4f9fc; color:#3a6079; font-size:11px; }
+.ic-turmas > span { padding:6px 9px; border:1px solid #dce8f0; border-radius:6px; background:#f4f9fc; color:#3a6079; font-size:0.6875rem; }
 .ic-esporte { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
-.ic-esporte > span { display:grid; place-items:center; width:46px; height:46px; background:#eaf4fb; border:1px solid #d6e8f5; border-radius:12px; font-size:24px; }
-.ic-esporte small { display:block; color:#7d91a0; font-size:11px; margin-bottom:4px; }
-.ic-esporte strong { color:var(--azul-escuro); font-size:15px; }
+.ic-esporte > span { display:grid; place-items:center; width:46px; height:46px; background:#eaf4fb; border:1px solid #d6e8f5; border-radius:12px; font-size:1.5rem; }
+.ic-esporte small { display:block; color:#7d91a0; font-size:0.6875rem; margin-bottom:4px; }
+.ic-esporte strong { color:var(--azul-escuro); font-size:0.9375rem; }
 .cartao-interclasse { border-radius:14px; position:relative; }
-.ic-cartao-base { margin-top:auto; display:flex; justify-content:space-between; gap:12px; padding-top:18px; border-top:1px solid #e9eff3; color:var(--azul); font-size:12px; font-weight:700; }
+.ic-cartao-base { margin-top:auto; display:flex; justify-content:space-between; gap:12px; padding-top:18px; border-top:1px solid #e9eff3; color:var(--azul); font-size:0.75rem; font-weight:700; }
 .ic-filtro-esportes { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 20px; }
-.ic-filtro-esportes button { padding:10px 14px; border:1px solid #dce5eb; border-radius:20px; color:#527083; background:white; font-size:12px; cursor:pointer; }
+.ic-filtro-esportes button { padding:10px 14px; border:1px solid #dce5eb; border-radius:20px; color:#527083; background:white; font-size:0.75rem; cursor:pointer; }
 .ic-filtro-esportes button[aria-pressed="true"] { background:var(--azul); border-color:var(--azul); color:white; }
 .ic-lista-jogo { padding:20px; border:1px solid #dce5eb; border-radius:12px; background:white; text-align:left; font:inherit; color:inherit; cursor:pointer; }
 .ic-lista-jogo > div { display:flex; align-items:center; gap:12px; justify-content:space-between; }
-.ic-lista-jogo h3 { font-size:17px; color:#254b63; }
-.ic-lista-jogo p,.ic-lista-jogo small { color:#738899; font-size:12px; }
-.ic-lista-jogo > b { color:var(--azul); font-size:12px; }
+.ic-lista-jogo h3 { font-size:1.0625rem; color:#254b63; }
+.ic-lista-jogo p,.ic-lista-jogo small { color:#738899; font-size:0.75rem; }
+.ic-lista-jogo > b { color:var(--azul); font-size:0.75rem; }
 .ic-lista-jogo:hover { border-color:var(--azul); }
 .ic-lote { padding:24px; background:#f4f9fd; border:1px solid #d6e7f3; border-radius:12px; margin-bottom:24px; }
 .ic-lote h3 { margin:0 0 8px; color:#254b63; }
@@ -167,7 +167,7 @@ button.ic-equipe { cursor:grab; }
   .ic-tela-cheia-barra .pev-botao { margin-left:auto; }
   .ic-chave-tela-cheia .ic-chave-topo p { display:none; }
   .ic-chave-topo { flex-direction:column; align-items:stretch; padding:20px; gap:16px; }
-  .ic-chave-topo h2 { font-size:21px; }
+  .ic-chave-topo h2 { font-size:1.3125rem; }
   .ic-ferramentas { flex-wrap:wrap; padding:12px 16px; }
   .ic-atalhos-fases { width:100%; }
   .ic-zoom { margin-left:auto; }
@@ -180,7 +180,7 @@ button.ic-equipe { cursor:grab; }
   .ic-campeonato-resumo > div:nth-child(3) { border-bottom:0; }
   .ic-modal-corpo { padding:16px; }
   .ic-placar-equipes { gap:10px; }
-  .ic-placar-equipes > b { font-size:24px; }
+  .ic-placar-equipes > b { font-size:1.5rem; }
   .ic-lote { padding:18px; }
   .ic-lote-acoes { align-items:stretch; flex-direction:column; }
   .pev-adicionar-inline.ic-participante-individual { grid-template-columns:1fr; }

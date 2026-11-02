@@ -4,7 +4,7 @@
   display: block;
   padding: 18px 20px 6px;
   color: rgba(255, 255, 255, 0.56);
-  font-size: 8px;
+  font-size: 0.5rem;
   font-weight: 700;
   letter-spacing: 0.8px;
   text-transform: uppercase;
@@ -39,7 +39,7 @@
 .pev-cabecalho span,
 .pev-formulario__topo small {
   color: var(--azul);
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   letter-spacing: 0.7px;
   text-transform: uppercase;
@@ -48,7 +48,7 @@
 .pev-cabecalho h1 {
   margin: 8px 0 6px;
   color: #304952;
-  font-size: clamp(25px, 3vw, 31px);
+  font-size: clamp(1.5625rem, calc(3vw * var(--fator-texto)), 1.9375rem);
   font-weight: 500;
 }
 
@@ -72,7 +72,7 @@
   color: #315764;
   background: #fff;
   cursor: pointer;
-  font: 700 10px/1.25 Arial, Helvetica, sans-serif;
+  font: 700 0.625rem/1.25 Arial, Helvetica, sans-serif;
   text-align: center;
   text-decoration: none;
 }
@@ -131,7 +131,7 @@
   border-left: 4px solid #73939f;
   color: #40565f;
   background: #edf4f6;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.55;
 }
 
@@ -193,7 +193,7 @@
 .pev-opcoes-votacao label > span,
 .pev-acoes-lote label > span {
   color: #50666f;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -211,7 +211,7 @@
   outline: 0;
   color: #3e535c;
   background: #fff;
-  font: 13px Arial, Helvetica, sans-serif;
+  font: 0.8125rem Arial, Helvetica, sans-serif;
 }
 
 .pev-filtros :is(input, select):focus,
@@ -249,7 +249,7 @@
   padding: 5px 7px;
   color: #3e5a64;
   background: #e8eff1;
-  font-size: 8px;
+  font-size: 0.5rem;
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
@@ -306,7 +306,7 @@
 .pev-cartao__conteudo h2 {
   margin: 0 0 6px;
   color: #304952;
-  font-size: 17px;
+  font-size: 1.0625rem;
 }
 
 .pev-cartao__conteudo p,
@@ -314,7 +314,7 @@
   display: block;
   margin: 0;
   color: #6c7b81;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.5;
 }
 
@@ -341,7 +341,7 @@
 .pev-vazio strong {
   display: block;
   color: #40565f;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .pev-vazio p {
@@ -377,7 +377,7 @@
 .pev-subpainel__topo h2 {
   margin: 7px 0 0;
   color: #304952;
-  font-size: 23px;
+  font-size: 1.4375rem;
 }
 
 .pev-subpainel__topo h2 {
@@ -412,7 +412,7 @@
 .pev-campo > span:first-child,
 .pev-campo > label > span {
   color: #475b63;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -428,7 +428,7 @@
   outline: 0;
   color: #354f59;
   background: #fff;
-  font: 13px Arial, Helvetica, sans-serif;
+  font: 0.8125rem Arial, Helvetica, sans-serif;
 }
 
 .pev-campo > textarea {
@@ -448,7 +448,7 @@
 
 .pev-campo > small {
   color: #77868b;
-  font-size: 10px;
+  font-size: 0.625rem;
   line-height: 1.4;
 }
 
@@ -462,7 +462,7 @@
 .pev-bloco legend {
   padding: 0 8px;
   color: #315965;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -485,7 +485,7 @@
   align-items: center;
   gap: 9px;
   color: #315764;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -496,7 +496,7 @@
 .pev-resumo-publicacao p {
   margin: 7px 0 0;
   color: #66787e;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.5;
 }
 
@@ -543,7 +543,7 @@
   padding: 9px;
   color: #266146 !important;
   background: #e7f4ed;
-  font-size: 10px !important;
+  font-size: 0.625rem !important;
   text-transform: none !important;
 }
 
@@ -553,7 +553,7 @@
   color: #942f2f;
   background: transparent;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .pev-arquivos {
@@ -574,7 +574,7 @@
 
 .pev-arquivos a {
   color: var(--azul);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .pev-resumo {
@@ -605,11 +605,11 @@
 
 .pev-resumo strong {
   color: var(--azul);
-  font-size: 25px;
+  font-size: 1.5625rem;
 }
 
 .pev-resumo span {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -617,7 +617,7 @@
   align-items: center;
   margin: 0 0 13px;
   color: #61747b;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .pev-barra-resultados p {
@@ -653,7 +653,7 @@
 .pev-grade-pendencias span {
   margin-top: 5px;
   color: #77858a;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .pev-abas {
@@ -671,7 +671,7 @@
   color: #5c7078;
   background: transparent;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -750,7 +750,7 @@
 .pev-acoes-lote > span {
   align-self: center;
   color: #526970;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -765,7 +765,7 @@
   min-width: 760px;
   border-collapse: collapse;
   background: #fff;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .pev-tabela th,
@@ -778,7 +778,7 @@
 .pev-tabela th {
   color: #3d5963;
   background: #edf3f5;
-  font-size: 9px;
+  font-size: 0.5625rem;
   text-transform: uppercase;
 }
 
@@ -798,7 +798,7 @@
   color: #60747c;
   background: transparent;
   cursor: pointer;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
 }
 
@@ -861,7 +861,7 @@
   color: #fff;
   background: var(--azul);
   border-radius: 50%;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .pev-participantes small {
@@ -905,7 +905,7 @@
 .pev-formatos span {
   margin-top: 7px;
   color: #708087;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.45;
 }
 
@@ -941,7 +941,7 @@
 .pev-chave section > h3 {
   margin: 0 0 12px;
   color: #304952;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .pev-chave section > div {
@@ -960,7 +960,7 @@
   display: block;
   margin-bottom: 7px;
   color: #718087;
-  font-size: 8px;
+  font-size: 0.5rem;
   text-transform: uppercase;
 }
 
@@ -983,7 +983,7 @@
   display: block;
   margin: 8px 0;
   color: #32624c;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-style: normal;
   font-weight: 700;
 }
@@ -1014,7 +1014,7 @@
 
 .pev-revisao span {
   color: #6d7d83;
-  font-size: 8px;
+  font-size: 0.5rem;
   text-transform: uppercase;
 }
 
@@ -1025,7 +1025,7 @@
 
 .pev-revisao p {
   color: #687980;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.45;
 }
 

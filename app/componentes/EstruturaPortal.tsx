@@ -86,8 +86,6 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
   const [menuAberto, setMenuAberto] = useState(false);
   // controla o submenu aberto
   const [submenuAberto, setSubmenuAberto] = useState<string | null>(null);
-  // controla o alto contraste
-  const [contraste, setContraste] = useState(false);
   // controla o tamanho do texto
   const [textoMaior, setTextoMaior] = useState(false);
   // guarda o texto da busca
@@ -143,7 +141,7 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
 
   // aplica as opções de acessibilidade
   return (
-    <div id="topo" className={`${contraste ? "alto-contraste" : ""} ${textoMaior ? "texto-maior" : ""}`}>
+    <div id="topo" className={textoMaior ? "texto-maior" : ""}>
       {/* link para pular o cabeçalho */}
       <a className="pular-conteudo" href="#conteudo">
         Ir para o conteúdo
@@ -157,20 +155,12 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
           </a>
         </div>
         {/* botões de acessibilidade */}
-        <div className="atalhos-acessibilidade" aria-label="Opções de acessibilidade">
+        <div className="atalhos-acessibilidade" role="group" aria-label="Opções de acessibilidade">
           <span>Acessibilidade</span>
-          <button
-            type="button"
-            onClick={() => setContraste((valor) => !valor)}
-            aria-pressed={contraste}
-            title="Alternar contraste"
-          >
-            ◐
-          </button>
-          <button type="button" onClick={() => setTextoMaior(true)} title="Aumentar o texto">
+          <button type="button" onClick={() => setTextoMaior(true)} aria-pressed={textoMaior} aria-label="Aumentar o texto" title="Aumentar o texto">
             A+
           </button>
-          <button type="button" onClick={() => setTextoMaior(false)} title="Tamanho normal">
+          <button type="button" onClick={() => setTextoMaior(false)} aria-pressed={!textoMaior} aria-label="Diminuir o texto para o tamanho normal" title="Diminuir o texto para o tamanho normal">
             A
           </button>
         </div>
