@@ -119,7 +119,7 @@ export function CentralEventos() {
           <Link href="/eventos/internos"><strong>Eventos internos</strong><span>Atividades, campanhas e programações</span></Link>
           <Link href="/eventos/interclasses"><strong>Interclasses</strong><span>Campeonatos, chaves e partidas</span></Link>
           <Link href="/eventos/reunioes"><strong>Reuniões e atas</strong><span>Resumos, presenças e documentos</span></Link>
-          <Link href="/representantes"><strong>Representantes</strong><span>Consulte a representação das turmas</span></Link>
+          <Link href="/projetos"><strong>Projetos</strong><span>Conheça as iniciativas do grêmio</span></Link>
         </nav>
         {carregando && <EstadoCarregando texto="Carregando a central de eventos…" />}
         {erro && <EstadoErro mensagem={erro} tentarNovamente={recarregar} />}
