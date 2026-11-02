@@ -1208,3 +1208,17 @@
     box-shadow: none;
   }
 }
+
+/* mantém a escolha opcional da sala discreta e fácil de abrir */
+.salas-vinculo { margin-block: 1.25rem; padding: 1rem; border: 1px solid #dce5eb; border-radius: 8px; }
+.salas-vinculo summary { cursor: pointer; color: var(--azul-escuro); font-weight: 700; }
+.salas-vinculo label { display: flex; gap: .5rem; margin-block: 1rem; }
+.salas-vinculo p { color: #536b7b; font-size: .8125rem; line-height: 1.6; }
+
+/* explica as opções com um toque ou pelo teclado */
+.ajuda-opcao { max-width: 28rem; color: var(--azul-escuro); }
+.ajuda-opcao summary { cursor: help; list-style: none; padding: .25rem; }
+.ajuda-opcao p { padding: .75rem; background: #eef5f9; color: #244859; font-size: .8125rem; line-height: 1.6; }
+
+/* coloca a ajuda ao lado de cada caixa de seleção */
+.opcao-com-ajuda { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: start; gap: .5rem; margin-block: .5rem; }

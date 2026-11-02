@@ -11,5 +11,5 @@ function primeiro(valor: string | string[] | undefined) { return Array.isArray(v
 
 export default async function Representantes({ searchParams }: { searchParams: Promise<Busca> }) {
   const busca = await searchParams;
-  return <PaginaRepresentantes filtrosIniciais={{ busca: primeiro(busca.busca), turma: primeiro(busca.turma), turno: primeiro(busca.turno), nivel: primeiro(busca.nivel), serie: primeiro(busca.serie), funcao: primeiro(busca.funcao) }} />;
+  return <PaginaRepresentantes abrirTabelaInicial={primeiro(busca.tabela) === "1"} filtrosIniciais={{ busca: primeiro(busca.busca), turma: primeiro(busca.turma), turno: primeiro(busca.turno), nivel: primeiro(busca.nivel), serie: primeiro(busca.serie), funcao: primeiro(busca.funcao) }} />;
 }

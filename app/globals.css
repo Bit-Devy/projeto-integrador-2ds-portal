@@ -6949,3 +6949,8 @@ html:has(#topo.texto-maior) {
     padding: 18px;
   }
 }
+
+/* destaca o caminho do crt até a lista completa de representantes */
+.atalho-crt { border: 1px solid #dce5eb; color: var(--azul-escuro); }
+.atalho-crt:hover { border-color: var(--azul); background: #eef5f9; }
+#tabela-completa-representantes { scroll-margin-top: 1rem; }

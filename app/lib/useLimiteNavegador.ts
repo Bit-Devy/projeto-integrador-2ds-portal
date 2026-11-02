@@ -37,12 +37,12 @@ export function useLimiteNavegador(acao: AcaoLimitada) {
 
   // consulta o prazo ao abrir a página ou voltar para esta aba
   useEffect(() => {
-    void atualizar();
+    const inicio = setTimeout(() => { void atualizar(); }, 0);
     function aoVoltar() {
       if (document.visibilityState === "visible") void atualizar();
     }
     document.addEventListener("visibilitychange", aoVoltar);
-    return () => document.removeEventListener("visibilitychange", aoVoltar);
+    return () => { clearTimeout(inicio); document.removeEventListener("visibilitychange", aoVoltar); };
   }, [atualizar]);
 
   // confere novamente o servidor quando o bloqueio termina

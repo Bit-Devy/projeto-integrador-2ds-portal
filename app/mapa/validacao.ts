@@ -11,6 +11,8 @@ import { alasMapa, type AlaMapa, type GrupoCategoriaMapa, type TurnoMapa } from 
 
 // define um erro esperado nas operações do mapa
 export class ErroMapa extends Error {
+  // informa quais ocupações precisam de confirmação no painel
+  conflitos?: Array<{ id: number; nome: string }>;
   // guarda a mensagem e o estado da resposta
   constructor(mensagem: string, public status = 400) {
     super(mensagem);
@@ -55,6 +57,7 @@ export type LocalMapaValidado = {
 
 // define uma turma depois da validação
 export type TurmaMapaValidada = {
+  nivelEnsino: string;
   nome: string;
   nomeNormalizado: string;
   aliases: string;
@@ -187,6 +190,7 @@ export function validarTurmaMapa(valor: unknown): TurmaMapaValidada {
   validarPeriodo(inicioValidade, fimValidade);
   // limita e organiza todos os campos da turma
   return {
+    nivelEnsino: ["medio", "fundamental", "outro"].includes(String(dados.nivelEnsino)) ? String(dados.nivelEnsino) : "medio",
     nome,
     nomeNormalizado,
     aliases,

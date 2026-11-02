@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+// importa as turmas que também aparecem no mapa público
+import type { TurmaAtividadeMapaPublica } from "../mapa/tipos";
 import {
   CabecalhoPainel,
   Campo,
@@ -24,6 +26,7 @@ import {
 } from "./painel-eventos-comum";
 
 type Representante = {
+  turmaAtividadeId: number | null;
   id: Identificador;
   nome: string;
   nomeExibicao: string;
@@ -46,6 +49,7 @@ type FormularioRepresentante = Omit<Representante, "id" | "atualizadoEm">;
 type Visao = "todos" | "duplicacoes" | "sem-representante";
 
 const formularioVazio: FormularioRepresentante = {
+  turmaAtividadeId: null,
   nome: "", nomeExibicao: "", nivelEnsino: "medio", serie: "", turma: "", turno: "manha",
   funcao: "titular", inicioMandato: "", fimMandato: "", ativo: true, publicado: false, ordem: 0,
   observacaoPublica: "", observacaoInterna: "",
@@ -58,7 +62,7 @@ const funcoes = [
 
 export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?: AoMudarEstadoSujo } = {}) {
   const [itens, setItens] = useState<Representante[]>([]);
-  const [turmasConhecidas, setTurmasConhecidas] = useState<string[]>([]);
+  const [turmasPublicadas, setTurmasPublicadas] = useState<TurmaAtividadeMapaPublica[]>([]);
   const [formulario, setFormulario] = useState<FormularioRepresentante | null>(null);
   const [idEditando, setIdEditando] = useState<Identificador | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -82,14 +86,10 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
     try {
       const [resultado, mapa] = await Promise.all([
         requisitarTodasPaginasPainel<Record<string, unknown>>("/api/representantes?todos=1", ["representantes"]),
-        requisitarPainel<unknown>("/api/mapa?todos=1").catch(() => null),
+        requisitarPainel<{ turmas: TurmaAtividadeMapaPublica[] }>("/api/mapa", { cache: "no-store" }),
       ]);
       setItens(resultado.map(normalizarRepresentante));
-      if (mapa && typeof mapa === "object") {
-        const dadosMapa = mapa as Record<string, unknown>;
-        const turmas = Array.isArray(dadosMapa.turmas) ? dadosMapa.turmas as Record<string, unknown>[] : [];
-        setTurmasConhecidas(Array.from(new Set(turmas.filter((item) => obterBooleano(item, "ativo", true)).map((item) => obterTexto(item, "nome")).filter(Boolean))).sort(compararTurmas));
-      }
+      setTurmasPublicadas(mapa.turmas);
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : "Erro inesperado ao carregar representantes.");
     } finally {
@@ -108,7 +108,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
     return new Set([...contagem].filter(([, total]) => total > 1).map(([chave]) => chave));
   }, [itens]);
 
-  const semRepresentante = useMemo(() => turmasConhecidas.filter((turma) => !itens.some((item) => item.ativo && item.funcao === "titular" && normalizarBusca(item.turma) === normalizarBusca(turma))), [itens, turmasConhecidas]);
+  const semRepresentante = useMemo(() => turmasPublicadas.filter((turma) => !itens.some((item) => item.ativo && item.publicado && item.funcao === "titular" && item.turmaAtividadeId === turma.id)).map((turma) => `${turma.nome} · ${nomeTurno(turma.turno)}`), [itens, turmasPublicadas]);
   const anos = useMemo(() => Array.from(new Set(itens.map((item) => item.serie).filter(Boolean))).sort(), [itens]);
   const filtrados = useMemo(() => {
     const termo = normalizarBusca(busca);
@@ -135,7 +135,8 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
 
   function novo(turma = "") {
     if (!confirmarSaida(mudou)) return;
-    setFormulario({ ...formularioVazio, turma });
+    const selecionada = turmasPublicadas.find((item) => `${item.nome} · ${nomeTurno(item.turno)}` === turma);
+    setFormulario({ ...formularioVazio, ...(selecionada ? dadosDaTurma(selecionada) : {}) });
     setIdEditando(null);
     setMudou(false);
     setErro("");
@@ -240,10 +241,15 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
           <fieldset className="pev-bloco"><legend>Identificação pública</legend><div className="pev-grade-campos">
             <Campo rotulo="Nome"><input value={formulario.nome} onChange={(e) => mudar("nome", e.target.value)} required maxLength={160} autoComplete="off" /></Campo>
             <Campo rotulo="Nome de exibição" dica="Deixe em branco para usar o nome acima."><input value={formulario.nomeExibicao} onChange={(e) => mudar("nomeExibicao", e.target.value)} maxLength={160} /></Campo>
-            <Campo rotulo="Nível de ensino"><select value={formulario.nivelEnsino} onChange={(e) => mudar("nivelEnsino", e.target.value)} required>{niveisPainel.filter(([valor]) => valor).map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo>
-            <Campo rotulo="Ano ou série"><input value={formulario.serie} onChange={(e) => mudar("serie", e.target.value)} placeholder="Ex.: 3º ano" required /></Campo>
-            <Campo rotulo="Turma"><input list="pev-turmas-representantes" value={formulario.turma} onChange={(e) => mudar("turma", e.target.value)} placeholder="Ex.: 3º J" required /><datalist id="pev-turmas-representantes">{turmasConhecidas.map((turma) => <option key={turma} value={turma} />)}</datalist></Campo>
-            <Campo rotulo="Turno"><select value={formulario.turno} onChange={(e) => mudar("turno", e.target.value)} required>{turnosPainel.filter(([valor]) => valor).map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo>
+            {/* oferece somente turmas publicadas e preenche os dados sem digitação livre */}
+            <Campo rotulo="Turma publicada" dica="A turma precisa estar ativa e dentro da validade. Cadastre novas turmas no menu Salas."><select value={formulario.turmaAtividadeId ?? ""} required onChange={(e) => {
+              const turma = turmasPublicadas.find((item) => item.id === Number(e.target.value));
+              setFormulario((atual) => atual ? { ...atual, ...(turma ? dadosDaTurma(turma) : { turmaAtividadeId: null, turma: "", serie: "" }) } : atual);
+              setMudou(true);
+            }}><option value="">Selecione a turma</option>{!turmasPublicadas.some((item) => item.id === formulario.turmaAtividadeId) && formulario.turmaAtividadeId && <option value={formulario.turmaAtividadeId} disabled>Turma indisponível — selecione outra</option>}{turmasPublicadas.map((turma) => <option key={turma.id} value={turma.id}>{turma.nome} · {nomeTurno(turma.turno)}</option>)}</select></Campo>
+            <Campo rotulo="Nível de ensino"><input value={niveisPainel.find(([valor]) => valor === formulario.nivelEnsino)?.[1] || formulario.nivelEnsino} readOnly /></Campo>
+            <Campo rotulo="Ano ou série"><input value={formulario.serie} readOnly /></Campo>
+            <Campo rotulo="Turno"><input value={nomeTurno(formulario.turno)} readOnly /></Campo>
             <Campo rotulo="Função"><select value={formulario.funcao} onChange={(e) => mudar("funcao", e.target.value)} required>{funcoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo>
             <Campo rotulo="Ordem na turma"><input type="number" min={0} value={formulario.ordem} onChange={(e) => mudar("ordem", Number(e.target.value))} /></Campo>
           </div></fieldset>
@@ -253,7 +259,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
             <Campo rotulo="Observação pública" largo><textarea rows={3} value={formulario.observacaoPublica} onChange={(e) => mudar("observacaoPublica", e.target.value)} /></Campo>
             <Campo rotulo="Observação interna" dica="Nunca aparece na página pública." largo><textarea rows={3} value={formulario.observacaoInterna} onChange={(e) => mudar("observacaoInterna", e.target.value)} /></Campo>
           </div>
-          <div className="pev-opcoes"><label><input type="checkbox" checked={formulario.ativo} onChange={(e) => mudar("ativo", e.target.checked)} /><span>Mandato ativo</span></label><label><input type="checkbox" checked={formulario.publicado} onChange={(e) => mudar("publicado", e.target.checked)} /><span>Mostrar no portal</span></label></div></fieldset>
+          <div className="pev-opcoes"><div className="opcao-com-ajuda"><label><input type="checkbox" checked={formulario.ativo} onChange={(e) => mudar("ativo", e.target.checked)} /><span>Mandato ativo</span></label><AjudaOpcao texto="Indica que a pessoa está representando a turma atualmente. Desmarque quando o mandato terminar. O histórico de reuniões é preservado." /></div><div className="opcao-com-ajuda"><label><input type="checkbox" checked={formulario.publicado} onChange={(e) => mudar("publicado", e.target.checked)} /><span>Mostrar no portal</span></label><AjudaOpcao texto="Permite mostrar este representante na página pública. A pessoa só aparece se o mandato e a turma também estiverem ativos e a turma estiver publicada e válida." /></div></div></fieldset>
           <p className="pev-nota-privacidade">Não cadastre telefone, e-mail, endereço ou informações pessoais neste formulário.</p>
           {mudou && <p className="pev-alteracoes" role="status">Há mudanças não salvas.</p>}
           <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={fechar}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>{salvando ? "Salvando…" : "Salvar representante"}</button></div>
@@ -296,6 +302,7 @@ function compararTurmas(a: string, b: string) { return a.localeCompare(b, "pt-BR
 
 function normalizarRepresentante(registro: Record<string, unknown>): Representante {
   return {
+    turmaAtividadeId: Number(registro.turmaAtividadeId) || null,
     id: (registro.id as Identificador) ?? crypto.randomUUID(), nome: obterTexto(registro, "nome"),
     nomeExibicao: obterTexto(registro, "nomeExibicao", "nomeExibicaoPublica"), nivelEnsino: obterTexto(registro, "nivelEnsino", "nivel") || "outro",
     serie: obterTexto(registro, "serie", "anoSerie", "ano"), turma: obterTexto(registro, "turma"),
@@ -305,4 +312,14 @@ function normalizarRepresentante(registro: Record<string, unknown>): Representan
     ordem: obterNumero(registro, "ordem"), observacaoPublica: obterTexto(registro, "observacaoPublica"),
     observacaoInterna: obterTexto(registro, "observacaoInterna"), atualizadoEm: obterTexto(registro, "atualizadoEm") || undefined,
   };
+}
+
+// copia os dados da turma escolhida para o mandato
+function dadosDaTurma(turma: TurmaAtividadeMapaPublica) {
+  return { turmaAtividadeId: turma.id, turma: turma.nome, nivelEnsino: turma.nivelEnsino, serie: turma.serie || "Não informado", turno: turma.turno };
+}
+
+// permite ler a explicação com mouse teclado ou toque
+function AjudaOpcao({ texto }: { texto: string }) {
+  return <details className="ajuda-opcao"><summary aria-label="Explicar esta opção" title={texto}>ⓘ</summary><p>{texto}</p></details>;
 }

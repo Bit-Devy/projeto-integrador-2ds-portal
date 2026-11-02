@@ -9,7 +9,7 @@
     "dev": "node scripts/comando-local.mjs vite",
     "build": "node scripts/comando-local.mjs vinext build",
     "start": "node scripts/comando-local.mjs start",
-    "test": "npm run build && node --test tests/*.test.mjs",
+    "test": "npm run build && node --import ./scripts/registrar-typescript-testes.mjs --test tests/*.test.mjs",
     "test:local": "node scripts/testar-servidor.mjs",
     "test:start": "npm run build && node scripts/testar-servidor.mjs --start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .wrangler",

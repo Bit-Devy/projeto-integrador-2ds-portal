@@ -22,6 +22,7 @@ Para executar a versão compilada, use `npm run build` e depois `npm run start`.
 - **Eventos e calendário:** consulta de atividades, datas e programações publicadas
 - **Interclasses:** campeonatos, participantes, fases, chaves, partidas, placares e resultados
 - **Reuniões e atas:** pautas, registros, presenças, votações e documentos publicados pela gestão
+- **Salas:** cadastro simples de turmas e salas físicas, com vínculo opcional ao ensalamento e confirmação ao substituir uma ocupação
 - **Mapa do colégio:** pesquisa de salas, espaços, turmas e atividades com filtros de turno e tipo
 - **Transparência:** consulta de receitas, despesas, categorias e comprovantes, com valores demonstrativos durante o desenvolvimento
 - **Estatuto e documentos:** acesso às normas e aos arquivos públicos do grêmio
@@ -31,7 +32,7 @@ Para executar a versão compilada, use `npm run build` e depois `npm run start`.
 
 ## Uso básico
 
-Acesse `/painel` e entre com a senha definida em `ADMIN_PASSWORD`. Cadastre ou edite os itens nas áreas do painel e use a opção de publicação para disponibilizá-los aos estudantes. Rascunhos e informações internas ficam na área administrativa.
+Acesse `/painel` e entre com a senha definida em `ADMIN_PASSWORD`. Cadastre ou edite os itens nas áreas do painel e use a opção de publicação para disponibilizá-los aos estudantes. Rascunhos e informações internas ficam na área administrativa. Para cadastrar um representante, publique primeiro uma turma ativa no menu Salas. O nível, a série e o turno do representante são preenchidos a partir dessa turma.
 
 Nos formulários, a opção de preservar identidade pede confirmação e desativa nome, turma e contato. Esses dados não acompanham o envio anônimo, e a gestão não poderá responder diretamente. Evite incluir dados pessoais no texto da mensagem.
 

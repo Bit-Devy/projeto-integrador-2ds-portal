@@ -11,6 +11,8 @@ import { ordenarRegistrosMaisRecentes } from "../conteudo/ordenacao";
 import type { MensagemParticipacao, RegistroConteudo, TipoConteudo } from "../conteudo/tipos";
 // importa o painel do mapa
 import PainelMapaColegio from "./PainelMapaColegio";
+// importa o cadastro simples de salas e turmas
+import PainelSalas from "./PainelSalas";
 // importa as áreas do sistema de eventos
 import PainelEventosInternos from "./PainelEventosInternos";
 import PainelInterclasses from "./PainelInterclasses";
@@ -25,7 +27,7 @@ import {
 // define os valores aceitos nos campos
 type ValorCampo = string | number | boolean;
 // identifica as novas áreas administrativas especializadas
-type SecaoEventosPainel = "eventos-internos" | "interclasses" | "reunioes" | "representantes";
+type SecaoEventosPainel = "eventos-internos" | "interclasses" | "reunioes" | "representantes" | "salas";
 
 // mostra a área administrativa
 export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: string }) {
@@ -292,6 +294,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
           <button type="button" className={secaoEventos === "interclasses" ? "ativo" : ""} onClick={() => abrirSecaoEventos("interclasses")}>Interclasses e campeonatos</button>
           <button type="button" className={secaoEventos === "reunioes" ? "ativo" : ""} onClick={() => abrirSecaoEventos("reunioes")}>Reuniões, atas e presenças</button>
           <button type="button" className={secaoEventos === "representantes" ? "ativo" : ""} onClick={() => abrirSecaoEventos("representantes")}>Representantes</button>
+          <button type="button" className={secaoEventos === "salas" ? "ativo" : ""} onClick={() => abrirSecaoEventos("salas")}>Salas</button>
           <button type="button" className={mapaAberto ? "ativo" : ""} onClick={abrirMapa}>Mapa e ensalamento</button>
           <button type="button" className={mensagensAbertas ? "ativo" : ""} onClick={abrirMensagens}>Mensagens recebidas</button>
         </nav>
@@ -311,6 +314,8 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
           <PainelReunioes aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : secaoEventos === "representantes" ? (
           <PainelRepresentantes aoMudarEstadoSujo={setPainelFilhoSujo} />
+        ) : secaoEventos === "salas" ? (
+          <PainelSalas aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : mapaAberto ? (
           <PainelMapaColegio aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : mensagensAbertas ? (

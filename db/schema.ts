@@ -118,6 +118,7 @@ export const turmasAtividades = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     chaveImportacao: text("chave_importacao"),
+    nivelEnsino: text("nivel_ensino").notNull().default("medio"),
     nome: text("nome").notNull(),
     nomeNormalizado: text("nome_normalizado").notNull(),
     aliases: text("aliases").notNull().default(""),

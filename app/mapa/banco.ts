@@ -1,5 +1,7 @@
 // importa o acesso direto ao banco
 import { getD1 } from "../../db";
+// compartilha a regra de publicação com o cadastro de representantes
+import { condicaoTurmaPublicada } from "./turmas-publicadas";
 // importa as funções de normalização do mapa
 import {
   aliasesNormalizados,
@@ -72,6 +74,7 @@ type LinhaLocal = {
 
 // define uma linha de turma do banco
 type LinhaTurma = {
+  nivel_ensino: string;
   id: number;
   nome: string;
   nome_normalizado: string;
@@ -145,11 +148,7 @@ export async function obterDadosMapa(opcoes: OpcoesListagem = {}): Promise<Dados
           )
         ORDER BY l.ordem, l.numero, l.nome COLLATE NOCASE, l.id`),
       d1.prepare(`SELECT t.* FROM turmas_atividades t
-        WHERE t.publicado = 1 AND t.ativo = 1 AND ${filtroVigente}
-          AND EXISTS (
-            SELECT 1 FROM categorias_mapa c
-            WHERE c.grupo = 'atividade' AND c.slug = t.tipo AND c.ativo = 1
-          )
+        WHERE ${condicaoTurmaPublicada()}
         ORDER BY t.ordem, t.nome COLLATE NOCASE, t.id`),
       d1.prepare(`SELECT e.* FROM ensalamentos e
         INNER JOIN turmas_atividades t ON t.id = e.turma_atividade_id
@@ -226,12 +225,7 @@ export async function criarRegistroMapa(entidade: EntidadeMapa, valor: unknown) 
 
   // valida e cria uma turma ou atividade
   if (entidade === "turmas") {
-    const dados = validarTurmaMapa(valor);
-    await exigirCategoria("atividade", dados.tipo);
-    const linha = await d1.prepare(`${sqlInserirTurma} RETURNING *`)
-      .bind(...valoresTurma(dados))
-      .first<LinhaTurma>();
-    return linha ? formatarTurma(linha) : null;
+    return salvarTurmaComSala(null, valor);
   }
 
   // valida e cria um ensalamento
@@ -297,17 +291,7 @@ export async function atualizarRegistroMapa(entidade: EntidadeMapa, idRecebido: 
 
   // atualiza uma turma e seus ensalamentos
   if (entidade === "turmas") {
-    if (!await buscarTurma(id)) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
-    const dados = validarTurmaMapa(valor);
-    await exigirCategoria("atividade", dados.tipo);
-    // mantém turno e tipo iguais nos vínculos da turma
-    await d1.batch([
-      d1.prepare(`${sqlAtualizarTurma} WHERE id = ?`).bind(...valoresTurma(dados), id),
-      d1.prepare(`UPDATE ensalamentos
-        SET turno = ?, tipo = ?, atualizado_em = CURRENT_TIMESTAMP
-        WHERE turma_atividade_id = ?`).bind(dados.turno, dados.tipo, id),
-    ]);
-    return buscarTurma(id);
+    return salvarTurmaComSala(id, valor);
   }
 
   // atualiza um ensalamento
@@ -318,6 +302,63 @@ export async function atualizarRegistroMapa(entidade: EntidadeMapa, idRecebido: 
     .bind(...valoresEnsalamento(dados), id)
     .run();
   return buscarEnsalamento(id);
+}
+
+// salva a turma e a sala juntas para evitar alterações pela metade
+async function salvarTurmaComSala(id: number | null, valor: unknown) {
+  const recebido = objetoRecebido(valor);
+  const existente = id ? await buscarTurma(id) : null;
+  if (id && !existente) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
+  const dados = validarTurmaMapa({ ...existente, ...recebido });
+  await exigirCategoria("atividade", dados.tipo);
+  const d1 = getD1();
+  const atribuir = recebido.salaId !== undefined;
+  const salaId = atribuir ? idPositivo(recebido.salaId, "sala publicada") : null;
+  const comandos: D1PreparedStatement[] = [];
+  if (salaId) {
+    const sala = await buscarLocal(salaId);
+    if (!sala?.ativo || !sala.publicado) throw new ErroMapa("Escolha uma sala ativa e publicada.");
+    const categoria = await d1.prepare("SELECT id FROM categorias_mapa WHERE grupo = 'local' AND slug = ? AND ativo = 1").bind(sala.tipo).first();
+    if (!categoria) throw new ErroMapa("A categoria da sala precisa estar ativa.");
+    // a confirmação só vale para as ocupações que a pessoa acabou de conferir
+    if (dados.ativo && dados.publicado) {
+      const ocupacoes = await d1.prepare(`SELECT e.id, t.nome FROM ensalamentos e
+        JOIN turmas_atividades t ON t.id = e.turma_atividade_id
+        WHERE e.local_id = ? AND e.turno = ? AND e.turma_atividade_id <> ?
+          AND e.ativo = 1 AND e.publicado = 1
+          AND COALESCE(NULLIF(e.fim_validade, ''), '9999-12-31') >= ?
+          AND COALESCE(NULLIF(e.inicio_validade, ''), '0001-01-01') <= ?`)
+        .bind(salaId, dados.turno, id ?? -1, dados.inicioValidade || "0001-01-01", dados.fimValidade || "9999-12-31")
+        .all<{ id: number; nome: string }>();
+      const confirmados = Array.isArray(recebido.substituirOcupacoes) ? recebido.substituirOcupacoes : [];
+      if (ocupacoes.results.some((item) => !confirmados.includes(item.id))) {
+        const erro = new ErroMapa("Esta sala já está ocupada neste turno e período. Deseja substituir a ocupação?", 409);
+        erro.conflitos = ocupacoes.results;
+        throw erro;
+      }
+      for (const ocupacao of ocupacoes.results) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?").bind(ocupacao.id));
+    }
+    // conserva os vínculos antigos como histórico ao escolher uma nova sala
+    if (id) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?").bind(id));
+  }
+  const chave = `cadastro:${crypto.randomUUID()}`;
+  comandos.push(id
+    ? d1.prepare(`${sqlAtualizarTurma} WHERE id = ?`).bind(...valoresTurma(dados), id)
+    : d1.prepare(`INSERT INTO turmas_atividades (chave_importacao, ${colunasTurma}) VALUES (?, ${placeholdersTurma})`).bind(chave, ...valoresTurma(dados)));
+  // mantém o nome e o turno dos representantes ligados ao cadastro atual da turma
+  if (id) comandos.push(d1.prepare(`UPDATE representantes SET turma = ?, turma_normalizada = ?, turno = ?,
+    nivel_ensino = ?, serie = ?, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?`)
+    .bind(dados.nome, dados.nomeNormalizado, dados.turno, dados.nivelEnsino, dados.serie || "Não informado", id));
+  if (salaId) {
+    comandos.push(d1.prepare(`INSERT INTO ensalamentos (${colunasEnsalamento})
+      SELECT id, ?, ?, ?, '', ?, ?, 0, ?, ? FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`)
+      .bind(salaId, dados.turno, dados.tipo, dados.inicioValidade, dados.fimValidade, numeroBooleano(dados.ativo), numeroBooleano(dados.publicado), id ?? chave));
+  } else if (id) {
+    comandos.push(d1.prepare("UPDATE ensalamentos SET turno = ?, tipo = ?, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?").bind(dados.turno, dados.tipo, id));
+  }
+  await d1.batch(comandos);
+  const linha = await d1.prepare(`SELECT * FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`).bind(id ?? chave).first<LinhaTurma>();
+  return linha ? formatarTurma(linha) : null;
 }
 
 // exclui um registro da entidade escolhida
@@ -599,6 +640,7 @@ function formatarLocal(linha: LinhaLocal): LocalMapa {
 function formatarTurma(linha: LinhaTurma): TurmaAtividadeMapa {
   return {
     id: linha.id,
+    nivelEnsino: linha.nivel_ensino || "medio",
     nome: linha.nome,
     nomeNormalizado: linha.nome_normalizado,
     aliases: linha.aliases,
@@ -669,6 +711,7 @@ function valoresLocal(dados: LocalMapaValidado) {
 // coloca os valores da turma na ordem da consulta
 function valoresTurma(dados: TurmaMapaValidada) {
   return [
+    dados.nivelEnsino,
     dados.nome,
     dados.nomeNormalizado,
     dados.aliases,
@@ -721,14 +764,13 @@ const sqlAtualizarLocal = `UPDATE locais_colegio SET
   publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
 // define as colunas e consultas usadas pelas turmas
-const colunasTurma = `nome, nome_normalizado, aliases, aliases_normalizados, turno, tipo,
+const colunasTurma = `nivel_ensino, nome, nome_normalizado, aliases, aliases_normalizados, turno, tipo,
   curso, serie, turma, descricao, observacoes, inicio_validade, fim_validade, ordem, ativo, publicado`;
 // cria um marcador para cada valor da turma
-const placeholdersTurma = Array.from({ length: 16 }, () => "?").join(", ");
-const sqlInserirTurma = `INSERT INTO turmas_atividades (${colunasTurma}) VALUES (${placeholdersTurma})`;
+const placeholdersTurma = Array.from({ length: 17 }, () => "?").join(", ");
 // atualiza todos os campos editáveis da turma
 const sqlAtualizarTurma = `UPDATE turmas_atividades SET
-  nome = ?, nome_normalizado = ?, aliases = ?, aliases_normalizados = ?, turno = ?, tipo = ?,
+  nivel_ensino = ?, nome = ?, nome_normalizado = ?, aliases = ?, aliases_normalizados = ?, turno = ?, tipo = ?,
   curso = ?, serie = ?, turma = ?, descricao = ?, observacoes = ?, inicio_validade = ?,
   fim_validade = ?, ordem = ?, ativo = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
 

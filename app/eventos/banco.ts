@@ -1,3 +1,5 @@
+// confere as turmas publicadas usando a mesma regra do mapa
+import { condicaoTurmaPublicada } from "../mapa/turmas-publicadas";
 import { getD1 } from "../../db";
 import { combinarHorario, normalizarTextoBusca, normalizarTurma } from "./normalizacao";
 import { planejarChaveMataMata, quantidadeParesProximos, validarLigacaoPartida } from "./chave";
@@ -250,7 +252,7 @@ async function substituirLinksEvento(eventoId: number, documentos: string[], ima
 export async function listarRepresentantes(parametros: URLSearchParams, todos = false): Promise<ListaPaginada<RepresentantePublico | RepresentanteAdministrativo>> {
   const { pagina, limite, offset } = paginacao(parametros, 500);
   const filtros: Filtros = { sql: [], valores: [] };
-  if (!todos) filtros.sql.push("r.publicado = 1", "r.ativo = 1", "r.arquivado_em IS NULL");
+  if (!todos) filtros.sql.push("r.publicado = 1", "r.ativo = 1", "r.arquivado_em IS NULL", `EXISTS (SELECT 1 FROM turmas_atividades t WHERE t.id = r.turma_atividade_id AND ${condicaoTurmaPublicada()})`);
   const busca = normalizarTextoBusca(textoFiltro(parametros.get("busca"), 120));
   if (busca) {
     filtros.sql.push("(r.nome_normalizado LIKE ? ESCAPE '\\' OR r.turma_normalizada LIKE ? ESCAPE '\\')");
@@ -282,15 +284,14 @@ export async function listarRepresentantes(parametros: URLSearchParams, todos = 
 
 export async function obterRepresentante(idRecebido: unknown, todos = false) {
   const id = idPositivo(idRecebido, "representante");
-  const filtro = todos ? "" : "AND publicado = 1 AND ativo = 1 AND arquivado_em IS NULL";
+  const filtro = todos ? "" : `AND publicado = 1 AND ativo = 1 AND arquivado_em IS NULL AND EXISTS (SELECT 1 FROM turmas_atividades t WHERE t.id = representantes.turma_atividade_id AND ${condicaoTurmaPublicada()})`;
   const linha = await getD1().prepare(`SELECT * FROM representantes WHERE id = ? ${filtro}`).bind(id).first<Linha>();
   if (!linha) throw new ErroEventos("Representante não encontrado.", 404);
   return formatarRepresentante(linha, todos);
 }
 
 export async function criarRepresentante(valor: unknown) {
-  const dados = validarRepresentante(valor);
-  await validarTurmaRelacionada(dados.turmaAtividadeId);
+  const dados = await validarTurmaDoRepresentante(validarRepresentante(valor));
   const linha = await getD1().prepare(`${sqlInserirRepresentante} RETURNING *`)
     .bind(...valoresRepresentante(dados)).first<Linha>();
   if (!linha) throw new ErroEventos("Não foi possível criar o representante.", 500);
@@ -302,8 +303,7 @@ export async function atualizarRepresentante(idRecebido: unknown, valor: unknown
   const existente = await obterRepresentante(id, true) as RepresentanteAdministrativo;
   const recebido = valor as Record<string, unknown>;
   const reativando = Boolean(existente.arquivadoEm) && booleano(recebido.ativo, existente.ativo);
-  const dados = validarRepresentante({ ...existente, ...recebido, ...(reativando ? { publicado: false } : {}) });
-  await validarTurmaRelacionada(dados.turmaAtividadeId);
+  const dados = await validarTurmaDoRepresentante(validarRepresentante({ ...existente, ...recebido, ...(reativando ? { publicado: false } : {}) }));
   const d1 = getD1();
   const comandos: D1PreparedStatement[] = [
     d1.prepare(`${sqlAtualizarRepresentante} WHERE id = ?`).bind(...valoresRepresentante(dados), id),
@@ -453,6 +453,16 @@ function valoresRepresentante(dados: ReturnType<typeof validarRepresentante>) {
   return [dados.turmaAtividadeId, dados.nome, dados.nomeExibicao, dados.nomeNormalizado, dados.nivelEnsino,
     dados.serie, dados.turma, dados.turmaNormalizada, dados.turno, dados.funcao, dados.inicioMandato,
     dados.fimMandato, dados.ordem, dados.observacaoPublica, dados.observacaoInterna, binario(dados.ativo), binario(dados.publicado)];
+}
+
+// exige uma turma que esteja disponível agora e guarda seus dados oficiais
+async function validarTurmaDoRepresentante(dados: ReturnType<typeof validarRepresentante>) {
+  const turma = await getD1().prepare(`SELECT t.* FROM turmas_atividades t WHERE ${condicaoTurmaPublicada()}
+    AND ${dados.turmaAtividadeId ? "t.id = ?" : "t.nome_normalizado = ? AND t.turno = ?"}`)
+    .bind(...(dados.turmaAtividadeId ? [dados.turmaAtividadeId] : [normalizarTextoBusca(dados.turma), dados.turno])).first<Linha>();
+  if (!turma) throw new ErroEventos("Escolha uma turma ativa, publicada e válida no cadastro de Salas.");
+  return { ...dados, turmaAtividadeId: numero(turma.id), turma: string(turma.nome), turmaNormalizada: normalizarTurma(string(turma.nome)),
+    turno: turma.turno as typeof dados.turno, nivelEnsino: string(turma.nivel_ensino) || "medio", serie: string(turma.serie) || "Não informado" };
 }
 
 async function validarTurmaRelacionada(id: number | null) {

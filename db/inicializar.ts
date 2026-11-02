@@ -14,6 +14,8 @@ import {
 } from "./dados-mapa-2026";
 // importa a mesma estrutura aditiva da migração do sistema de eventos
 import { comandosEstruturaEventos } from "./estrutura-eventos";
+// importa a proteção contra ocupações repetidas das salas
+import { comandosProtecaoSalas } from "./estrutura-salas";
 
 // guarda uma única inicialização em andamento
 let tarefaInicializacao: Promise<void> | null = null;
@@ -193,7 +195,21 @@ async function prepararBanco() {
     }
   }
   await adicionarColunasContato(d1);
+
+  // acrescenta o nível de ensino sem apagar turmas de bancos antigos
+  const colunasTurmas = await d1.prepare("PRAGMA table_info(turmas_atividades)").all<{ name: string }>();
+  if (!colunasTurmas.results.some((coluna) => coluna.name === "nivel_ensino")) {
+    try {
+      await d1.prepare("ALTER TABLE turmas_atividades ADD COLUMN nivel_ensino TEXT NOT NULL DEFAULT 'medio'").run();
+    } catch (erro) {
+      if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro;
+    }
+    await d1.prepare(`UPDATE turmas_atividades SET nivel_ensino = CASE
+      WHEN CAST(serie AS INTEGER) BETWEEN 6 AND 9 THEN 'fundamental'
+      WHEN tipo NOT IN ('aula_regular', 'curso_tecnico') THEN 'outro' ELSE 'medio' END`).run();
+  }
   await carregarMapa2026(d1);
+  await d1.batch(comandosProtecaoSalas.map((comando) => d1.prepare(comando)));
 
   // retira do catálogo antigo a documentação interna que não é publicada no portal
   await d1.prepare(`DELETE FROM conteudos WHERE tipo = 'documentos'
@@ -262,12 +278,13 @@ export async function carregarMapa2026(d1 = getD1()) {
   // insere as turmas que ainda não existem
   await executarEmLotes(d1, turmasMapa2026.map((turma) => d1
     .prepare(`INSERT INTO turmas_atividades (
-        chave_importacao, nome, nome_normalizado, aliases, aliases_normalizados,
+        chave_importacao, nivel_ensino, nome, nome_normalizado, aliases, aliases_normalizados,
         turno, tipo, curso, serie, turma, ordem
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT (chave_importacao) DO NOTHING`)
     .bind(
       turma.chaveImportacao,
+      Number(turma.serie) >= 6 ? "fundamental" : ["aula_regular", "curso_tecnico"].includes(turma.tipo) ? "medio" : "outro",
       turma.nome,
       turma.nomeNormalizado,
       turma.aliases,

@@ -6,6 +6,7 @@ const migracoesDaPrevia = [
   "0003_reclassificar_mapa_2026.sql", "0004_sistema_eventos.sql", "0005_long_blob.sql",
   "0006_redundant_sir_ram.sql",
   "0007_amusing_toad_men.sql",
+  "0008_massive_shooting_star.sql",
 ];
 const identificador = (valor) => `"${valor.replaceAll('"', '""')}"`;
 const normalizarSql = (sql) => sql.match(/'(?:''|[^'])*'|[^']+/g).map((trecho) => trecho.startsWith("'")

@@ -7,10 +7,11 @@ import { spawn } from "node:child_process";
 
 // guarda o endereço usado pelos testes
 const testarStart = process.argv.includes("--start");
-const endereco = testarStart ? "http://127.0.0.1:4173" : "http://127.0.0.1:5173";
+const portaTeste = process.env.GECEP_TEST_PORT || (testarStart ? "4173" : "5173");
+const endereco = `http://127.0.0.1:${portaTeste}`;
 // inicia o servidor local
 const servidor = spawn(process.execPath, ["scripts/comando-local.mjs", testarStart ? "start" : "vite",
-  ...(testarStart ? ["--port", "4173"] : [])], {
+  "--port", portaTeste], {
   cwd: process.cwd(),
   env: process.env,
   stdio: ["ignore", "pipe", "pipe"],
@@ -434,7 +435,7 @@ async function testarSistemaEventos(cookie) {
     buscaTurma = await requisicaoPublica(`/api/representantes?busca=${encodeURIComponent("3ºJ")}&limite=100&teste=${sufixo}`);
     const representantePublico = buscaTurma.itens.find((item) => item.id === criados.representante);
     assert.ok(representantePublico, "A busca normalizada por 3ºJ deve encontrar 3º J.");
-    assert.equal(representantePublico.turma, "3º J");
+    assert.equal(representantePublico.turma, "3J");
     afirmarSemCamposPrivados(representantePublico);
 
     // arquiva o representante e impede que ele continue visível ao público
@@ -707,7 +708,7 @@ async function testarSistemaEventos(cookie) {
         horarioFinal: "15:00",
         local: "Sala do GECEP",
         turno: "tarde",
-        niveisEnsino: ["Ensino Médio"],
+        niveisEnsino: ["medio"],
         descricaoCurta: "Reunião temporária do teste HTTP.",
         responsaveis: "GECEP",
         pauta: "Pauta pública do teste.",
@@ -734,7 +735,7 @@ async function testarSistemaEventos(cookie) {
     assert.ok(presenca, "A geração deve incluir o representante temporário.");
     criados.presencas.push(...geracaoPresencas.presencas.map((item) => item.id));
     assert.equal(presenca.nome, nomeExibicao);
-    assert.equal(presenca.turma, "3º J");
+    assert.equal(presenca.turma, "3J");
 
     // alterar o cadastro atual não pode reescrever a presença histórica
     await requisicaoDominio(cookie, "/api/representantes", "PUT", {
@@ -1452,7 +1453,7 @@ async function testarMapa(cookie) {
     const sala214 = mapaAdministrativo.locais.find((item) => item.numero === "214");
     assert.ok(sala214?.id);
 
-    // troca o local da atividade
+    // rejeita a troca para uma sala que já está ocupada
     await requisicaoMapa(cookie, "PUT", {
       entidade: "ensalamentos",
       id: idEnsalamento,
@@ -1465,9 +1466,9 @@ async function testarMapa(cookie) {
         ativo: true,
         publicado: true,
       },
-    });
+    }, 409);
     publico = await obterMapaPublico(`${sufixo}-troca`);
-    assert.equal(publico.ensalamentos.find((item) => item.id === idEnsalamento)?.localId, sala214.id);
+    assert.equal(publico.ensalamentos.find((item) => item.id === idEnsalamento)?.localId, idLocal);
 
     // volta a ligação para rascunho
     await requisicaoMapa(cookie, "PUT", {

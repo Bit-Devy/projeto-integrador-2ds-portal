@@ -51,6 +51,7 @@ export type LocalMapa = {
 export type TurmaAtividadeMapa = {
   id: number;
   nome: string;
+  nivelEnsino: string;
   nomeNormalizado: string;
   aliases: string;
   turno: TurnoMapa;

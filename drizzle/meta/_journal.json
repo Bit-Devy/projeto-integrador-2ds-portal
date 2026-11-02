@@ -57,6 +57,13 @@
       "when": 1793583749818,
       "tag": "0007_amusing_toad_men",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793642103134,
+      "tag": "0008_massive_shooting_star",
+      "breakpoints": true
     }
   ]
 }

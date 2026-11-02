@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ListaPaginada, RepresentantePublico } from "../eventos/tipos";
 import { formatarData, normalizarBusca, temTexto } from "../eventos/modelo-publico";
 import { useConsultaPublica } from "../eventos/useConsultaPublica";
@@ -35,10 +35,10 @@ function periodoMandato(representante: RepresentantePublico) {
 type FiltrosRepresentante = { busca: string; turma: string; turno: string; nivel: string; serie: string; funcao: string };
 type Ordenacao = "turma" | "turno" | "nome";
 
-export function PaginaRepresentantes({ filtrosIniciais = {} }: { filtrosIniciais?: Partial<FiltrosRepresentante> }) {
+export function PaginaRepresentantes({ filtrosIniciais = {}, abrirTabelaInicial = false }: { filtrosIniciais?: Partial<FiltrosRepresentante>; abrirTabelaInicial?: boolean }) {
   const [filtros, setFiltros] = useState<FiltrosRepresentante>({ busca: filtrosIniciais.busca || "", turma: filtrosIniciais.turma || "", turno: filtrosIniciais.turno || "", nivel: filtrosIniciais.nivel || "", serie: filtrosIniciais.serie || "", funcao: filtrosIniciais.funcao || "" });
   const [pagina, setPagina] = useState(1);
-  const [mostrarTabela, setMostrarTabela] = useState(false);
+  const [mostrarTabela, setMostrarTabela] = useState(abrirTabelaInicial);
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("turma");
   const [direcao, setDirecao] = useState<"asc" | "desc">("asc");
   const url = useMemo(() => {
@@ -53,6 +53,17 @@ export function PaginaRepresentantes({ filtrosIniciais = {} }: { filtrosIniciais
     const comparacao = normalizarBusca(valorA).localeCompare(normalizarBusca(valorB), "pt-BR", { numeric: true });
     return direcao === "asc" ? comparacao : -comparacao;
   }), [dados, direcao, ordenacao]);
+
+  // leva o acesso vindo do crt até a tabela depois de carregar os representantes
+  const desceuParaTabela = useRef(false);
+  useEffect(() => {
+    if (!abrirTabelaInicial || carregando || erro || desceuParaTabela.current) return;
+    const quadro = requestAnimationFrame(() => {
+      document.getElementById("tabela-completa-representantes")?.scrollIntoView({ block: "start", behavior: "instant" });
+      desceuParaTabela.current = true;
+    });
+    return () => cancelAnimationFrame(quadro);
+  }, [abrirTabelaInicial, carregando, erro]);
 
   function alterar(campo: keyof FiltrosRepresentante, valor: string) {
     setFiltros((atuais) => ({ ...atuais, [campo]: valor }));

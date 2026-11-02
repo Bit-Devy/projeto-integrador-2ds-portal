@@ -31,8 +31,8 @@ export default function PaginaCrt() {
 
       {/* lista dos representantes */}
       <section className="limite secao-padrao" id="representantes">
-        <div className="cabecalho-secao"><div><span className="rotulo-secao">REPRESENTANTES</span><h2>Lista por turma</h2><p>Este espaço receberá a relação atualizada de representantes e suplentes.</p></div></div>
-        <div className="caixa-vazia"><span>CRT</span><div><strong>Relação em preparação</strong><p>A lista poderá ser organizada por turno, série, curso e turma, com atualização feita pela gestão.</p></div></div>
+        <div className="cabecalho-secao"><div><span className="rotulo-secao">REPRESENTANTES</span><h2>Lista por turma</h2><p>Consulte os representantes e suplentes publicados para cada turma.</p></div></div>
+        <Link className="caixa-vazia atalho-crt" href="/representantes?tabela=1#tabela-completa-representantes"><span aria-hidden="true">CRT</span><div><strong>Conheça os representantes da sua turma ›</strong><p>Abra a tabela completa e consulte por turma, turno ou nome. A relação é atualizada pela gestão.</p></div></Link>
       </section>
 
       {/* explicação das assembleias */}

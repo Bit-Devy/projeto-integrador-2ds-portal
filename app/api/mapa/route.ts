@@ -155,13 +155,16 @@ function validarEntidade(valor: unknown): EntidadeMapa {
 function responderErro(erro: unknown) {
   // mantém a mensagem e o estado dos erros esperados
   if (erro instanceof ErroMapa) {
-    return Response.json({ erro: erro.message }, { status: erro.status });
+    return Response.json({ erro: erro.message, conflitos: erro.conflitos }, { status: erro.status });
   }
   // informa quando o json recebido está quebrado
   if (erro instanceof SyntaxError) {
     return Response.json({ erro: "O corpo da solicitação não contém JSON válido." }, { status: 400 });
   }
   // explica conflitos entre registros relacionados
+  if (erro instanceof Error && /sala_ocupada/i.test(erro.message)) {
+    return Response.json({ erro: "A ocupação da sala mudou. Confira os dados antes de tentar novamente." }, { status: 409 });
+  }
   if (erro instanceof Error && /foreign key constraint/i.test(erro.message)) {
     return Response.json({ erro: "O registro ainda está relacionado a outros dados do mapa." }, { status: 409 });
   }
@@ -192,7 +195,7 @@ function dadosPublicos(dados: DadosMapa): DadosMapaPublico {
       horario: local.horario, imagemUrl: local.imagemUrl, ordem: local.ordem, atualizadoEm: local.atualizadoEm,
     })),
     turmas: dados.turmas.map((turma) => ({
-      id: turma.id, nome: turma.nome, nomeNormalizado: turma.nomeNormalizado, aliases: turma.aliases,
+      id: turma.id, nome: turma.nome, nivelEnsino: turma.nivelEnsino, nomeNormalizado: turma.nomeNormalizado, aliases: turma.aliases,
       turno: turma.turno, tipo: turma.tipo, curso: turma.curso, serie: turma.serie, turma: turma.turma,
       descricao: turma.descricao, observacoes: turma.observacoes, inicioValidade: turma.inicioValidade,
       fimValidade: turma.fimValidade, ordem: turma.ordem, atualizadoEm: turma.atualizadoEm,
