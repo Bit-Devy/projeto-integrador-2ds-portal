@@ -89,6 +89,7 @@ try {
   await testarLimiteSeries(cookie);
   await testarAtualizacaoPublicada(cookie);
   await testarConteudo(cookie);
+  await testarPublicacoes2027(cookie);
   await testarMensagens(cookie);
   await testarArquivos(cookie);
   await testarLimitesNavegador(cookie, senha);
@@ -412,8 +413,8 @@ async function testarSistemaEventos(cookie) {
         turma: "3º J",
         turno: "manha",
         funcao: "titular",
-        inicioMandato: "2099-02-01",
-        fimMandato: "2099-12-20",
+        inicioMandato: "2000-01-01",
+        fimMandato: "2199-12-31",
         observacaoPublica: "Representante criado pelo teste HTTP local.",
         observacaoInterna: `não publicar representante ${sufixo}`,
         publicado: false,
@@ -1569,6 +1570,52 @@ async function testarConteudo(cookie) {
     headers: { cookie },
   });
   assert.equal(respostaExclusao.status, 200);
+}
+
+// confere os novos campos e a separação entre os anos sem deixar dados de teste
+async function testarPublicacoes2027(cookie) {
+  const criados = [];
+  try {
+    const dados = { titulo: `Notícia temporária 2027 ${Date.now()}`, data: "2027-02-01", categoria: "Teste", resumo: "Resumo temporário", conteudo: "Conteúdo temporário completo", imagemUrl: "/noticias/patricia-ressurreicao.jpg", imagemAlt: "Descrição temporária", creditoImagem: "Crédito temporário", link: "https://www.cep.pr.gov.br/", cor: "azul", destaque: false };
+    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", dados: { ...dados, imagemAlt: "" } }, 400);
+    const noticia = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", dados }, 201)).item;
+    criados.push(noticia.id);
+    assert.ok((await requisicaoPublica("/api/conteudo?tipo=noticias&ano=2027")).itens.some((item) => item.id === noticia.id));
+    assert.ok(!(await requisicaoPublica("/api/conteudo?tipo=noticias&ano=2026")).itens.some((item) => item.id === noticia.id));
+    const pagina = await fetch(`${endereco}/noticias/${noticia.id}`);
+    assert.equal(pagina.status, 200);
+    const html = await pagina.text();
+    assert.match(html, /Descrição temporária/);
+    assert.match(html, /Crédito temporário/);
+    assert.match(html, /Conteúdo temporário completo/);
+
+    // um lançamento de outro ano não pode misturar os registros de 2026
+    const financeiro = { descricao: `Movimento temporário 2027 ${Date.now()}`, data: "2027-03-02", tipo: "entrada", categoria: "Teste", valor: 12.5, comprovanteUrl: "" };
+    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: { ...financeiro, exemplo: true } }, 400);
+    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: { ...financeiro, data: "2027-02-30" } }, 400);
+    const movimento = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: financeiro }, 201)).item;
+    criados.push(movimento.id);
+    assert.ok((await requisicaoPublica("/api/conteudo?tipo=movimentos&ano=2027")).itens.some((item) => item.id === movimento.id));
+    assert.ok(!(await requisicaoPublica("/api/conteudo?tipo=movimentos&ano=2026")).itens.some((item) => item.id === movimento.id));
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: movimento.id, tipo: "movimentos", dados: { ...financeiro, exemplo: true } }, 400);
+    await requisicaoPublica("/api/conteudo?tipo=noticias&ano=errado", 400);
+
+    // os canais podem ser publicados e editados pelo mesmo painel
+    const canal = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "canais", dados: { titulo: `Canal temporário ${Date.now()}`, descricao: "Descrição do canal temporário", link: "https://example.com/canal", icone: "◉" } }, 201)).item;
+    criados.push(canal.id);
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: canal.id, tipo: "canais", dados: { ...canal.dados, link: "https://example.com/novo" } });
+    assert.equal((await requisicaoPublica("/api/conteudo?tipo=canais")).itens.find((item) => item.id === canal.id).dados.link, "https://example.com/novo");
+    for (const rota of ["/contato", "/noticias?ano=2027", "/transparencia?ano=2027"]) {
+      const resposta = await fetch(`${endereco}${rota}`);
+      assert.equal(resposta.status, 200);
+      const texto = await resposta.text();
+      if (rota === "/contato") { assert.doesNotMatch(texto, /name="mensagem"/); assert.match(texto, /href="\/sugestoes"/); }
+      if (rota.startsWith("/transparencia")) assert.doesNotMatch(texto, /Valores demonstrativos|primeira versão são fictícios/);
+    }
+    console.log("Notícias com foto, canais editáveis e publicações de 2027: OK");
+  } finally {
+    for (const id of criados) await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE");
+  }
 }
 
 async function testarDatasEPeriodos(cookie) {

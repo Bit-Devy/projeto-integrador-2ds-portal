@@ -18,7 +18,7 @@ const tiposContato = [
 ] as const;
 
 // mostra o formulário de participação
-export default function FormularioParticipacao({ modo = "sugestao" }: { modo?: "sugestao" | "contato" }) {
+export default function FormularioParticipacao() {
   // guarda o protocolo recebido
   const [protocolo, setProtocolo] = useState("");
   // guarda a mensagem de erro
@@ -106,7 +106,7 @@ export default function FormularioParticipacao({ modo = "sugestao" }: { modo?: "
       </div>
       {/* assunto da participação */}
       <label>
-        {modo === "contato" ? "Assunto" : "Tipo de participação"}
+        Tipo de participação
         <select name="assunto" defaultValue="" required>
           <option value="" disabled>Escolha uma opção</option>
           <option>Sugestão</option>
@@ -192,7 +192,7 @@ export default function FormularioParticipacao({ modo = "sugestao" }: { modo?: "
         <input type="text" name="site" tabIndex={-1} autoComplete="off" />
       </label>
       {/* botão de envio */}
-      <button type="submit" disabled={envioDesativado}>{enviando ? "Enviando..." : carregando ? "Aguarde..." : modo === "contato" ? "Enviar mensagem" : "Enviar participação"}</button>
+      <button type="submit" disabled={envioDesativado}>{enviando ? "Enviando..." : carregando ? "Aguarde..." : "Enviar participação"}</button>
       {/* confirmação com protocolo */}
       {protocolo && (
         <p className="confirmacao-formulario" role="status">

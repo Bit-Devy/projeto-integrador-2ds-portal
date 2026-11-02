@@ -1,5 +1,7 @@
 // confere as turmas publicadas usando a mesma regra do mapa
 import { condicaoTurmaPublicada } from "../mapa/turmas-publicadas";
+// importa a regra que confere as datas do mandato
+import { condicaoMandatoVigente } from "./mandato";
 import { getD1 } from "../../db";
 import { combinarHorario, normalizarTextoBusca, normalizarTurma } from "./normalizacao";
 import { planejarChaveMataMata, quantidadeParesProximos, validarLigacaoPartida } from "./chave";
@@ -252,7 +254,7 @@ async function substituirLinksEvento(eventoId: number, documentos: string[], ima
 export async function listarRepresentantes(parametros: URLSearchParams, todos = false): Promise<ListaPaginada<RepresentantePublico | RepresentanteAdministrativo>> {
   const { pagina, limite, offset } = paginacao(parametros, 500);
   const filtros: Filtros = { sql: [], valores: [] };
-  if (!todos) filtros.sql.push("r.publicado = 1", "r.ativo = 1", "r.arquivado_em IS NULL", `EXISTS (SELECT 1 FROM turmas_atividades t WHERE t.id = r.turma_atividade_id AND ${condicaoTurmaPublicada()})`);
+  if (!todos) filtros.sql.push("r.publicado = 1", "r.ativo = 1", "r.arquivado_em IS NULL", condicaoMandatoVigente(), `EXISTS (SELECT 1 FROM turmas_atividades t WHERE t.id = r.turma_atividade_id AND ${condicaoTurmaPublicada()})`);
   const busca = normalizarTextoBusca(textoFiltro(parametros.get("busca"), 120));
   if (busca) {
     filtros.sql.push("(r.nome_normalizado LIKE ? ESCAPE '\\' OR r.turma_normalizada LIKE ? ESCAPE '\\')");
@@ -284,7 +286,7 @@ export async function listarRepresentantes(parametros: URLSearchParams, todos = 
 
 export async function obterRepresentante(idRecebido: unknown, todos = false) {
   const id = idPositivo(idRecebido, "representante");
-  const filtro = todos ? "" : `AND publicado = 1 AND ativo = 1 AND arquivado_em IS NULL AND EXISTS (SELECT 1 FROM turmas_atividades t WHERE t.id = representantes.turma_atividade_id AND ${condicaoTurmaPublicada()})`;
+  const filtro = todos ? "" : `AND publicado = 1 AND ativo = 1 AND arquivado_em IS NULL AND ${condicaoMandatoVigente("representantes")} AND EXISTS (SELECT 1 FROM turmas_atividades t WHERE t.id = representantes.turma_atividade_id AND ${condicaoTurmaPublicada()})`;
   const linha = await getD1().prepare(`SELECT * FROM representantes WHERE id = ? ${filtro}`).bind(id).first<Linha>();
   if (!linha) throw new ErroEventos("Representante não encontrado.", 404);
   return formatarRepresentante(linha, todos);
@@ -338,7 +340,7 @@ export async function diagnosticoRepresentantes() {
   const d1 = getD1();
   const [duplicacoes, turmasSemRepresentante] = await d1.batch([
     d1.prepare(`SELECT turma, turno, funcao, COUNT(*) AS quantidade
-      FROM representantes WHERE ativo = 1 AND arquivado_em IS NULL
+      FROM representantes r WHERE ativo = 1 AND arquivado_em IS NULL AND ${condicaoMandatoVigente()}
       GROUP BY turma_normalizada, turno, funcao HAVING COUNT(*) > 1
       ORDER BY turma, turno, funcao`),
     d1.prepare(`SELECT t.id, t.nome, t.serie, t.turma, t.turno
@@ -346,7 +348,7 @@ export async function diagnosticoRepresentantes() {
       WHERE t.ativo = 1 AND t.tipo = 'aula_regular'
         AND NOT EXISTS (
           SELECT 1 FROM representantes r
-          WHERE r.turma_atividade_id = t.id AND r.ativo = 1 AND r.arquivado_em IS NULL
+          WHERE r.turma_atividade_id = t.id AND r.ativo = 1 AND r.arquivado_em IS NULL AND ${condicaoMandatoVigente()}
         )
       ORDER BY t.ordem, t.nome COLLATE NOCASE`),
   ]);
@@ -1832,6 +1834,9 @@ export async function gerarPresencasDeRepresentantes(reuniaoIdRecebido: unknown,
   if (reuniao.tipo !== "representantes") throw new ErroEventos("A geração por representantes só pode ser usada nesse tipo de reunião.");
   const filtrosDados = (filtrosRecebidos && typeof filtrosRecebidos === "object" ? filtrosRecebidos : {}) as Record<string, unknown>;
   const filtros: Filtros = { sql: ["r.ativo = 1", "r.arquivado_em IS NULL"], valores: [] };
+  // usa o mandato válido no dia da reunião para preservar cada período
+  filtros.sql.push(condicaoMandatoVigente("r", "?"));
+  filtros.valores.push(reuniao.data, reuniao.data);
   for (const [campo, coluna, normalizar] of [
     ["nivelEnsino", "r.nivel_ensino", false], ["turno", "r.turno", false], ["serie", "r.serie", false], ["turma", "r.turma_normalizada", true],
   ] as const) {

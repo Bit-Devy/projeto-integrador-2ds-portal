@@ -16,6 +16,7 @@ export function useConteudoPublico<T extends TipoConteudo>(
   // guarda os dados ordenados e o estado de carregamento
   const [dados, setDados] = useState(() => ordenarConteudosMaisRecentes(dadosIniciais));
   const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
 
   // busca uma versão atualizada quando o tipo muda
   useEffect(() => {
@@ -23,7 +24,7 @@ export function useConteudoPublico<T extends TipoConteudo>(
     const controle = new AbortController();
 
     // consulta os conteúdos públicos da api
-    fetch(`/api/conteudo?tipo=${tipo}`, { signal: controle.signal })
+    fetch(`/api/conteudo?tipo=${tipo}`, { signal: controle.signal, cache: "no-store" })
       .then(async (resposta) => {
         if (!resposta.ok) throw new Error("Conteúdo temporariamente indisponível.");
         // define o formato esperado da resposta
@@ -37,6 +38,7 @@ export function useConteudoPublico<T extends TipoConteudo>(
         }>;
       })
       .then((resultado) => {
+        setErro("");
         // junta os dados do item com os campos do registro
         setDados(ordenarConteudosMaisRecentes(
           resultado.itens.map((item) => ({
@@ -50,6 +52,7 @@ export function useConteudoPublico<T extends TipoConteudo>(
       .catch((erro) => {
         if (erro instanceof Error && erro.name === "AbortError") return;
         // mantém os dados do arquivo se o banco estiver fora do ar
+        setErro("Não foi possível atualizar os dados. Tente novamente em alguns instantes.");
       })
       .finally(() => setCarregando(false));
 
@@ -58,5 +61,5 @@ export function useConteudoPublico<T extends TipoConteudo>(
   }, [tipo]);
 
   // devolve os dados e o estado da busca
-  return { dados, carregando };
+  return { dados, carregando, erro };
 }

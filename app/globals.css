@@ -2593,13 +2593,13 @@ a {
 .grade-canais-contato {
   display: grid;
   /* organiza os elementos em colunas */
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
   margin-bottom: 70px;
 }
 
 /* item de grade de canais contato */
-.grade-canais-contato article {
+.grade-canais-contato .cartao-canal {
   min-height: 220px;
   display: flex;
   flex-direction: column;
@@ -2607,10 +2607,14 @@ a {
   border: 1px solid #dce3e6;
   /* cria uma sombra para destacar o elemento */
   box-shadow: inset 0 -4px 0 var(--azul-claro);
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 400;
+  margin-top: 0;
 }
 
 /* elemento de grade de canais contato */
-.grade-canais-contato article > span {
+.grade-canais-contato .cartao-canal > span {
   color: var(--azul);
   font-size: 1.5625rem;
 }
@@ -2942,6 +2946,8 @@ a {
   font-size: 0.75rem;
   font-weight: 700;
 }
+
+
 
 /* interação de link de conteúdo de notícia */
 .corpo-noticia a:hover,
@@ -6951,6 +6957,83 @@ html:has(#topo.texto-maior) {
 }
 
 /* destaca o caminho do crt até a lista completa de representantes */
-.atalho-crt { border: 1px solid #dce5eb; color: var(--azul-escuro); }
-.atalho-crt:hover { border-color: var(--azul); background: #eef5f9; }
+.atalho-crt {
+  display: grid;
+  grid-template-columns: 75px minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  min-height: 135px;
+  padding: 24px;
+  border: 2px solid var(--azul-escuro);
+  color: #ffffff;
+  background: var(--azul-escuro);
+}
+
+/* mantém todo o texto legível também ao passar o mouse ou usar o teclado */
+.atalho-crt:hover,
+.atalho-crt:focus-visible {
+  color: #ffffff;
+  background: #064b76;
+  border-color: #064b76;
+}
+
+/* identifica o conselho sem misturar os estilos de avisos vazios */
+.atalho-crt > span {
+  display: grid;
+  place-items: center;
+  width: 65px;
+  height: 65px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+/* conserva o contraste da descrição em todos os estados do link */
+.atalho-crt p { margin: 7px 0 0; color: #ffffff; line-height: 1.5; }
+
+/* acomoda o atalho também em telas estreitas */
+@media (max-width: 520px) {
+  .atalho-crt { grid-template-columns: 48px minmax(0, 1fr); padding: 18px; gap: 12px; }
+  .atalho-crt > span { width: 48px; height: 48px; font-size: .8125rem; }
+}
 #tabela-completa-representantes { scroll-margin-top: 1rem; }
+
+
+/* mantém a foto visível e os títulos com o tamanho do cartão */
+.imagem-noticia > a { position: absolute; inset: 0; z-index: 1; }
+.imagem-noticia-com-foto::before, .imagem-noticia-com-foto::after { display: none; }
+.imagem-noticia-com-foto img { inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 1; transform: none; filter: none; }
+.corpo-noticia time { display: block; margin-bottom: 0.55rem; color: #64747c; font-size: 0.75rem; }
+.corpo-noticia h3 a { display: block; color: inherit; font-size: inherit; line-height: inherit; }
+.corpo-noticia h3 a:hover, .corpo-noticia h3 a:focus-visible { text-decoration: underline; }
+.foto-noticia { margin: 1.5rem 0 2rem; }
+.foto-noticia img { display: block; width: 100%; max-height: 36rem; object-fit: contain; background: #f4f6f7; }
+.foto-noticia figcaption { margin-top: 0.65rem; color: #62747d; font-size: 0.8125rem; line-height: 1.5; }
+
+/* organiza a troca de ano nas páginas de notícias e transparência */
+.seletor-ano { display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid #dce3e6; }
+.seletor-ano label { display: grid; gap: 0.4rem; color: #344e5b; font-size: 0.875rem; font-weight: 700; }
+.seletor-ano select, .seletor-ano button { min-height: 2.75rem; padding: 0.65rem 0.9rem; font: inherit; border: 1px solid #cad6dc; background: white; color: var(--azul-escuro); border-radius: 3px; }
+.seletor-ano button { font-size: 0.875rem; cursor: pointer; }
+.seletor-ano button:hover:not(:disabled) { background: #eef6fa; }
+.seletor-ano button:disabled { color: #7d8b91; cursor: default; }
+.cartao-canal:hover, .cartao-canal:focus-visible { background: #f1f8fc; outline: 2px solid var(--azul); outline-offset: 2px; }
+#resultado-representantes { scroll-margin-top: 1.5rem; }
+
+/* deixa os filtros e as notícias mais simples de ler no celular */
+@media (max-width: 780px) {
+  .seletor-ano { gap: 0.65rem; }
+  .seletor-ano label { width: 100%; order: -1; }
+  .seletor-ano button { flex: 1; }
+  .grade-noticias, .grade-noticias-completa { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  .cartao-noticia { box-shadow: none; border: 0; border-bottom: 1px solid #dce3e6; padding-bottom: 1.5rem; }
+  .cartao-noticia:hover { transform: none; box-shadow: none; }
+  .cartao-noticia .imagem-noticia { height: 13.5rem; }
+  .cartao-noticia .corpo-noticia { padding: 1rem 0 0; }
+  .cartao-noticia .corpo-noticia h3 { font-size: 1.25rem; line-height: 1.4; margin-block: 0.5rem 0.75rem; }
+  .cartao-noticia .corpo-noticia p { font-size: 0.9375rem; line-height: 1.6; }
+  .cartao-noticia .corpo-noticia > small, .cartao-noticia .corpo-noticia > a { font-size: 0.875rem; }
+  .cartao-noticia .corpo-noticia time { font-size: 0.8125rem; }
+  .filtro-noticias > div { flex-wrap: wrap; }
+  .filtro-noticias input { min-width: 0; }
+}

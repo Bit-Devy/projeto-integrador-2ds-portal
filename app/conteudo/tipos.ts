@@ -5,6 +5,7 @@ export type TipoConteudo =
   | "noticias"
   | "projetos"
   | "documentos"
+  | "canais"
   | "movimentos";
 
 // define os campos comuns dos registros
@@ -47,6 +48,17 @@ export type NoticiaGecep = RegistroBase & {
   link: string;
   cor: string;
   destaque: boolean;
+  imagemUrl?: string;
+  imagemAlt?: string;
+  creditoImagem?: string;
+};
+
+// define os canais que a gestão pode atualizar
+export type CanalContato = RegistroBase & {
+  titulo: string;
+  descricao: string;
+  link: string;
+  icone: string;
 };
 
 // define os dados de um projeto
@@ -77,7 +89,6 @@ export type MovimentoGecep = RegistroBase & {
   categoria: string;
   valor: number;
   comprovanteUrl: string;
-  exemplo?: boolean;
 };
 
 // relaciona cada tipo com seus dados
@@ -88,6 +99,7 @@ export type DadosPorTipo = {
   projetos: ProjetoGecep;
   documentos: DocumentoGecep;
   movimentos: MovimentoGecep;
+  canais: CanalContato;
 };
 
 // define um conteúdo salvo no banco

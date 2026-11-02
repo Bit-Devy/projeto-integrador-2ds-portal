@@ -35,10 +35,10 @@ const atalhosPrincipais = [
     destino: "/sugestoes",
   },
   {
-    icone: "§",
-    titulo: "Estatuto do GECEP",
-    texto: "Conheça as normas, direitos e estrutura do grêmio.",
-    destino: "/estatuto",
+    icone: "▤",
+    titulo: "Notícias",
+    texto: "Acompanhe ações, avisos e novidades do colégio e do grêmio.",
+    destino: "/noticias",
   },
   {
     icone: "≡",
@@ -76,12 +76,6 @@ const areasPortal = [
   },
   {
     numero: "05",
-    titulo: "Notícias",
-    texto: "Veja ações, campanhas e decisões recentes da representação estudantil.",
-    destino: "/noticias",
-  },
-  {
-    numero: "06",
     titulo: "Contato",
     texto: "Encontre os canais oficiais e saiba como conversar diretamente com o GECEP.",
     destino: "/contato",

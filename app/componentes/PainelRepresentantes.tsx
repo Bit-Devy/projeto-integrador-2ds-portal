@@ -1,5 +1,8 @@
 "use client";
 
+// confere as datas dos mandatos nos indicadores
+import { mandatoVigenteEm } from "../eventos/mandato";
+
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 // importa as turmas que também aparecem no mapa público
 import type { TurmaAtividadeMapaPublica } from "../mapa/tipos";
@@ -101,14 +104,14 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
 
   const chavesDuplicadas = useMemo(() => {
     const contagem = new Map<string, number>();
-    for (const item of itens.filter((registro) => registro.ativo)) {
+    for (const item of itens.filter((registro) => registro.ativo && mandatoVigenteEm(registro))) {
       const chave = `${normalizarBusca(item.nome)}|${normalizarBusca(item.turma)}|${item.funcao}`;
       contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
     }
     return new Set([...contagem].filter(([, total]) => total > 1).map(([chave]) => chave));
   }, [itens]);
 
-  const semRepresentante = useMemo(() => turmasPublicadas.filter((turma) => !itens.some((item) => item.ativo && item.publicado && item.funcao === "titular" && item.turmaAtividadeId === turma.id)).map((turma) => `${turma.nome} · ${nomeTurno(turma.turno)}`), [itens, turmasPublicadas]);
+  const semRepresentante = useMemo(() => turmasPublicadas.filter((turma) => !itens.some((item) => item.ativo && item.publicado && mandatoVigenteEm(item) && item.funcao === "titular" && item.turmaAtividadeId === turma.id)).map((turma) => `${turma.nome} · ${nomeTurno(turma.turno)}`), [itens, turmasPublicadas]);
   const anos = useMemo(() => Array.from(new Set(itens.map((item) => item.serie).filter(Boolean))).sort(), [itens]);
   const filtrados = useMemo(() => {
     const termo = normalizarBusca(busca);
@@ -259,14 +262,14 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
             <Campo rotulo="Observação pública" largo><textarea rows={3} value={formulario.observacaoPublica} onChange={(e) => mudar("observacaoPublica", e.target.value)} /></Campo>
             <Campo rotulo="Observação interna" dica="Nunca aparece na página pública." largo><textarea rows={3} value={formulario.observacaoInterna} onChange={(e) => mudar("observacaoInterna", e.target.value)} /></Campo>
           </div>
-          <div className="pev-opcoes"><div className="opcao-com-ajuda"><label><input type="checkbox" checked={formulario.ativo} onChange={(e) => mudar("ativo", e.target.checked)} /><span>Mandato ativo</span></label><AjudaOpcao texto="Indica que a pessoa está representando a turma atualmente. Desmarque quando o mandato terminar. O histórico de reuniões é preservado." /></div><div className="opcao-com-ajuda"><label><input type="checkbox" checked={formulario.publicado} onChange={(e) => mudar("publicado", e.target.checked)} /><span>Mostrar no portal</span></label><AjudaOpcao texto="Permite mostrar este representante na página pública. A pessoa só aparece se o mandato e a turma também estiverem ativos e a turma estiver publicada e válida." /></div></div></fieldset>
+          <div className="pev-opcoes"><div className="opcao-com-ajuda"><label><input type="checkbox" checked={formulario.ativo} onChange={(e) => mudar("ativo", e.target.checked)} /><span>Mandato ativo</span></label><AjudaOpcao texto="Permite usar este mandato dentro das datas de início e fim. Mandatos encerrados deixam a consulta pública automaticamente. O histórico de reuniões é preservado." /></div><div className="opcao-com-ajuda"><label><input type="checkbox" checked={formulario.publicado} onChange={(e) => mudar("publicado", e.target.checked)} /><span>Mostrar no portal</span></label><AjudaOpcao texto="Permite mostrar este representante na página pública. A pessoa só aparece durante o mandato e se a turma estiver ativa, publicada e válida." /></div></div></fieldset>
           <p className="pev-nota-privacidade">Não cadastre telefone, e-mail, endereço ou informações pessoais neste formulário.</p>
           {mudou && <p className="pev-alteracoes" role="status">Há mudanças não salvas.</p>}
           <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={fechar}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>{salvando ? "Salvando…" : "Salvar representante"}</button></div>
         </form>
       ) : (
         <>
-          <div className="pev-resumo"><button type="button" className={visao === "todos" ? "ativo" : ""} onClick={() => setVisao("todos")}><strong>{itens.filter((item) => item.ativo).length}</strong><span>Mandatos ativos</span></button><button type="button" className={visao === "duplicacoes" ? "ativo" : ""} onClick={() => setVisao("duplicacoes")}><strong>{chavesDuplicadas.size}</strong><span>Possíveis duplicações</span></button><button type="button" className={visao === "sem-representante" ? "ativo" : ""} onClick={() => setVisao("sem-representante")}><strong>{semRepresentante.length}</strong><span>Turmas sem titular</span></button></div>
+          <div className="pev-resumo"><button type="button" className={visao === "todos" ? "ativo" : ""} onClick={() => setVisao("todos")}><strong>{itens.filter((item) => item.ativo && mandatoVigenteEm(item)).length}</strong><span>Mandatos ativos</span></button><button type="button" className={visao === "duplicacoes" ? "ativo" : ""} onClick={() => setVisao("duplicacoes")}><strong>{chavesDuplicadas.size}</strong><span>Possíveis duplicações</span></button><button type="button" className={visao === "sem-representante" ? "ativo" : ""} onClick={() => setVisao("sem-representante")}><strong>{semRepresentante.length}</strong><span>Turmas sem titular</span></button></div>
           {visao !== "sem-representante" && <div className="pev-filtros pev-filtros--amplos">
             <label className="pev-filtro--busca"><span>Buscar</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome ou turma — 3º J, 3 J ou 3J" /></label>
             <label><span>Turno</span><select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label>

@@ -17,16 +17,17 @@ Para executar a versão compilada, use `npm run build` e depois `npm run start`.
 - **Início:** apresentação do grêmio, atalhos, notícias em destaque e próximos eventos
 - **O GECEP e gestão:** história, objetivos, organização e integrantes do grêmio
 - **CRT e representantes:** explicação da representação estudantil e consulta dos representantes de turma
-- **Notícias:** publicações, busca por assunto e leitura das notícias ou fontes relacionadas
+- **Notícias:** publicações com foto, descrição da imagem, crédito, fonte e texto completo, com busca e arquivo por ano
 - **Projetos:** apresentação das iniciativas estudantis e seus estados de andamento
 - **Eventos e calendário:** consulta de atividades, datas e programações publicadas
 - **Interclasses:** campeonatos, participantes, fases, chaves, partidas, placares e resultados
 - **Reuniões e atas:** pautas, registros, presenças, votações e documentos publicados pela gestão
 - **Salas:** cadastro simples de turmas e salas físicas, com vínculo opcional ao ensalamento e confirmação ao substituir uma ocupação
 - **Mapa do colégio:** pesquisa de salas, espaços, turmas e atividades com filtros de turno e tipo
-- **Transparência:** consulta de receitas, despesas, categorias e comprovantes, com valores demonstrativos durante o desenvolvimento
+- **Transparência:** receitas, despesas, categorias e comprovantes, com totais separados por ano e consulta do histórico
 - **Estatuto e documentos:** acesso às normas e aos arquivos públicos do grêmio
-- **Sugestões e contato:** envio de ideias, demandas, propostas e relatos com protocolo de recebimento
+- **Sugestões:** envio de ideias, demandas, propostas e relatos com protocolo, apenas em `/sugestoes`
+- **Contato:** atalhos para atendimento presencial, Instagram, canal do WhatsApp e sugestões; os três destinos externos são editáveis no painel
 - **Acessibilidade:** A+ amplia levemente os textos em um único nível; A restaura o tamanho normal
 - **Painel da gestão:** cadastro, edição e publicação de conteúdos, administração de mensagens, eventos, interclasses, reuniões, representantes, mapa e envio de arquivos
 
@@ -36,4 +37,10 @@ Acesse `/painel` e entre com a senha definida em `ADMIN_PASSWORD`. Cadastre ou e
 
 Nos formulários, a opção de preservar identidade pede confirmação e desativa nome, turma e contato. Esses dados não acompanham o envio anônimo, e a gestão não poderá responder diretamente. Evite incluir dados pessoais no texto da mensagem.
 
-Sugestões e contato compartilham o limite de três envios por hora em cada navegador. No login, cinco erros exigem uma espera de 15 minutos; mais cinco erros bloqueiam o navegador por 24 horas. Uma entrada correta reinicia o contador.
+Sugestões têm o limite de três envios por hora em cada navegador. No login, cinco erros exigem uma espera de 15 minutos; mais cinco erros bloqueiam o navegador por 24 horas. Uma entrada correta reinicia o contador.
+
+O ano inicial acompanha o calendário. Use o seletor de ano para consultar o histórico ou preparar 2027 e os próximos períodos. Eventos, reuniões e interclasses também aceitam datas e edições futuras. Informe as datas de início e fim dos mandatos; representantes encerrados ou futuros não aparecem como atuais. Ao renovar as turmas, ajuste a validade no painel e cadastre as novas sem apagar os registros anteriores.
+
+Os lançamentos financeiros locais ainda são fictícios por escolha durante o desenvolvimento. Antes do uso público, substitua-os pelos registros reais, complete os integrantes e horários e configure D1, R2 e segredos de produção. O banco local não é enviado automaticamente na publicação.
+
+Para conferir o projeto, execute `npm run typecheck`, `npm run lint`, `npm test` e `npm run test:start`. Os testes de integração criam registros temporários e depois os excluem ou arquivam.

@@ -36,6 +36,18 @@ async function comBanco(executar) {
 const turma = (nome, outros = {}) => ({ nome, nivelEnsino: "medio", serie: "2ª série", turno: "manha", tipo: "aula_regular", publicado: true, ativo: true, ...outros });
 const pessoa = (id, outros = {}) => ({ turmaAtividadeId: id, nome: "Pessoa fictícia", turma: "Texto adulterado", turno: "noite", nivelEnsino: "outro", serie: "Inválida", funcao: "titular", publicado: true, ativo: true, ...outros });
 
+// simula a virada do ano com o mesmo filtro usado no banco publicado
+test("em janeiro de 2027 só mostra mandatos válidos naquele período", () => comBanco(async (sqlite) => {
+  sqlite.function("date", (valor) => valor === "now" ? "2027-01-01" : valor);
+  const item = await criarRegistroMapa("turmas", turma("2DS"));
+  const encerrado = await criarRepresentante(pessoa(item.id, { inicioMandato: "2026-01-01", fimMandato: "2026-12-31" }));
+  const atual = await criarRepresentante(pessoa(item.id, { inicioMandato: "2027-01-01", fimMandato: "2027-12-31" }));
+  const futuro = await criarRepresentante(pessoa(item.id, { inicioMandato: "2028-01-01", fimMandato: "2028-12-31" }));
+  assert.deepEqual((await listarRepresentantes(new URLSearchParams())).itens.map((registro) => registro.id), [atual.id]);
+  const painel = await listarRepresentantes(new URLSearchParams(), true);
+  assert.ok([encerrado.id, atual.id, futuro.id].every((id) => painel.itens.some((registro) => registro.id === id)));
+}));
+
 test("sala ocupada exige confirmação e a substituição atualiza o mapa sem apagar o histórico", () => comBanco(async (sqlite, sala) => {
   const primeira = await criarRegistroMapa("turmas", turma("2A", { salaId: sala.id }));
   const antes = sqlite.prepare("SELECT COUNT(*) AS total FROM turmas_atividades").get().total;

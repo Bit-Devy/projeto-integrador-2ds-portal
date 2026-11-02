@@ -4,21 +4,23 @@ import type { NoticiaGecep } from "../conteudo/tipos";
 // mostra os dados de uma notícia
 export default function CartaoNoticia({ noticia }: { noticia: NoticiaGecep }) {
   // escolhe o endereço da notícia
-  const link = noticia.link || (noticia.id ? `/noticias/${noticia.id}` : "/noticias");
+  const link = noticia.id ? `/noticias/${noticia.id}` : noticia.link || "/noticias";
   // verifica se o endereço é externo
   const externo = link.startsWith("http");
 
   return (
     <article className="cartao-noticia">
       {/* imagem e data da notícia */}
-      <div className={`imagem-noticia imagem-${noticia.cor}`}>
-        <img src="/logo-gecep.png" alt="" />
-        <span>{formatarData(noticia.data)}</span>
+      <div className={`imagem-noticia imagem-${noticia.cor}${noticia.imagemUrl ? " imagem-noticia-com-foto" : ""}`}>
+        <a href={link} aria-label={`Ler: ${noticia.titulo}`} target={externo ? "_blank" : undefined} rel={externo ? "noreferrer" : undefined}>
+          <img src={noticia.imagemUrl || "/logo-gecep.png"} alt={noticia.imagemAlt || ""} loading="lazy" />
+        </a>
       </div>
       {/* texto e link da notícia */}
       <div className="corpo-noticia">
+        <time dateTime={noticia.data}>{formatarData(noticia.data)}</time>
         <small>{noticia.categoria}</small>
-        <h3>{noticia.titulo}</h3>
+        <h3><a href={link} target={externo ? "_blank" : undefined} rel={externo ? "noreferrer" : undefined}>{noticia.titulo}</a></h3>
         <p>{noticia.resumo}</p>
         <a href={link} target={externo ? "_blank" : undefined} rel={externo ? "noreferrer" : undefined}>
           Ler notícia completa <span aria-hidden="true">›</span>

@@ -41,7 +41,9 @@ export default async function PaginaNoticia({ params }: { params: Promise<{ id: 
       {/* texto e dados da notícia */}
       <article className="limite pagina-conteudo noticia-completa">
         {/* organiza a data no formato usado no brasil */}
-        <div className="metadados-noticia"><span>{noticia.categoria}</span><time>{noticia.data.split("-").reverse().join("/")}</time></div>
+        <div className="metadados-noticia"><span>{noticia.categoria}</span><time dateTime={noticia.data}>{noticia.data.split("-").reverse().join("/")}</time></div>
+        {/* foto com descrição e crédito para acompanhar o texto */}
+        {noticia.imagemUrl && <figure className="foto-noticia"><img src={noticia.imagemUrl} alt={noticia.imagemAlt || ""} /><figcaption>{noticia.creditoImagem}</figcaption></figure>}
         {/* separa o conteúdo em parágrafos */}
         {noticia.conteudo ? noticia.conteudo.split("\n").filter(Boolean).map((paragrafo) => <p key={paragrafo}>{paragrafo}</p>) : <p>{noticia.resumo}</p>}
         {/* link externo relacionado à notícia */}

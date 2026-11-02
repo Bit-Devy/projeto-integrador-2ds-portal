@@ -9,15 +9,18 @@ import { noticias } from "../dados";
 import { useConteudoPublico } from "../conteudo/useConteudoPublico";
 // importa o cartão de notícia
 import CartaoNoticia from "./CartaoNoticia";
+// escolhe as notícias do ano em andamento
+import { anoDoPortal, pertenceAoAno } from "../conteudo/periodos";
 
 // mostra as notícias na tela inicial
 export default function NoticiasInicio() {
   // busca as notícias publicadas
   const { dados } = useConteudoPublico("noticias", noticias);
   // separa as notícias em destaque
-  const destaques = dados.filter((noticia) => noticia.destaque).slice(0, 3);
+  const desteAno = dados.filter((noticia) => pertenceAoAno(noticia.data, String(anoDoPortal())));
+  const destaques = desteAno.filter((noticia) => noticia.destaque).slice(0, 3);
   // usa as primeiras notícias quando não há destaques
-  const exibidas = destaques.length ? destaques : dados.slice(0, 3);
+  const exibidas = destaques.length ? destaques : desteAno.slice(0, 3);
 
   return (
     <section className="limite secao-inicial-noticias">

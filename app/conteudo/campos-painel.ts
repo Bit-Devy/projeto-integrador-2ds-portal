@@ -59,7 +59,10 @@ export const configuracaoPainel: Record<TipoConteudo, {
       { chave: "categoria", rotulo: "Categoria", tipo: "text", obrigatorio: true },
       { chave: "resumo", rotulo: "Resumo", tipo: "textarea", obrigatorio: true },
       { chave: "conteudo", rotulo: "Texto completo", tipo: "textarea" },
-      { chave: "link", rotulo: "Link externo", tipo: "url", dica: "Deixe vazio para usar uma página do próprio portal." },
+      { chave: "imagemUrl", rotulo: "Imagem da notícia", tipo: "arquivo", dica: "Envie uma foto ou informe o endereço de uma imagem." },
+      { chave: "imagemAlt", rotulo: "Descrição da imagem", tipo: "text", dica: "Explique de forma breve o que aparece na foto." },
+      { chave: "creditoImagem", rotulo: "Crédito da imagem", tipo: "text", dica: "Informe quem fez ou publicou a foto." },
+      { chave: "link", rotulo: "Fonte ou publicação relacionada", tipo: "url", dica: "A notícia abre no portal e este link aparece ao final do texto." },
       // oferece as cores aceitas pelos cartões
       { chave: "cor", rotulo: "Cor do cartão", tipo: "select", opcoes: [
         { valor: "azul", nome: "Azul" }, { valor: "verde", nome: "Verde" },
@@ -99,6 +102,22 @@ export const configuracaoPainel: Record<TipoConteudo, {
       { chave: "real", rotulo: "Documento oficial", tipo: "checkbox" },
     ],
   },
+  // configura os destinos dos canais de atendimento
+  canais: {
+    nome: "Canais de contato",
+    singular: "canal",
+    descricao: "Atualize os endereços de atendimento presencial, Instagram e WhatsApp. As mensagens pelo portal ficam em Sugestões.",
+    campos: [
+      { chave: "titulo", rotulo: "Nome do canal", tipo: "text", obrigatorio: true },
+      { chave: "descricao", rotulo: "Descrição", tipo: "textarea", obrigatorio: true },
+      { chave: "link", rotulo: "Endereço de destino", tipo: "url", obrigatorio: true },
+      { chave: "icone", rotulo: "Ícone", tipo: "select", opcoes: [
+        { valor: "⌂", nome: "Atendimento presencial" },
+        { valor: "◎", nome: "Instagram" },
+        { valor: "◉", nome: "WhatsApp" },
+      ] },
+    ],
+  },
   // configura o formulário de movimentações
   movimentos: {
     nome: "Transparência",
@@ -118,4 +137,4 @@ export const configuracaoPainel: Record<TipoConteudo, {
 };
 
 // define a ordem das seções no painel
-export const tiposConteudoPainel: TipoConteudo[] = ["noticias", "eventos", "projetos", "membros", "movimentos", "documentos"];
+export const tiposConteudoPainel: TipoConteudo[] = ["noticias", "eventos", "projetos", "membros", "movimentos", "documentos", "canais"];

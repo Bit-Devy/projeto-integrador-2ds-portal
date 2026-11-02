@@ -9,8 +9,8 @@ type EstadoConsulta<T> = {
   recarregar: () => void;
 };
 
-// Consulta uma API pública sem manter dados antigos ou demonstrativos como fallback.
-export function useConsultaPublica<T>(url: string): EstadoConsulta<T> {
+// consulta os dados públicos sem mostrar uma resposta antiga durante a busca
+export function useConsultaPublica<T>(url: string, habilitada = true): EstadoConsulta<T> {
   const [tentativa, setTentativa] = useState(0);
   const chave = `${url}\u0000${tentativa}`;
   const [resultado, setResultado] = useState<{ chave: string; dados: T | null; erro: string }>({ chave: "", dados: null, erro: "" });
@@ -18,6 +18,7 @@ export function useConsultaPublica<T>(url: string): EstadoConsulta<T> {
   const recarregar = useCallback(() => setTentativa((valor) => valor + 1), []);
 
   useEffect(() => {
+    if (!habilitada) return;
     const controle = new AbortController();
 
     fetch(url, { signal: controle.signal, cache: "no-store" })
@@ -39,13 +40,13 @@ export function useConsultaPublica<T>(url: string): EstadoConsulta<T> {
       });
 
     return () => controle.abort();
-  }, [chave, url]);
+  }, [chave, url, habilitada]);
 
-  const carregando = resultado.chave !== chave;
+  const carregando = habilitada && resultado.chave !== chave;
   return {
-    dados: carregando ? null : resultado.dados,
+    dados: !habilitada || carregando ? null : resultado.dados,
     carregando,
-    erro: carregando ? "" : resultado.erro,
+    erro: !habilitada || carregando ? "" : resultado.erro,
     recarregar,
   };
 }

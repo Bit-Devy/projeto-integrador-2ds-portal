@@ -2,8 +2,8 @@
 import type { Metadata } from "next";
 // importa o cabeçalho da página
 import CabecalhoPagina from "../componentes/CabecalhoPagina";
-// importa o formulário de contato
-import FormularioParticipacao from "../componentes/FormularioParticipacao";
+// importa os atalhos de atendimento
+import CanaisContato from "../componentes/CanaisContato";
 
 // define os dados da página de contato
 export const metadata: Metadata = { title: "Fale com o GECEP", description: "Canais de contato do Grêmio Estudantil do CEP." };
@@ -14,13 +14,10 @@ export default function PaginaContato() {
     <main id="conteudo">
       {/* cabeçalho da página */}
       <CabecalhoPagina titulo="Fale com o GECEP" resumo="Encontre os canais de atendimento e envie uma mensagem diretamente à representação estudantil." caminho="Participe / Contato" />
-      {/* canais e formulário de contato */}
+      {/* canais de contato com os destinos publicados pela gestão */}
       <section className="limite pagina-conteudo">
         {/* cartões dos canais de atendimento */}
-        <div className="grade-canais-contato"><article><span>⌂</span><h2>Atendimento presencial</h2><p>Sala do GECEP, dentro do Colégio Estadual do Paraná.</p><small>Horários serão publicados pela gestão.</small></article><article><span>◎</span><h2>Instagram</h2><p>Notícias, avisos e atualizações rápidas do grêmio.</p><a href="https://www.instagram.com/gecep_oficial/" target="_blank" rel="noreferrer">@gecep_oficial ↗</a></article><article><span>✉</span><h2>Mensagem pelo portal</h2><p>Canal para dúvidas, propostas e demandas que precisam de registro.</p><small>As mensagens ficam organizadas para análise da gestão.</small></article></div>
-
-        {/* orientações e envio da mensagem */}
-        <div className="grade-formulario-contato"><div><span className="rotulo-secao">MENSAGEM</span><h2>Como podemos ajudar?</h2><p>Escolha o assunto, explique a situação e informe sua turma para facilitar o encaminhamento.</p><div className="lista-simples"><p><strong>Assuntos urgentes:</strong> procure também um adulto responsável ou setor competente do colégio.</p><p><strong>Questões pedagógicas:</strong> podem precisar de encaminhamento para a equipe pedagógica ou direção auxiliar.</p><p><strong>Acompanhamento:</strong> o protocolo confirma o recebimento e ajuda a identificar a mensagem.</p></div></div><FormularioParticipacao modo="contato" /></div>
+        <CanaisContato />
       </section>
 
       {/* dúvidas comuns sobre o contato */}

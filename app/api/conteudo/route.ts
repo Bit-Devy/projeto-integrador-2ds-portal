@@ -16,6 +16,7 @@ const tiposPermitidos: TipoConteudo[] = [
   "projetos",
   "documentos",
   "movimentos",
+  "canais",
 ];
 
 // lista os campos obrigatórios de cada tipo
@@ -26,6 +27,7 @@ const camposObrigatorios: Record<TipoConteudo, string[]> = {
   projetos: ["titulo", "categoria", "estado", "texto"],
   documentos: ["titulo", "categoria", "tipo", "texto", "link"],
   movimentos: ["descricao", "data", "tipo", "categoria", "valor"],
+  canais: ["titulo", "descricao", "link"],
 };
 
 // define o formato de uma linha de conteúdo do banco
@@ -64,8 +66,11 @@ export async function GET(request: Request) {
       ? "SELECT * FROM conteudos WHERE tipo = ?"
       : "SELECT * FROM conteudos WHERE tipo = ? AND publicado = 1";
     // executa a consulta com o tipo informado
-    const consulta = `${filtro} ${ordemMaisRecente}`;
-    const resultado = await getD1().prepare(consulta).bind(tipo).all<LinhaConteudo>();
+    const ano = url.searchParams.get("ano");
+    if (ano && !/^(19|20|21)\d{2}$/.test(ano)) throw new Error("Informe um ano válido.");
+    // usa a data da publicação para consultar um ano sem apagar o histórico
+    const consulta = `${filtro}${ano ? " AND substr(COALESCE(NULLIF(json_extract(dados_json, '$.data'), ''), json_extract(dados_json, '$.dataDocumento')), 1, 4) = ?" : ""} ${ordemMaisRecente}`;
+    const resultado = await getD1().prepare(consulta).bind(...(ano ? [tipo, ano] : [tipo])).all<LinhaConteudo>();
 
     return Response.json({ itens: resultado.results.map(formatarLinha) });
   } catch (erro) {
@@ -172,17 +177,23 @@ function validarCorpo(corpo: Record<string, unknown>) {
   // encontra os campos obrigatórios vazios
   const ausentes = camposObrigatorios[tipo].filter((campo) => dados[campo] === "" || dados[campo] === undefined || dados[campo] === null);
   if (ausentes.length) throw new Error(`Preencha os campos obrigatórios: ${ausentes.join(", ")}.`);
-  if (tipo === "noticias") {
-    const data = String(dados.data);
+  if (["noticias", "movimentos", "eventos"].includes(tipo) || (tipo === "documentos" && dados.dataDocumento)) {
+    const data = String(tipo === "documentos" ? dados.dataDocumento : dados.data);
     const instante = new Date(`${data}T00:00:00Z`);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || Number.isNaN(instante.getTime()) || instante.toISOString().slice(0, 10) !== data) {
-      throw new Error("Informe uma data válida para a notícia.");
+      throw new Error("Informe uma data válida para a publicação.");
     }
   }
   // valida os dados próprios das movimentações
   if (tipo === "movimentos") {
+    // impede que o antigo aviso seja ativado por uma chamada direta
+    if (dados.exemplo) throw new Error("Campo exemplo inválido para movimentações.");
+    delete dados.exemplo;
     if (!["entrada", "saida"].includes(String(dados.tipo))) throw new Error("Escolha entrada ou saída.");
     if (!Number.isFinite(Number(dados.valor)) || Number(dados.valor) < 0) throw new Error("Informe um valor válido.");
+  }
+  if (tipo === "noticias" && dados.imagemUrl && (!dados.imagemAlt || !dados.creditoImagem)) {
+    throw new Error("Informe a descrição e o crédito da imagem.");
   }
 
   // devolve somente os dados aceitos
@@ -239,6 +250,8 @@ function formatarLinha(linha: LinhaConteudo) {
   } catch {
     dados = {};
   }
+  // retira a opção antiga também dos registros já existentes
+  if (linha.tipo === "movimentos") delete dados.exemplo;
   // muda os nomes dos campos para o formato do portal
   return {
     id: linha.id,

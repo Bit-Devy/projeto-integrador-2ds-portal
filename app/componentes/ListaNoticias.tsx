@@ -9,23 +9,28 @@ import CartaoNoticia from "./CartaoNoticia";
 import { noticias } from "../dados";
 // importa a busca de conteúdo público
 import { useConteudoPublico } from "../conteudo/useConteudoPublico";
+// importa o controle do ano e o filtro do histórico
+import SeletorAno from "./SeletorAno";
+import { anoInicial, pertenceAoAno } from "../conteudo/periodos";
 
 // mostra e filtra todas as notícias
-export default function ListaNoticias({ buscaInicial = "" }: { buscaInicial?: string }) {
+export default function ListaNoticias({ buscaInicial = "", ano: periodoInicial }: { buscaInicial?: string; ano?: string }) {
   // começa com a busca que veio do cabeçalho
   const [busca, setBusca] = useState(buscaInicial);
+  const [ano, setAno] = useState(() => anoInicial(periodoInicial));
   // busca as notícias publicadas
   const { dados: noticiasPublicadas, carregando } = useConteudoPublico("noticias", noticias);
 
   // filtra as notícias pelo texto digitado
   const filtradas = noticiasPublicadas.filter((noticia) => {
     const texto = `${noticia.titulo} ${noticia.resumo} ${noticia.categoria}`.toLowerCase();
-    return texto.includes(busca.trim().toLowerCase());
+    return pertenceAoAno(noticia.data, ano) && texto.includes(busca.trim().toLowerCase());
   });
 
   return (
     <>
-      {/* campo de busca das notícias */}
+      {/* período e campo de busca das notícias */}
+      <SeletorAno id="ano-noticias" ano={ano} datas={noticiasPublicadas.map((noticia) => noticia.data)} alterar={setAno} />
       <div className="filtro-noticias">
         <label htmlFor="busca-noticias">Buscar nas notícias</label>
         <div>

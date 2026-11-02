@@ -6,6 +6,7 @@ import type {
   MovimentoGecep,
   NoticiaGecep,
   ProjetoGecep,
+  CanalContato,
 } from "./tipos";
 
 // dados gerais do portal
@@ -21,6 +22,13 @@ export const informacoesSite = {
   nomeGestao: "Gestão atual - nome a publicar",
   periodoGestao: "Período a publicar",
 };
+
+// reúne os canais que podem ser alterados pelo painel
+export const canaisIniciais: CanalContato[] = [
+  { titulo: "Atendimento presencial", descricao: "Procure a sala do GECEP no colégio. Consulte o endereço antes de ir.", link: "https://goo.gl/maps/76bgtgbndHniW9JA9", icone: "⌂", publicado: true },
+  { titulo: "Instagram", descricao: "Acompanhe notícias, avisos e atualizações do grêmio no @gecep_oficial.", link: "https://www.instagram.com/gecep_oficial/", icone: "◎", publicado: true },
+  { titulo: "Canal do WhatsApp", descricao: "Receba comunicados e acompanhe as novidades do GECEP pelo canal oficial.", link: "https://whatsapp.com/channel/0029VbCpdU05Ui2QYzsxuR25", icone: "◉", publicado: true },
+];
 
 // pessoas de exemplo: troque pelos integrantes reais
 export const membrosIniciais: MembroGecep[] = [
@@ -62,6 +70,27 @@ export const eventosIniciais: EventoGecep[] = [];
 // notícias reais encontradas nos canais oficiais do colégio
 export const noticiasIniciais: NoticiaGecep[] = [
   {
+    data: "2026-10-28", categoria: "Cultura e formação", titulo: "Encontro no CEP aproxima teatro e audiovisual",
+    resumo: "Patrícia Ressurreição conversou com estudantes dos cursos técnicos sobre criação e direção.",
+    conteudo: "Os cursos técnicos em Teatro e em Produção de Áudio e Vídeo receberam Patrícia Ressurreição no Salão Nobre, em 5 de outubro. Ex-estudante do CEP, a convidada apresentou experiências de sua trajetória profissional.\nA conversa relacionou cinema, audiovisual e artes cênicas, incluindo o processo de criação do curta-metragem Entre Nós. O encontro ofereceu às turmas uma oportunidade de conhecer caminhos de atuação nessas áreas.\nResumo elaborado para o portal do GECEP a partir da publicação do Colégio Estadual do Paraná, de 28 de outubro de 2026. Consulte a fonte para acessar a cobertura e a galeria completas.",
+    link: "https://www.cep.pr.gov.br/Noticia/Palestra-com-Patricia-Ressurreicao-promove-integracao-entre-audiovisual-e-teatro",
+    imagemUrl: "/noticias/patricia-ressurreicao.jpg", imagemAlt: "Patrícia Ressurreição conversa com estudantes durante palestra no CEP", creditoImagem: "Imagem publicada pelo Colégio Estadual do Paraná, na galeria da notícia original", cor: "azul", destaque: true, publicado: true,
+  },
+  {
+    data: "2026-07-07", categoria: "Tecnologia", titulo: "Turmas de Desenvolvimento de Sistemas conhecem a GAMEscola",
+    resumo: "Visita técnica aproximou os conteúdos de programação do trabalho com jogos digitais.",
+    conteudo: "Estudantes do curso Técnico em Desenvolvimento de Sistemas visitaram a GAMEscola em 11 de junho de 2026. A atividade foi organizada pelo professor Fernando Emrich Pinto Maja.\nA visita apresentou ferramentas e processos ligados à criação de jogos. As turmas puderam relacionar o aprendizado de programação a situações profissionais e conhecer possibilidades de trabalho no setor de tecnologia.\nResumo elaborado para o portal do GECEP a partir da notícia publicada pelo Colégio Estadual do Paraná em 7 de julho de 2026. A fonte reúne mais informações e outras imagens da atividade.",
+    link: "https://www.cep.pr.gov.br/Noticia/Estudantes-do-curso-Tecnico-em-Desenvolvimento-de-Sistemas-realizam-visita-tecnica",
+    imagemUrl: "/noticias/visita-gamescola.jpg", imagemAlt: "Estudantes do curso de Desenvolvimento de Sistemas em visita à GAMEscola", creditoImagem: "Imagem publicada pelo Colégio Estadual do Paraná, na galeria da visita técnica", cor: "verde", destaque: true, publicado: true,
+  },
+  {
+    data: "2026-06-09", categoria: "Esporte e integração", titulo: "Copa CEP reúne esporte e cultura na comunidade escolar",
+    resumo: "A abertura da edição de 2026 reuniu turmas em apresentações sobre os países representados na competição.",
+    conteudo: "A Copa CEP de 2026 começou com uma cerimônia que reuniu referências esportivas e culturais. Turmas do Ensino Fundamental e do Ensino Médio representaram seleções de diferentes países.\nBandeiras, cartazes e caracterizações fizeram parte das apresentações de abertura. A proposta do colégio associou o esporte à pesquisa cultural e à convivência entre estudantes, professores e funcionários.\nResumo elaborado para o portal do GECEP a partir da cobertura publicada pelo Colégio Estadual do Paraná em 9 de junho de 2026. A notícia original contém os detalhes da programação e a galeria de fotos.",
+    link: "https://www.cep.pr.gov.br/Noticia/Colegio-Estadual-do-Parana-da-inicio-Copa-CEP-2026-com-evento-cultural-e-espirito-de",
+    imagemUrl: "/noticias/copa-cep-2026.jpg", imagemAlt: "Comunidade escolar participa da abertura da Copa CEP de 2026", creditoImagem: "Imagem publicada pelo Colégio Estadual do Paraná, na galeria da Copa CEP 2026", cor: "amarelo", destaque: true, publicado: true,
+  },
+  {
     data: "2026-03-23",
     categoria: "Representação",
     titulo: "GECEP promove debate para eleição de delegados da UBES",
@@ -69,7 +98,7 @@ export const noticiasIniciais: NoticiaGecep[] = [
     conteudo: "",
     link: "https://www.cep.pr.gov.br/Noticia/Eleicao-dos-delegados-para-o-46o-Congresso-Nacional-da-Uniao-Brasileira-dos-Estudantes",
     cor: "azul",
-    destaque: true,
+    destaque: false,
     publicado: true,
   },
   {
@@ -80,7 +109,7 @@ export const noticiasIniciais: NoticiaGecep[] = [
     conteudo: "",
     link: "https://www.cep.pr.gov.br/Noticia/Gremio-Estudantil-arrecada-brinquedos-e-o-BrincaCEP",
     cor: "verde",
-    destaque: true,
+    destaque: false,
     publicado: true,
   },
   {
@@ -91,7 +120,7 @@ export const noticiasIniciais: NoticiaGecep[] = [
     conteudo: "",
     link: "https://www.cep.pr.gov.br/Noticia/Gremio-Estudantil-promove-festa-junina-nesta-quarta-dia-18",
     cor: "amarelo",
-    destaque: true,
+    destaque: false,
     publicado: true,
   },
   {
@@ -180,11 +209,11 @@ export const documentosIniciais: DocumentoGecep[] = [
 
 // valores fictícios até a gestão publicar os registros reais
 export const movimentosIniciais: MovimentoGecep[] = [
-  { data: "2026-07-16", tipo: "saida", descricao: "Apoio a uma atividade estudantil", categoria: "Projetos", valor: 300, comprovanteUrl: "", exemplo: true, publicado: true },
-  { data: "2026-07-15", tipo: "entrada", descricao: "Doação destinada a projeto", categoria: "Doações", valor: 1000, comprovanteUrl: "", exemplo: true, publicado: true },
-  { data: "2026-07-10", tipo: "saida", descricao: "Materiais para evento", categoria: "Eventos", valor: 519.45, comprovanteUrl: "", exemplo: true, publicado: true },
-  { data: "2026-07-08", tipo: "saida", descricao: "Materiais gráficos", categoria: "Comunicação", valor: 145.9, comprovanteUrl: "", exemplo: true, publicado: true },
-  { data: "2026-07-03", tipo: "entrada", descricao: "Arrecadação de campanha estudantil", categoria: "Campanhas", valor: 850, comprovanteUrl: "", exemplo: true, publicado: true },
+  { data: "2026-07-16", tipo: "saida", descricao: "Apoio a uma atividade estudantil", categoria: "Projetos", valor: 300, comprovanteUrl: "", publicado: true },
+  { data: "2026-07-15", tipo: "entrada", descricao: "Doação destinada a projeto", categoria: "Doações", valor: 1000, comprovanteUrl: "", publicado: true },
+  { data: "2026-07-10", tipo: "saida", descricao: "Materiais para evento", categoria: "Eventos", valor: 519.45, comprovanteUrl: "", publicado: true },
+  { data: "2026-07-08", tipo: "saida", descricao: "Materiais gráficos", categoria: "Comunicação", valor: 145.9, comprovanteUrl: "", publicado: true },
+  { data: "2026-07-03", tipo: "entrada", descricao: "Arrecadação de campanha estudantil", categoria: "Campanhas", valor: 850, comprovanteUrl: "", publicado: true },
 ];
 
 // tudo que será colocado no banco na primeira execução
@@ -195,4 +224,5 @@ export const dadosIniciais = {
   projetos: projetosIniciais,
   documentos: documentosIniciais,
   movimentos: movimentosIniciais,
+  canais: canaisIniciais,
 };

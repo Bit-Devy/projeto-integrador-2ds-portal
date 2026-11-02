@@ -1,5 +1,5 @@
 // importa os conteúdos usados na primeira execução
-import { dadosIniciais } from "../app/conteudo/dados-iniciais";
+import { dadosIniciais, canaisIniciais } from "../app/conteudo/dados-iniciais";
 // importa os tipos de conteúdo
 import type { TipoConteudo } from "../app/conteudo/tipos";
 // importa o acesso direto ao banco
@@ -217,7 +217,17 @@ async function prepararBanco() {
 
   // evita repetir os conteúdos iniciais
   const quantidade = await d1.prepare("SELECT COUNT(*) AS total FROM conteudos").first<{ total: number }>();
-  if ((quantidade?.total ?? 0) > 0) return;
+  if ((quantidade?.total ?? 0) > 0) {
+    // adiciona os canais uma única vez sem sobrescrever os endereços da gestão
+    const carga = await d1.prepare("SELECT chave FROM cargas_iniciais WHERE chave = 'canais-contato-v1'").first();
+    if (!carga) await d1.batch([
+      ...canaisIniciais.map(({ publicado, ...dados }) => d1.prepare(`INSERT INTO conteudos (tipo, titulo, dados_json, publicado)
+        SELECT 'canais', ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM conteudos WHERE tipo = 'canais' AND titulo = ?)`)
+        .bind(dados.titulo, JSON.stringify(dados), publicado ? 1 : 0, dados.titulo)),
+      d1.prepare("INSERT OR IGNORE INTO cargas_iniciais (chave) VALUES ('canais-contato-v1')"),
+    ]);
+    return;
+  }
 
   // prepara um comando para cada conteúdo inicial
   const comandos: ReturnType<typeof d1.prepare>[] = [];
