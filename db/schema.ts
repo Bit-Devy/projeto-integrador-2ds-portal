@@ -32,6 +32,15 @@ export const conteudos = sqliteTable(
   ],
 );
 
+// guarda a versão atual dos documentos usados em todo o portal
+export const documentosOficiais = sqliteTable("documentos_oficiais", {
+  chave: text("chave").primaryKey(),
+  titulo: text("titulo").notNull(),
+  arquivoUrl: text("arquivo_url").notNull(),
+  versao: text("versao").notNull().default(""),
+  atualizadoEm: text("atualizado_em").notNull().default(""),
+});
+
 // mensagens recebidas pelos formulários
 export const mensagens = sqliteTable(
   "mensagens",

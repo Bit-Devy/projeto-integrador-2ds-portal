@@ -25,7 +25,7 @@ Para executar a versão compilada, use `npm run build` e depois `npm run start`.
 - **Salas:** cadastro simples de turmas e salas físicas, com vínculo opcional ao ensalamento e confirmação ao substituir uma ocupação
 - **Mapa do colégio:** pesquisa de salas, espaços, turmas e atividades com filtros de turno e tipo
 - **Transparência:** receitas, despesas, categorias e comprovantes, com totais separados por ano e consulta do histórico
-- **Estatuto e documentos:** acesso às normas e aos arquivos públicos do grêmio
+- **Estatuto e documentos:** acesso à última versão das normas e aos arquivos publicados do grêmio
 - **Sugestões:** envio de ideias, demandas, propostas e relatos com protocolo, apenas em `/sugestoes`
 - **Contato:** atalhos para atendimento presencial, Instagram, canal do WhatsApp e sugestões; os três destinos externos são editáveis no painel
 - **Acessibilidade:** A+ amplia levemente os textos em um único nível; A restaura o tamanho normal
@@ -44,3 +44,7 @@ O ano inicial acompanha o calendário. Use o seletor de ano para consultar o his
 Os lançamentos financeiros locais ainda são fictícios por escolha durante o desenvolvimento. Antes do uso público, substitua-os pelos registros reais, complete os integrantes e horários e configure D1, R2 e segredos de produção. O banco local não é enviado automaticamente na publicação.
 
 Para conferir o projeto, execute `npm run typecheck`, `npm run lint`, `npm test` e `npm run test:start`. Os testes de integração criam registros temporários e depois os excluem ou arquivam.
+
+No painel, **Documentos → Arquivos** guarda PDFs, imagens, documentos, planilhas e apresentações privados até serem vinculados a uma publicação. Use **Escolher da biblioteca** nos editores ou continue enviando arquivos diretamente. Em **Estatuto e Regimento**, apenas PDFs são aceitos; **Salvar versão** atualiza os links e o leitor do Estatuto. A aba **Publicações** mantém o catálogo público.
+
+Notícias podem ter um botão para uma página publicada do portal e outro para um site externo, com confirmação de saída. Os filtros anuais começam recolhidos em **Ano: ano atual**; clique para consultar outro período.

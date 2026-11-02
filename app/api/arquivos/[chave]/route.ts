@@ -2,6 +2,9 @@
 import { exigirAdministradorApi, origemValida } from "../../../lib/autorizacao";
 // importa o acesso ao armazenamento
 import { obterAmbiente } from "../../../../worker/ambiente";
+// confere a publicação atual antes de liberar o arquivo
+import { garantirBanco } from "../../../../db/inicializar";
+import { possuiReferenciaPublica } from "../../../arquivos/publicacao";
 
 // devolve um arquivo guardado no armazenamento
 export async function GET(
@@ -17,7 +20,8 @@ export async function GET(
   if (!objeto) return new Response("Arquivo não encontrado.", { status: 404 });
 
   // anexos explicitamente privados exigem a mesma sessão do painel
-  const privado = objeto.customMetadata?.visibilidade === "privada";
+  await garantirBanco();
+  const privado = !await possuiReferenciaPublica(chave);
   if (privado) {
     const { resposta } = await exigirAdministradorApi();
     if (resposta) return resposta;
@@ -27,10 +31,11 @@ export async function GET(
   const cabecalhos = new Headers();
   objeto.writeHttpMetadata(cabecalhos);
   cabecalhos.set("etag", objeto.httpEtag);
-  cabecalhos.set("cache-control", privado ? "private, no-store" : "public, max-age=3600");
+  cabecalhos.set("cache-control", privado ? "private, no-store" : "public, no-store");
   cabecalhos.set("x-content-type-options", "nosniff");
   const nomeOriginal = objeto.customMetadata?.nomeOriginal?.replace(/[\r\n"\\]/g, "-") || "arquivo";
-  cabecalhos.set("content-disposition", `inline; filename*=UTF-8''${encodeURIComponent(nomeOriginal)}`);
+  const abrirNoNavegador = /^(image\/(png|jpeg|webp)|application\/pdf)$/.test(objeto.httpMetadata?.contentType || "");
+  cabecalhos.set("content-disposition", `${abrirNoNavegador ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(nomeOriginal)}`);
   return new Response(objeto.body, { headers: cabecalhos });
 }
 
@@ -50,6 +55,10 @@ export async function PUT(
     return Response.json({ erro: "Escolha visibilidade pública ou privada." }, { status: 400 });
   }
   const { chave } = await params;
+  await garantirBanco();
+  if (corpo.visibilidade === "publica" && !await possuiReferenciaPublica(chave)) {
+    return Response.json({ erro: "Vincule o arquivo a uma publicação para torná-lo público." }, { status: 400 });
+  }
   const objeto = await bucket.get(chave);
   if (!objeto) return Response.json({ erro: "Arquivo não encontrado." }, { status: 404 });
   // materializa o conteúdo antes de substituir os metadados do mesmo objeto
@@ -75,6 +84,8 @@ export async function DELETE(
   if (!bucket) return Response.json({ erro: "Armazenamento indisponível." }, { status: 503 });
   // remove o arquivo pela chave recebida
   const { chave } = await params;
+  await garantirBanco();
+  if (await possuiReferenciaPublica(chave)) return Response.json({ erro: "Retire o arquivo das publicações antes de excluí-lo." }, { status: 409 });
   await bucket.delete(chave);
   return Response.json({ removido: true });
 }

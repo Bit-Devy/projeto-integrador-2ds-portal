@@ -2,22 +2,26 @@
 import type { Metadata } from "next";
 // importa o cabeçalho da página
 import CabecalhoPagina from "../componentes/CabecalhoPagina";
+// consulta a versão que a gestão escolheu no painel
+import { listarDocumentosOficiais } from "../arquivos/documentos-oficiais";
 
 // define os dados da página do estatuto
-export const metadata: Metadata = { title: "Estatuto do GECEP", description: "Consulte o Estatuto de 2023 do Grêmio Estudantil do CEP." };
+export const metadata: Metadata = { title: "Estatuto do GECEP", description: "Consulte a última versão do Estatuto do Grêmio Estudantil do CEP." };
+export const dynamic = "force-dynamic";
 // guarda o endereço do estatuto oficial
-const linkEstatuto = "https://www.cep.pr.gov.br/sites/cep/arquivos_restritos/files/documento/2025-05/estatuto_do_gecep_de_2023-1.pdf";
+const linkEstatuto = "/api/documentos-oficiais/estatuto";
 
 // monta a página do estatuto
-export default function PaginaEstatuto() {
+export default async function PaginaEstatuto() {
+  const estatuto = (await listarDocumentosOficiais()).find((item) => item.chave === "estatuto");
   return (
     <main id="conteudo">
       {/* cabeçalho da página */}
       <CabecalhoPagina titulo="Estatuto do GECEP" resumo="O documento que estabelece a organização, os objetivos, as regras e os processos da entidade estudantil." caminho="O GECEP / Estatuto" />
       {/* apresentação e botões do documento */}
       <section className="limite pagina-conteudo grade-estatuto-abertura">
-        <div><span className="rotulo-secao">ESTATUTO DE 2023</span><h2>As regras que orientam o funcionamento do grêmio</h2><p>O Estatuto foi reformulado em Assembleia Geral extraordinária realizada em outubro de 2023. Ele é a referência oficial para compreender direitos, órgãos, eleições, patrimônio e funcionamento do GECEP.</p><div className="botoes-inicio"><a className="botao-primario" href={linkEstatuto} target="_blank" rel="noreferrer">Abrir PDF oficial</a><a className="botao-secundario" href={linkEstatuto} download>Baixar documento</a></div></div>
-        <div className="cartao-documento-grande"><span>PDF</span><div><strong>Estatuto do Grêmio Estudantil do Colégio Estadual do Paraná</strong><small>Curitiba · Outubro de 2023</small></div></div>
+        <div><span className="rotulo-secao">ÚLTIMA VERSÃO DO ESTATUTO</span><h2>As regras que orientam o funcionamento do grêmio</h2><p>O Estatuto é a referência oficial para compreender direitos, órgãos, eleições, patrimônio e funcionamento do GECEP.</p><div className="botoes-inicio"><a className="botao-primario" href={linkEstatuto} target="_blank" rel="noreferrer">Abrir PDF oficial</a><a className="botao-secundario" href={linkEstatuto} download>Baixar documento</a></div></div>
+        <div className="cartao-documento-grande"><span>PDF</span><div><strong>Estatuto do Grêmio Estudantil do Colégio Estadual do Paraná</strong><small>{estatuto?.versao ? `Versão ${estatuto.versao}` : "Última versão"}{estatuto?.atualizadoEm ? ` · Atualizado em ${estatuto.atualizadoEm.slice(0, 10).split("-").reverse().join("/")}` : ""}</small></div></div>
       </section>
 
       {/* resumo dos assuntos do estatuto */}

@@ -92,6 +92,7 @@ try {
   await testarPublicacoes2027(cookie);
   await testarMensagens(cookie);
   await testarArquivos(cookie);
+  await testarBiblioteca(cookie);
   await testarLimitesNavegador(cookie, senha);
 
   console.log("Servidor local, banco, login, mapa, eventos, painel, CRUD e arquivos: OK");
@@ -1842,6 +1843,57 @@ async function testarMensagens(cookie) {
 }
 
 // testa o envio, a leitura e a exclusão de arquivos
+// testa o vínculo entre a biblioteca privada e as publicações
+async function testarBiblioteca(cookie) {
+  await requisicaoPublica("/api/arquivos", 401);
+  await requisicaoPublica("/api/paginas", 401);
+  const paginas = await requisicaoDominio(cookie, "/api/paginas");
+  assert.ok(paginas.itens.some((item) => item.url === "/estatuto"));
+  const upload = new FormData();
+  upload.append("arquivo", new File([await readFile("public/logo-gecep.png")], "biblioteca-http.png", { type: "image/png" }));
+  upload.append("visibilidade", "publica");
+  const resposta = await fetch(`${endereco}/api/arquivos`, { method: "POST", headers: { cookie }, body: upload });
+  assert.equal(resposta.status, 201);
+  const arquivo = await resposta.json();
+  assert.equal(arquivo.visibilidade, "privada");
+  const criados = [];
+  const dados = { titulo: `Notícia da biblioteca ${Date.now()}`, data: "2027-01-10", categoria: "Teste", resumo: "Resumo temporário", imagemUrl: arquivo.url, imagemAlt: "Logo usado no teste", creditoImagem: "GECEP", botaoInternoAtivo: true, botaoInternoUrl: "/estatuto", botaoInternoTexto: "Ver Estatuto", botaoExternoAtivo: true, botaoExternoUrl: "https://www.cep.pr.gov.br/", botaoExternoTexto: "Abrir site do CEP" };
+  try {
+    assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 401);
+    await requisicaoDominio(cookie, arquivo.url, "PUT", { visibilidade: "publica" }, 400);
+    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", dados: { ...dados, botaoInternoUrl: "//example.com" } }, 400);
+    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", dados: { ...dados, botaoExternoUrl: "javascript:alert(1)" } }, 400);
+    await requisicaoDominio(cookie, "/api/documentos-oficiais", "PUT", { chave: "estatuto", arquivoUrl: arquivo.url }, 400);
+    const primeiro = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados }, 201)).item;
+    criados.push(primeiro.id);
+    assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 401);
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: primeiro.id, tipo: "noticias", publicado: true, dados });
+    assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 200);
+    await requisicaoDominio(cookie, arquivo.url, "DELETE", undefined, 409);
+    const segundo = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: true, dados: { ...dados, titulo: `${dados.titulo} compartilhada` } }, 201)).item;
+    criados.push(segundo.id);
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: primeiro.id, tipo: "noticias", publicado: false, dados });
+    assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 200);
+    await requisicaoDominio(cookie, `/api/conteudo?id=${segundo.id}`, "DELETE");
+    assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 401);
+    const biblioteca = await requisicaoDominio(cookie, "/api/arquivos");
+    assert.ok(biblioteca.itens.some((item) => item.chave === arquivo.chave && item.publico === false));
+    const oficiais = await requisicaoPublica("/api/documentos-oficiais");
+    assert.equal(oficiais.itens.length, 2);
+    const catalogo = await requisicaoDominio(cookie, "/api/conteudo?tipo=documentos&todos=1");
+    const estatuto = catalogo.itens.find((item) => item.dados.documentoOficial === "estatuto");
+    assert.ok(estatuto);
+    await requisicaoDominio(cookie, `/api/conteudo?id=${estatuto.id}`, "DELETE", undefined, 400);
+    const leitor = await fetch(`${endereco}/estatuto`);
+    assert.equal(leitor.status, 200);
+    assert.match(await leitor.text(), /src="\/api\/documentos-oficiais\/estatuto"/);
+    console.log("Biblioteca privada, publicação compartilhada, PDFs protegidos e botões de notícias: OK");
+  } finally {
+    for (const id of criados) await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE");
+    await requisicaoDominio(cookie, arquivo.url, "DELETE");
+  }
+}
+
 async function testarArquivos(cookie) {
   // rejeita um arquivo cujo tipo declarado não corresponde ao conteúdo
   const formularioFalso = new FormData();
@@ -1869,8 +1921,9 @@ async function testarArquivos(cookie) {
   const arquivo = await respostaEnvio.json();
   assert.ok(arquivo.url && arquivo.chave);
 
-  // lê a imagem pelo endereço recebido
-  const respostaLeitura = await fetch(`${endereco}${arquivo.url}`);
+  // um upload solto continua privado mesmo que a pessoa conheça o endereço
+  assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 401);
+  const respostaLeitura = await fetch(`${endereco}${arquivo.url}`, { headers: { cookie } });
   assert.equal(respostaLeitura.status, 200);
   assert.match(respostaLeitura.headers.get("content-type") ?? "", /image\/png/);
 

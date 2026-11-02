@@ -10,10 +10,10 @@ import SeletorAno from "./SeletorAno";
 import { anoInicial, pertenceAoAno } from "../conteudo/periodos";
 
 // mostra os dados de transparência
-export default function TransparenciaInterativa({ ano: periodoInicial }: { ano?: string }) {
+export default function TransparenciaInterativa() {
   // guarda o filtro escolhido
   const [filtro, setFiltro] = useState("todos");
-  const [ano, setAno] = useState(() => anoInicial(periodoInicial));
+  const [ano, setAno] = useState(() => anoInicial());
   // busca os movimentos publicados
   const { dados: todosMovimentos, carregando, erro } = useConteudoPublico("movimentos", []);
   // prepara valores no formato brasileiro

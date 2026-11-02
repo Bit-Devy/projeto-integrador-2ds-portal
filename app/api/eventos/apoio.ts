@@ -1,5 +1,5 @@
 import { garantirBanco } from "../../../db/inicializar";
-import { getD1 } from "../../../db";
+import { possuiReferenciaPublica } from "../../arquivos/publicacao";
 import { obterAmbiente } from "../../../worker/ambiente";
 import { exigirAdministradorApi, origemValida } from "../../lib/autorizacao";
 import { ErroEventos, objetoRecebido } from "../../eventos/validacao";
@@ -56,9 +56,7 @@ export async function sincronizarVisibilidadeArquivo(dados: Record<string, unkno
   if (!bucket) throw new ErroEventos("O armazenamento de arquivos não está configurado.", 503);
   const objeto = await bucket.get(chave);
   if (!objeto) throw new ErroEventos("O arquivo associado não foi encontrado.", 400);
-  // O corpo da requisição pode ser parcial ou uma cópia pode reutilizar a
-  // mesma chave. A decisão é feita pelo estado persistido de TODAS as
-  // referências, nunca pelo booleano recebido do cliente.
+  // confere todos os usos salvos antes de mudar a visibilidade
   const visibilidade = await possuiReferenciaPublica(chave, endereco) ? "publica" : "privada";
   if (objeto.customMetadata?.visibilidade === visibilidade) return;
   const conteudo = await objeto.arrayBuffer();
@@ -94,38 +92,6 @@ export async function sincronizarArquivosDoEvento(...registros: Record<string, u
   }
 }
 
-async function possuiReferenciaPublica(chave: string, enderecoRecebido: string) {
-  const endereco = `/api/arquivos/${encodeURIComponent(chave)}`;
-  const resultado = await getD1().prepare(`WITH alvo(chave, endereco, recebido) AS (VALUES (?, ?, ?))
-    SELECT 1 AS publica FROM (
-      SELECT e.id FROM eventos_internos e, alvo a
-        WHERE e.publicado = 1 AND (e.ativo = 1 OR e.arquivado_em IS NOT NULL)
-          AND e.imagem_capa_url IN (a.endereco, a.recebido)
-      UNION ALL
-      SELECT d.id FROM documentos_eventos d
-        INNER JOIN eventos_internos e ON e.id = d.evento_id, alvo a
-        WHERE e.publicado = 1 AND (e.ativo = 1 OR e.arquivado_em IS NOT NULL)
-          AND d.publicado = 1 AND d.ativo = 1
-          AND (d.arquivo_chave = a.chave OR d.arquivo_url IN (a.endereco, a.recebido))
-      UNION ALL
-      SELECT c.id FROM campeonatos c, alvo a
-        WHERE c.publicado = 1 AND (c.ativo = 1 OR c.arquivado_em IS NOT NULL)
-          AND c.imagem_capa_url IN (a.endereco, a.recebido)
-      UNION ALL
-      SELECT d.id FROM documentos_campeonato d
-        INNER JOIN campeonatos c ON c.id = d.campeonato_id, alvo a
-        WHERE c.publicado = 1 AND (c.ativo = 1 OR c.arquivado_em IS NOT NULL)
-          AND d.publicado = 1 AND d.ativo = 1
-          AND (d.arquivo_chave = a.chave OR d.arquivo_url IN (a.endereco, a.recebido))
-      UNION ALL
-      SELECT d.id FROM documentos_reuniao d
-        INNER JOIN reunioes r ON r.id = d.reuniao_id, alvo a
-        WHERE r.publicado = 1 AND (r.ativo = 1 OR r.arquivado_em IS NOT NULL)
-          AND d.publicado = 1 AND d.ativo = 1
-          AND (d.arquivo_chave = a.chave OR d.arquivo_url IN (a.endereco, a.recebido))
-    ) LIMIT 1`).bind(chave, endereco, enderecoRecebido).first();
-  return Boolean(resultado);
-}
 
 function extrairArquivoInterno(dados: Record<string, unknown>) {
   const chaveRecebida = typeof dados.arquivoChave === "string" ? dados.arquivoChave.trim() : "";

@@ -1,5 +1,8 @@
 "use client";
 
+// permite reutilizar arquivos já enviados ao painel
+import EscolherArquivo from "./BibliotecaArquivos";
+
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   CabecalhoPainel,
@@ -270,15 +273,15 @@ export default function PainelEventosInternos({ aoMudarEstadoSujo }: { aoMudarEs
 
           <fieldset className="pev-bloco"><legend>Imagens e documentos</legend><div className="pev-grade-campos">
             <Campo rotulo="Imagem de capa" dica="PNG, JPG ou WebP, com até 10 MB.">
-              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void enviar("imagemCapaUrl", e.target.files?.[0])} disabled={Boolean(enviando)} />
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void enviar("imagemCapaUrl", e.target.files?.[0])} disabled={Boolean(enviando)} /><EscolherArquivo aceitar="imagem" selecionar={(arquivo) => mudar("imagemCapaUrl", arquivo.url)} />
               {formulario.imagemCapaUrl && <span className="pev-arquivo-salvo">Capa enviada <button type="button" onClick={() => mudar("imagemCapaUrl", "")}>Remover</button></span>}
             </Campo>
             <Campo rotulo="Galeria de imagens">
-              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void enviar("imagens", e.target.files?.[0])} disabled={Boolean(enviando)} />
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void enviar("imagens", e.target.files?.[0])} disabled={Boolean(enviando)} /><EscolherArquivo aceitar="imagem" selecionar={(arquivo) => mudar("imagens", [...formulario.imagens, arquivo.url])} />
               <ListaArquivos itens={formulario.imagens} remover={(indice) => mudar("imagens", formulario.imagens.filter((_, i) => i !== indice))} />
             </Campo>
             <Campo rotulo="Documentos" dica="Envie PDF ou imagem. Você pode adicionar vários arquivos." largo>
-              <input type="file" accept=".pdf,image/png,image/jpeg,image/webp" onChange={(e) => void enviar("documentos", e.target.files?.[0])} disabled={Boolean(enviando)} />
+              <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp" onChange={(e) => void enviar("documentos", e.target.files?.[0])} disabled={Boolean(enviando)} /><EscolherArquivo selecionar={(arquivo) => mudar("documentos", [...formulario.documentos, arquivo.url])} />
               <ListaArquivos itens={formulario.documentos} remover={(indice) => mudar("documentos", formulario.documentos.filter((_, i) => i !== indice))} />
             </Campo>
           </div></fieldset>

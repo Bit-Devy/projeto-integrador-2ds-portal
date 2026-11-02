@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Notícias | GECEP", description: "No
 export default async function PaginaNoticias({
   searchParams,
 }: {
-  searchParams: Promise<{ busca?: string; ano?: string }>;
+  searchParams: Promise<{ busca?: string }>;
 }) {
   // recebe o texto de busca enviado pela url
   const parametros = await searchParams;
@@ -23,7 +23,7 @@ export default async function PaginaNoticias({
       <CabecalhoPagina titulo="Notícias" resumo="Ações, campanhas, eventos e decisões relacionadas à representação estudantil no CEP." />
       {/* lista filtrada de notícias */}
       <section className="limite pagina-conteudo">
-        <ListaNoticias buscaInicial={parametros.busca} ano={parametros.ano} />
+        <ListaNoticias buscaInicial={parametros.busca} />
       </section>
     </main>
   );

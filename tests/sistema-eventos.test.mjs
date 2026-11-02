@@ -463,6 +463,6 @@ test("protege as APIs administrativas e uploads de rascunho por construção", a
   assert.match(apoio, /origemValida/);
   assert.match(painelEventos, /enviarArquivoPainel\(arquivo,\s*["']privada["']\)/);
   assert.match(rotaEventos, /sincronizarArquivosDoEvento/);
-  assert.match(arquivos, /visibilidade\s*===\s*["']privada["']/);
+  assert.match(arquivos, /!await possuiReferenciaPublica\(chave\)/);
   assert.match(arquivos, /private, no-store/);
 });

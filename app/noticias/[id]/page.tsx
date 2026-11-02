@@ -12,6 +12,8 @@ import { garantirBanco } from "../../../db/inicializar";
 import type { NoticiaGecep } from "../../conteudo/tipos";
 // importa o cabeçalho da página
 import CabecalhoPagina from "../../componentes/CabecalhoPagina";
+// importa os botões e o aviso de saída
+import BotoesNoticia from "../../componentes/BotoesNoticia";
 
 // evita usar uma notícia antiga em cache
 export const dynamic = "force-dynamic";
@@ -46,8 +48,8 @@ export default async function PaginaNoticia({ params }: { params: Promise<{ id: 
         {noticia.imagemUrl && <figure className="foto-noticia"><img src={noticia.imagemUrl} alt={noticia.imagemAlt || ""} /><figcaption>{noticia.creditoImagem}</figcaption></figure>}
         {/* separa o conteúdo em parágrafos */}
         {noticia.conteudo ? noticia.conteudo.split("\n").filter(Boolean).map((paragrafo) => <p key={paragrafo}>{paragrafo}</p>) : <p>{noticia.resumo}</p>}
-        {/* link externo relacionado à notícia */}
-        {noticia.link && <a className="botao-secundario" href={noticia.link} target="_blank" rel="noreferrer">Consultar fonte ou publicação relacionada ↗</a>}
+        {/* botões opcionais para páginas do portal e outros sites */}
+        <BotoesNoticia noticia={noticia} />
         <Link className="link-seta" href="/noticias">‹ Voltar para notícias</Link>
       </article>
     </main>

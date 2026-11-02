@@ -1,5 +1,5 @@
 // importa os conteúdos usados na primeira execução
-import { dadosIniciais, canaisIniciais } from "../app/conteudo/dados-iniciais";
+import { dadosIniciais, canaisIniciais, documentosIniciais } from "../app/conteudo/dados-iniciais";
 // importa os tipos de conteúdo
 import type { TipoConteudo } from "../app/conteudo/tipos";
 // importa o acesso direto ao banco
@@ -39,6 +39,10 @@ async function prepararBanco() {
 
   // cria todas as tabelas e índices que ainda não existem
   await d1.batch([
+    d1.prepare(`CREATE TABLE IF NOT EXISTS documentos_oficiais (
+      chave TEXT PRIMARY KEY NOT NULL, titulo TEXT NOT NULL, arquivo_url TEXT NOT NULL,
+      versao TEXT NOT NULL DEFAULT '', atualizado_em TEXT NOT NULL DEFAULT ''
+    )`),
     d1.prepare(`CREATE TABLE IF NOT EXISTS limites_navegador (
       navegador TEXT NOT NULL,
       acao TEXT NOT NULL,
@@ -215,6 +219,15 @@ async function prepararBanco() {
   await d1.prepare(`DELETE FROM conteudos WHERE tipo = 'documentos'
     AND json_valid(dados_json) = 1 AND json_extract(dados_json, '$.link') LIKE '/documentacao/%'`).run();
 
+  // guarda os dois documentos atuais sem trocar uma versão já enviada pela gestão
+  await d1.batch(documentosIniciais.map((documento, indice) => d1.prepare(`INSERT OR IGNORE INTO documentos_oficiais
+    (chave, titulo, arquivo_url, versao) VALUES (?, ?, ?, ?)`)
+    .bind(indice === 0 ? "estatuto" : "regimento", indice === 0 ? "Estatuto do GECEP" : "Regimento Escolar do CEP", documento.link, indice === 0 ? "2023" : "2022")));
+  // identifica os documentos antigos para que todos os links acompanhem a troca do pdf
+  await d1.batch(documentosIniciais.map((documento, indice) => d1.prepare(`UPDATE conteudos SET dados_json = json_set(dados_json,
+    '$.documentoOficial', ?, '$.link', ?) WHERE tipo = 'documentos' AND json_extract(dados_json, '$.link') = ?`)
+    .bind(indice === 0 ? "estatuto" : "regimento", `/api/documentos-oficiais/${indice === 0 ? "estatuto" : "regimento"}`, documento.link)));
+
   // evita repetir os conteúdos iniciais
   const quantidade = await d1.prepare("SELECT COUNT(*) AS total FROM conteudos").first<{ total: number }>();
   if ((quantidade?.total ?? 0) > 0) {
@@ -235,6 +248,13 @@ async function prepararBanco() {
     itens.forEach((item) => {
       // separa o estado de publicação dos outros dados
       const { publicado = true, ...dados } = item;
+      if (tipo === "documentos") {
+        const indice = documentosIniciais.findIndex((documento) => documento.link === dados.link);
+        if (indice >= 0) {
+          dados.documentoOficial = indice === 0 ? "estatuto" : "regimento";
+          dados.link = `/api/documentos-oficiais/${dados.documentoOficial}`;
+        }
+      }
       const titulo = obterTitulo(tipo, dados);
       comandos.push(
         d1

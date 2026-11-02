@@ -7037,3 +7037,57 @@ html:has(#topo.texto-maior) {
   .filtro-noticias > div { flex-wrap: wrap; }
   .filtro-noticias input { min-width: 0; }
 }
+
+/* deixa o período discreto até a pessoa abrir a escolha de ano */
+.periodo-recolhido { margin-bottom: 1.5rem; }
+.periodo-recolhido > summary { width: fit-content; color: #6c787e; font-size: 0.8125rem; cursor: pointer; padding: 0.35rem 0; }
+.periodo-recolhido[open] .seletor-ano { margin-top: 0.65rem; margin-bottom: 0; padding: 1rem; background: #f6f8f9; border: 1px solid #dce3e6; }
+
+/* organiza a biblioteca sem mudar as outras seções do painel */
+.abas-documentos { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1.5rem; }
+.abas-documentos button { padding: 0.7rem 1rem; font: inherit; font-size: 0.875rem; border: 1px solid #cbd7dd; background: white; color: var(--azul-escuro); cursor: pointer; }
+.abas-documentos button[aria-pressed="true"] { color: white; background: var(--azul-escuro); border-color: var(--azul-escuro); }
+.biblioteca-envio { display: grid; gap: 0.8rem; padding: 1.25rem; border: 1px solid #d9e2e6; background: #f5f8fa; }
+.biblioteca-envio span, .painel-documentos > p { color: #62737c; font-size: 0.875rem; line-height: 1.6; }
+.biblioteca-envio input { max-width: 100%; font: inherit; }
+.biblioteca-filtros { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; margin-block: 1.25rem; }
+.biblioteca-filtros label { display: grid; gap: 0.4rem; font-size: 0.875rem; color: #38515d; }
+.biblioteca-filtros input, .biblioteca-filtros select { max-width: 100%; padding: 0.65rem; font: inherit; border: 1px solid #ccd8df; background: white; color: #304b59; }
+.biblioteca-lista { display: grid; gap: 0.7rem; }
+.biblioteca-lista article { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr) auto; align-items: center; gap: 1rem; padding: 0.9rem; border: 1px solid #dce4e8; background: white; }
+.biblioteca-lista img { width: 3.5rem; height: 3.5rem; object-fit: cover; }
+.biblioteca-lista strong { display: block; font-size: 0.875rem; overflow-wrap: anywhere; color: #304b59; }
+.biblioteca-lista small { display: block; margin-top: 0.35rem; color: #62737c; font-size: 0.75rem; }
+.biblioteca-formato { font-size: 0.75rem; font-weight: 700; color: var(--azul-escuro); text-align: center; }
+.dialogo-biblioteca { width: min(52rem, calc(100% - 2rem)); max-height: 85vh; overflow-y: auto; }
+.biblioteca-topo { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.biblioteca-topo h2 { margin: 0; }
+.botao-biblioteca { margin-top: 0.65rem; width: fit-content; }
+.grade-documentos-oficiais { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+.grade-documentos-oficiais article { display: flex; flex-direction: column; gap: 1rem; padding: 1.5rem; color: white; background: var(--azul-escuro); }
+.grade-documentos-oficiais h2, .grade-documentos-oficiais p { color: white; margin: 0; }
+.grade-documentos-oficiais h2 { font-size: 1.25rem; }
+.grade-documentos-oficiais label { display: grid; gap: 0.45rem; font-size: 0.875rem; }
+.grade-documentos-oficiais input { width: 100%; min-width: 0; padding: 0.65rem; font: inherit; color: #294856; background: white; border: 1px solid #c8d7df; }
+.grade-documentos-oficiais a { color: white; font-size: 0.875rem; text-decoration: underline; }
+.grade-documentos-oficiais .pev-botao { background: white; color: var(--azul-escuro); border-color: white; }
+
+/* destaca o destino interno e mantém o botão externo com fundo branco */
+.chamada-noticia-interna { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding: 1.4rem; margin-block: 2rem; color: white; background: var(--azul-escuro); text-decoration: none; }
+.chamada-noticia-interna small { display: block; font-size: 0.75rem; margin-bottom: 0.45rem; }
+.chamada-noticia-interna strong { color: white; font-size: 1.125rem; }
+.chamada-noticia-interna:hover, .chamada-noticia-interna:focus-visible { color: white; background: #064b76; }
+.botoes-noticia-externos { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-block: 1.5rem; }
+.botoes-noticia-externos .botao-secundario { font: inherit; font-size: 0.875rem; background: white; color: var(--azul-escuro); cursor: pointer; border: 1px solid var(--azul); }
+.destino-externo { overflow-wrap: anywhere; font-size: 0.875rem; color: #5d737e; }
+
+/* acomoda somente os controles novos no celular */
+@media (max-width: 700px) {
+  .grade-documentos-oficiais { grid-template-columns: minmax(0, 1fr); }
+  .biblioteca-lista article { grid-template-columns: 2.5rem minmax(0, 1fr); gap: 0.7rem; }
+  .biblioteca-lista img { width: 2.5rem; height: 2.5rem; }
+  .biblioteca-lista article > .pev-botao { grid-column: 2; justify-self: start; }
+  .biblioteca-topo { align-items: flex-start; flex-direction: column; }
+  .biblioteca-filtros label { width: 100%; }
+  .chamada-noticia-interna { padding: 1.1rem; }
+}

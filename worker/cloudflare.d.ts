@@ -57,6 +57,7 @@ interface R2ObjectBody extends R2Object, Body {
 }
 
 interface R2Bucket {
+  list(options?: { limit?: number; cursor?: string; include?: ("httpMetadata" | "customMetadata")[] }): Promise<{ objects: R2Object[]; truncated: boolean; cursor?: string }>;
   get(key: string): Promise<R2ObjectBody | null>;
   put(
     key: string,

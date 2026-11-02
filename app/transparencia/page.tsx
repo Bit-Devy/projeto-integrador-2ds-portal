@@ -11,15 +11,14 @@ import Link from "next/link";
 export const metadata: Metadata = { title: "Portal da transparência | GECEP", description: "Receitas, despesas, comprovantes e relatórios financeiros do GECEP." };
 
 // monta a página de transparência
-export default async function PaginaTransparencia({ searchParams }: { searchParams: Promise<{ ano?: string }> }) {
-  const parametros = await searchParams;
+export default function PaginaTransparencia() {
   return (
     <main id="conteudo">
       {/* cabeçalho da página */}
       <CabecalhoPagina titulo="Portal da transparência" resumo="Acompanhe entradas, despesas, comprovantes e relatórios dos recursos administrados pelo GECEP." />
       {/* resumo e movimentações financeiras */}
       <section className="limite pagina-conteudo">
-        <TransparenciaInterativa ano={parametros.ano} />
+        <TransparenciaInterativa />
       </section>
 
       {/* relatórios financeiros por período */}

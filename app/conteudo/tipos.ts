@@ -51,6 +51,12 @@ export type NoticiaGecep = RegistroBase & {
   imagemUrl?: string;
   imagemAlt?: string;
   creditoImagem?: string;
+  botaoInternoAtivo?: boolean;
+  botaoInternoTexto?: string;
+  botaoInternoUrl?: string;
+  botaoExternoAtivo?: boolean;
+  botaoExternoTexto?: string;
+  botaoExternoUrl?: string;
 };
 
 // define os canais que a gestão pode atualizar
@@ -72,6 +78,7 @@ export type ProjetoGecep = RegistroBase & {
 
 // define os dados de um documento
 export type DocumentoGecep = RegistroBase & {
+  documentoOficial?: string;
   tipo: string;
   categoria: string;
   titulo: string;

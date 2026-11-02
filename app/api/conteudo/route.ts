@@ -7,6 +7,8 @@ import type { TipoConteudo } from "../../conteudo/tipos";
 // importa as verificações de administrador e origem
 import { exigirAdministradorApi, origemValida } from "../../lib/autorizacao";
 import { ErroJsonInvalido, lerObjetoJson } from "../../lib/corpo-json";
+// valida os botões e protege os documentos que têm uma versão central
+import { paginasPublicadas, caminhoInterno } from "../../conteudo/paginas";
 
 // lista os tipos aceitos pela api
 const tiposPermitidos: TipoConteudo[] = [
@@ -89,6 +91,8 @@ export async function POST(request: Request) {
     // prepara e valida os dados recebidos
     await garantirBanco();
     const corpo = await lerCorpo(request);
+    await validarBotoes(corpo.tipo, corpo.dados);
+    if (corpo.tipo === "documentos" && corpo.dados.documentoOficial) throw new ErroJsonInvalido("Use a aba Estatuto e Regimento para alterar os PDFs oficiais.");
     const titulo = obterTitulo(corpo.tipo, corpo.dados);
     // salva o conteúdo e devolve a linha criada
     const resultado = await getD1()
@@ -117,6 +121,9 @@ export async function PUT(request: Request) {
     if (!Number.isInteger(id) || id <= 0) throw new Error("Registro inválido.");
     // valida o restante do conteúdo
     const corpo = validarCorpo(dadosRecebidos);
+    await protegerDocumentoOficial(id);
+    await validarBotoes(corpo.tipo, corpo.dados);
+    if (corpo.tipo === "documentos" && corpo.dados.documentoOficial) throw new ErroJsonInvalido("Use a aba Estatuto e Regimento para alterar os PDFs oficiais.");
     const titulo = obterTitulo(corpo.tipo, corpo.dados);
     // atualiza o registro e sua data de alteração
     const resultado = await getD1()
@@ -147,11 +154,28 @@ export async function DELETE(request: Request) {
     const id = Number(new URL(request.url).searchParams.get("id"));
     if (!Number.isInteger(id) || id <= 0) throw new Error("Registro inválido.");
     // remove o registro pelo identificador
+    await protegerDocumentoOficial(id);
     await getD1().prepare("DELETE FROM conteudos WHERE id = ?").bind(id).run();
     return Response.json({ removido: true });
   } catch (erro) {
     return respostaErro(erro);
   }
+}
+
+// impede alterações paralelas que deixariam o leitor com um pdf diferente
+async function protegerDocumentoOficial(id: number) {
+  const oficial = await getD1().prepare("SELECT id FROM conteudos WHERE id = ? AND tipo = 'documentos' AND json_extract(dados_json, '$.documentoOficial') IS NOT NULL").bind(id).first();
+  if (oficial) throw new ErroJsonInvalido("Use a aba Estatuto e Regimento para atualizar este documento.");
+}
+
+// confere os endereços antes de publicar os botões opcionais
+async function validarBotoes(tipo: TipoConteudo, dados: Record<string, unknown>) {
+  if (tipo !== "noticias") return;
+  if (dados.botaoInternoAtivo) {
+    const endereco = caminhoInterno(String(dados.botaoInternoUrl || ""));
+    if (!endereco || !(await paginasPublicadas()).some((pagina) => pagina.url === endereco.pathname)) throw new ErroJsonInvalido("Escolha uma página pública válida para o botão do portal.");
+  }
+  if (dados.botaoExternoAtivo && !/^https?:\/\//.test(String(dados.botaoExternoUrl || ""))) throw new ErroJsonInvalido("Informe um endereço completo para o botão externo.");
 }
 
 // lê e valida o corpo da chamada

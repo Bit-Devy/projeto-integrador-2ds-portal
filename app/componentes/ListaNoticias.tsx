@@ -14,10 +14,10 @@ import SeletorAno from "./SeletorAno";
 import { anoInicial, pertenceAoAno } from "../conteudo/periodos";
 
 // mostra e filtra todas as notícias
-export default function ListaNoticias({ buscaInicial = "", ano: periodoInicial }: { buscaInicial?: string; ano?: string }) {
+export default function ListaNoticias({ buscaInicial = "" }: { buscaInicial?: string }) {
   // começa com a busca que veio do cabeçalho
   const [busca, setBusca] = useState(buscaInicial);
-  const [ano, setAno] = useState(() => anoInicial(periodoInicial));
+  const [ano, setAno] = useState(() => anoInicial());
   // busca as notícias publicadas
   const { dados: noticiasPublicadas, carregando } = useConteudoPublico("noticias", noticias);
 

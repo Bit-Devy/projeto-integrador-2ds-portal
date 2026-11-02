@@ -1,12 +1,13 @@
 import { DatabaseSync } from "node:sqlite";
 
-// Somente estas migrações também foram executadas pelo inicializador da prévia.
+// reconhece as migrações que o inicializador local também executa
 const migracoesDaPrevia = [
   "0000_smart_quasar.sql", "0001_damp_mockingbird.sql", "0002_sleepy_mandarin.sql",
   "0003_reclassificar_mapa_2026.sql", "0004_sistema_eventos.sql", "0005_long_blob.sql",
   "0006_redundant_sir_ram.sql",
   "0007_amusing_toad_men.sql",
   "0008_massive_shooting_star.sql",
+  "0009_grey_spectrum.sql",
 ];
 const identificador = (valor) => `"${valor.replaceAll('"', '""')}"`;
 const normalizarSql = (sql) => sql.match(/'(?:''|[^'])*'|[^']+/g).map((trecho) => trecho.startsWith("'")

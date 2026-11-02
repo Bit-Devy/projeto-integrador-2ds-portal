@@ -5,7 +5,8 @@ import type { TipoConteudo } from "./tipos";
 export type CampoPainel = {
   chave: string;
   rotulo: string;
-  tipo: "text" | "textarea" | "date" | "time" | "number" | "url" | "select" | "checkbox" | "arquivo";
+  tipo: "text" | "textarea" | "date" | "time" | "number" | "url" | "select" | "checkbox" | "arquivo" | "pagina";
+  dependeDe?: string;
   obrigatorio?: boolean;
   dica?: string;
   opcoes?: Array<{ valor: string; nome: string }>;
@@ -69,6 +70,13 @@ export const configuracaoPainel: Record<TipoConteudo, {
         { valor: "amarelo", nome: "Amarelo" }, { valor: "laranja", nome: "Laranja" },
       ] },
       { chave: "destaque", rotulo: "Mostrar em destaque", tipo: "checkbox" },
+      // oferece os dois botões opcionais no final da notícia
+      { chave: "botaoInternoAtivo", rotulo: "Adicionar botão para uma página do portal", tipo: "checkbox" },
+      { chave: "botaoInternoTexto", rotulo: "Texto do botão do portal", tipo: "text", dependeDe: "botaoInternoAtivo", dica: "Ex.: Conhecer o Estatuto ou Ver o interclasse." },
+      { chave: "botaoInternoUrl", rotulo: "Página de destino", tipo: "pagina", dependeDe: "botaoInternoAtivo" },
+      { chave: "botaoExternoAtivo", rotulo: "Adicionar botão para outro site", tipo: "checkbox" },
+      { chave: "botaoExternoTexto", rotulo: "Texto do botão externo", tipo: "text", dependeDe: "botaoExternoAtivo" },
+      { chave: "botaoExternoUrl", rotulo: "Endereço do outro site", tipo: "url", dependeDe: "botaoExternoAtivo", dica: "O visitante confirma um aviso antes de sair do portal." },
     ],
   },
   // configura o formulário de projetos
@@ -91,7 +99,7 @@ export const configuracaoPainel: Record<TipoConteudo, {
   documentos: {
     nome: "Documentos",
     singular: "documento",
-    descricao: "Atas, estatutos, planos, relatórios e comprovantes públicos.",
+    descricao: "Biblioteca privada, versões do Estatuto e Regimento e documentos publicados.",
     campos: [
       { chave: "titulo", rotulo: "Título", tipo: "text", obrigatorio: true },
       { chave: "categoria", rotulo: "Categoria", tipo: "text", obrigatorio: true },

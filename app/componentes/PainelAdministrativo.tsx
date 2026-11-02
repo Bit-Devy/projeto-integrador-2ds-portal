@@ -18,6 +18,10 @@ import PainelEventosInternos from "./PainelEventosInternos";
 import PainelInterclasses from "./PainelInterclasses";
 import PainelReunioes from "./PainelReunioes";
 import PainelRepresentantes from "./PainelRepresentantes";
+// importa a biblioteca e os documentos usados em todo o portal
+import PainelDocumentos from "./PainelDocumentos";
+import EscolherArquivo from "./BibliotecaArquivos";
+import SeletorPagina from "./SeletorPagina";
 import {
   autorizarNavegacaoPainel,
   confirmarSaida,
@@ -33,6 +37,7 @@ type SecaoEventosPainel = "eventos-internos" | "interclasses" | "reunioes" | "re
 export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: string }) {
   // guarda a seção de conteúdo atual
   const [tipo, setTipo] = useState<TipoConteudo>("noticias");
+  const [abaDocumentos, setAbaDocumentos] = useState<"arquivos" | "normas" | "publicacoes">("arquivos");
   // controla a seção de mensagens
   const [mensagensAbertas, setMensagensAbertas] = useState(false);
   // controla a seção do mapa
@@ -325,20 +330,23 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
             {/* título e botão de novo registro */}
             <header className="topo-painel">
               <div><span className="rotulo-secao">PAINEL DE CONTEÚDO</span><h1>{configuracao.nome}</h1><p>{configuracao.descricao}</p></div>
-              {!formulario && <button type="button" onClick={novoRegistro}>+ Novo {configuracao.singular}</button>}
+              {!formulario && (tipo !== "documentos" || abaDocumentos === "publicacoes") && <button type="button" onClick={novoRegistro}>+ Novo {configuracao.singular}</button>}
             </header>
 
             {/* aviso de erro */}
             {erro && <p className="erro-painel" role="alert">{erro}</p>}
 
+            {/* separa os arquivos privados das versões oficiais e das publicações */}
+            {tipo === "documentos" && <div className="abas-documentos" role="group" aria-label="Áreas de documentos">{([["arquivos", "Arquivos"], ["normas", "Estatuto e Regimento"], ["publicacoes", "Publicações"]] as const).map(([aba, nome]) => <button type="button" key={aba} aria-pressed={abaDocumentos === aba} onClick={() => { if (!prepararTroca()) return; setFormulario(null); setAbaDocumentos(aba); }}>{nome}</button>)}</div>}
+
             {/* formulário ou lista de registros */}
-            {formulario ? (
+            {tipo === "documentos" && abaDocumentos !== "publicacoes" ? <PainelDocumentos key={abaDocumentos} aba={abaDocumentos} aoMudarEstadoSujo={setPainelFilhoSujo} /> : formulario ? (
               <form className="formulario-painel" onSubmit={salvar}>
                 {/* título do formulário */}
                 <div className="titulo-formulario-painel"><div><small>{idEditando ? "EDITANDO" : "NOVO REGISTRO"}</small><h2>{idEditando ? "Atualizar" : "Adicionar"} {configuracao.singular}</h2></div><button type="button" onClick={fecharFormulario}>Fechar</button></div>
                 {/* campos configurados para a seção */}
                 <div className="grade-campos-painel">
-                  {configuracao.campos.map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} key={campo.chave} />)}
+                  {configuracao.campos.filter((campo) => !campo.dependeDe || Boolean(formulario[campo.dependeDe])).map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} key={campo.chave} />)}
                   <label className="campo-publicado"><input type="checkbox" checked={publicado} onChange={(evento) => { setPublicado(evento.target.checked); setConteudoSujo(true); }} /><span>Publicar este registro no portal</span></label>
                 </div>
                 {/* botões do formulário */}
@@ -350,7 +358,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
                 {carregando && <p>Carregando registros...</p>}
                 {!carregando && !itens.length && <div className="vazio-painel"><strong>Nenhum registro</strong><p>Use o botão acima para adicionar o primeiro item.</p></div>}
                 {/* registros da seção */}
-                {itens.map((item) => (
+                {itens.filter((item) => !(tipo === "documentos" && "documentoOficial" in item.dados)).map((item) => (
                   <article key={item.id}><span className={item.publicado ? "estado-publicado" : "estado-rascunho"}>{item.publicado ? "Publicado" : "Rascunho"}</span><div><h2>{item.titulo}</h2><p>Atualizado em {formatarData(item.atualizadoEm)}</p></div><div className="acoes-item-painel"><button type="button" onClick={() => editarRegistro(item)}>Editar</button><button type="button" onClick={() => excluir(item)}>Excluir</button></div></article>
                 ))}
               </div>
@@ -371,7 +379,9 @@ function CampoFormulario({ campo, valor, mudar, enviarArquivo }: { campo: CampoP
   // mostra uma lista de opções
   if (campo.tipo === "select") return <label><span>{campo.rotulo}</span><select value={String(valor ?? "")} onChange={(evento) => mudar(evento.target.value)} required={campo.obrigatorio}>{campo.opcoes?.map((opcao) => <option value={opcao.valor} key={opcao.valor}>{opcao.nome}</option>)}</select></label>;
   // mostra o endereço e envio de arquivo
-  if (campo.tipo === "arquivo") return <label className="campo-largo"><span>{campo.rotulo}</span><input type="text" inputMode="url" value={String(valor ?? "")} onChange={(evento) => mudar(evento.target.value)} placeholder="Cole um link ou envie um arquivo abaixo" required={campo.obrigatorio} /><input className="entrada-arquivo" type="file" accept={campo.chave === "imagemUrl" ? "image/png,image/jpeg,image/webp" : ".pdf,image/png,image/jpeg,image/webp"} onChange={(evento) => enviarArquivo(evento.target.files?.[0])} />{campo.dica && <small>{campo.dica}</small>}</label>;
+  if (campo.tipo === "arquivo") return <div className="campo-largo"><label><span>{campo.rotulo}</span><input type="text" inputMode="url" value={String(valor ?? "")} onChange={(evento) => mudar(evento.target.value)} placeholder="Cole um link ou envie um arquivo abaixo" required={campo.obrigatorio} /><input className="entrada-arquivo" type="file" accept={["imagemUrl", "fotoUrl"].includes(campo.chave) ? "image/png,image/jpeg,image/webp" : ".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp"} onChange={(evento) => enviarArquivo(evento.target.files?.[0])} />{campo.dica && <small>{campo.dica}</small>}</label><EscolherArquivo aceitar={["imagemUrl", "fotoUrl"].includes(campo.chave) ? "imagem" : "todos"} selecionar={(arquivo) => mudar(arquivo.url)} /></div>;
+  // oferece páginas publicadas para o botão interno da notícia
+  if (campo.tipo === "pagina") return <label><span>{campo.rotulo}</span><SeletorPagina valor={String(valor ?? "")} mudar={(endereco) => mudar(endereco)} /></label>;
   // mostra um campo simples
   return <label><span>{campo.rotulo}</span><input type={campo.tipo} value={String(valor ?? "")} step={campo.tipo === "number" ? "0.01" : undefined} onChange={(evento) => mudar(campo.tipo === "number" ? Number(evento.target.value) : evento.target.value)} required={campo.obrigatorio} />{campo.dica && <small>{campo.dica}</small>}</label>;
 }

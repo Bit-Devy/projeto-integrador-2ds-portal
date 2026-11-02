@@ -1,6 +1,6 @@
 // encontra o ano atual sem prender o portal a uma gestão
-export function anoDoPortal() {
-  return new Date().getFullYear();
+export function anoDoPortal(data = new Date()) {
+  return Number(new Intl.DateTimeFormat("pt-BR", { year: "numeric", timeZone: "America/Sao_Paulo" }).format(data));
 }
 
 // aceita todos os anos ou um ano válido informado no endereço
