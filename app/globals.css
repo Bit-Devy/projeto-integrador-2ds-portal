@@ -4033,6 +4033,7 @@ a {
   .botao-menu-celular {
     width: 41px;
     height: 41px;
+    flex-shrink: 0;
     display: grid;
     place-items: center;
     border: 0;
@@ -4040,6 +4041,7 @@ a {
     color: #ffffff;
     cursor: pointer;
     font-size: 23px;
+    line-height: 1;
   }
 
   /* imagem de marca do colégio */
@@ -4072,7 +4074,7 @@ a {
     display: none;
   }
 
-  /* menu de aberto */
+  /* mostra a navegação quando o botão do celular está aberto */
   .menu-principal.menu-aberto {
     display: block;
   }
@@ -4081,6 +4083,12 @@ a {
   .lista-menu {
     width: 100%;
     display: block;
+    margin: 0;
+  }
+
+  /* mantém a separação por toda a largura de cada linha */
+  .item-menu {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   }
 
   /* link de item do menu */
@@ -4089,8 +4097,9 @@ a {
     height: auto;
     justify-content: space-between;
     padding-inline: 22px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     font-size: 14px;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   /* link de item do menu com submenu */
@@ -4098,36 +4107,56 @@ a {
     padding-right: 4px;
   }
 
-  /* item do menu com submenu */
+  /* deixa o link ocupar a linha e mantém a seta na borda direita */
   .item-menu-tem-submenu {
-    /* organiza os elementos em colunas */
-    grid-template-columns: max-content 44px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 44px;
   }
 
   /* botão do submenu */
   .botao-submenu {
     width: 44px;
-    height: 47px;
+    height: 100%;
+    min-height: 47px;
   }
 
-  /* foco dentro de submenu */
-  .submenu,
-  .item-menu:hover .submenu,
-  .item-menu:focus-within .submenu,
-  .item-menu.submenu-aberto .submenu {
+  /* coloca o submenu abaixo do link sem as sombras do menu de computador */
+  .menu-principal .submenu {
     position: static;
     min-width: 0;
     display: none;
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 0;
+    color: #ffffff;
+    background: #08649d;
     border: 0;
-    /* cria uma sombra para destacar o elemento */
     box-shadow: none;
   }
 
-  /* submenu */
-  .item-menu-tem-submenu > .submenu {
-    /* define o espaço ocupado na grade */
-    grid-column: 1 / -1;
-    width: 100%;
+  /* mostra apenas o submenu escolhido */
+  .menu-principal .item-menu.submenu-aberto .submenu {
+    display: block;
+  }
+
+  /* permite ler os nomes longos sem sair da tela */
+  .menu-principal .submenu a {
+    padding: 12px 31px;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.12);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  /* mantém o texto legível ao passar o mouse ou usar o teclado */
+  .menu-principal .submenu a:hover,
+  .menu-principal .submenu a:focus {
+    background: var(--azul-escuro);
+  }
+
+  /* destaca a seta quando seu submenu está aberto */
+  .item-menu.submenu-aberto > .botao-submenu {
+    background: var(--azul-escuro);
   }
 
   /* conteúdo do banner */
@@ -4833,31 +4862,6 @@ a {
   .marca-gecep img {
     width: 135px;
     height: 62px;
-  }
-
-  /* submenu */
-  .menu-principal.menu-aberto .submenu {
-    position: static;
-    display: none;
-    padding: 0;
-    color: #ffffff;
-    background: #08649d;
-    border: 0;
-    /* cria uma sombra para destacar o elemento */
-    box-shadow: none;
-  }
-
-  /* estado ativo de submenu */
-  .menu-principal.menu-aberto .item-menu.submenu-aberto .submenu {
-    display: block;
-  }
-
-  /* link de submenu */
-  .menu-principal.menu-aberto .submenu a {
-    padding: 10px 31px;
-    color: rgba(255, 255, 255, 0.88);
-    border-color: rgba(255, 255, 255, 0.12);
-    font-size: 12px;
   }
 
   /* apresentação inicial */

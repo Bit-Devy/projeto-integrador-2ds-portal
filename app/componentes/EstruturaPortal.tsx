@@ -95,8 +95,7 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
   // permite devolver o foco ao botão ao fechar o menu móvel com Escape
   const botaoMenuCelular = useRef<HTMLButtonElement>(null);
 
-  // Escape precisa funcionar mesmo quando o foco ainda está no botão que fica
-  // fora do <nav> móvel.
+  // fecha o menu com escape mesmo quando o foco ainda está no botão do cabeçalho
   useEffect(() => {
     if (!menuAberto) return;
     function fecharComEscape(evento: KeyboardEvent) {
@@ -110,12 +109,23 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("keydown", fecharComEscape);
   }, [menuAberto]);
 
+  // limpa os menus ao mudar entre a navegação de celular e a de computador
+  useEffect(() => {
+    const telaCelular = window.matchMedia("(max-width: 780px)");
+    function limparMenus() {
+      setMenuAberto(false);
+      setSubmenuAberto(null);
+    }
+    telaCelular.addEventListener("change", limparMenus);
+    return () => telaCelular.removeEventListener("change", limparMenus);
+  }, []);
+
   // envia a busca para a página de notícias
   function enviarBusca(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const texto = busca.trim();
     navegador.push(texto ? `/noticias?busca=${encodeURIComponent(texto)}` : "/noticias");
-    setMenuAberto(false);
+    fecharMenu();
   }
 
   // fecha todos os menus
@@ -178,12 +188,12 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
             aria-expanded={menuAberto}
             aria-controls="menu-principal"
           >
-            <span aria-hidden="true">☰</span>
+            <span aria-hidden="true">{menuAberto ? "×" : "☰"}</span>
             <span className="somente-leitor">{menuAberto ? "Fechar menu" : "Abrir menu"}</span>
           </button>
 
           {/* marca do colégio */}
-          <Link className="marca-colegio" href="/" aria-label="Página inicial do GECEP">
+          <Link className="marca-colegio" href="/" onClick={fecharMenu} aria-label="Página inicial do GECEP">
             <img
               src="https://web.celepar.pr.gov.br/drupal/images/seed/logo-cep-105x105.png"
               alt="Brasão do Colégio Estadual do Paraná"
@@ -193,7 +203,7 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
           <div className="divisor-marcas" aria-hidden="true" />
 
           {/* marca do grêmio */}
-          <Link className="marca-gecep" href="/" aria-label="GECEP — página inicial">
+          <Link className="marca-gecep" href="/" onClick={fecharMenu} aria-label="GECEP — página inicial">
             <img src="/logo-gecep-com-texto.png" alt="GECEP — Grêmio Estudantil do Colégio Estadual do Paraná" />
           </Link>
 
@@ -251,7 +261,10 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
               <li
                 className={`item-menu ${item.subitens ? "item-menu-tem-submenu" : ""} ${submenuAberto === item.nome ? "submenu-aberto" : ""} ${ativo ? "item-menu-ativo" : ""}`}
                 onPointerEnter={(evento) => {
-                  if (evento.pointerType === "mouse") setSubmenuAberto(item.subitens ? item.nome : null);
+                  // abre ao passar o mouse apenas no menu de computador
+                  if (evento.pointerType === "mouse" && window.matchMedia("(min-width: 781px)").matches) {
+                    setSubmenuAberto(item.subitens ? item.nome : null);
+                  }
                 }}
                 onPointerLeave={(evento) => {
                   if (evento.pointerType === "mouse" && !evento.currentTarget.contains(document.activeElement)) {
@@ -276,7 +289,12 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
                 <Link
                   href={item.destino}
                   onClick={fecharMenu}
-                  onFocus={() => item.subitens && setSubmenuAberto(item.nome)}
+                  onFocus={() => {
+                    // no celular a abertura fica apenas no botão da seta
+                    if (item.subitens && window.matchMedia("(min-width: 781px)").matches) {
+                      setSubmenuAberto(item.nome);
+                    }
+                  }}
                   aria-current={!item.subitens && ativo ? "page" : undefined}
                 >
                   {item.nome}
