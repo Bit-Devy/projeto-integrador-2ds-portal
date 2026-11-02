@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { criarTokenSessao, caminhoSeguro, NOME_COOKIE_SESSAO, validarSenhaAdministrativa } from "../../lib/sessao";
 // importa a verificação da origem da chamada
 import { origemValida } from "../../lib/autorizacao";
+// importa os limites de tentativas por navegador
+import { consumirTentativa, guardarNavegador, identificarNavegador, limparTentativasLogin } from "../../lib/limites";
 
 // valida o login e cria a sessão
 export async function POST(request: Request) {
@@ -15,15 +17,18 @@ export async function POST(request: Request) {
   const senha = String(formulario.get("senha") ?? "");
   const retorno = caminhoSeguro(String(formulario.get("returnTo") ?? "/painel"));
 
+  // reserva a tentativa antes de conferir a senha
+  const navegador = identificarNavegador(request);
+  const tentativa = await consumirTentativa("login", navegador);
+  if (!tentativa.permitido) return voltarAoLogin("limite");
+
   // devolve ao login quando a senha está errada
   if (!(await validarSenhaAdministrativa(senha))) {
-    const destino = new URL("/login", request.url);
-    destino.searchParams.set("erro", "1");
-    destino.searchParams.set("returnTo", retorno);
-    return NextResponse.redirect(destino, 303);
+    return voltarAoLogin(tentativa.limite.bloqueado ? "limite" : "1");
   }
 
   // redireciona e grava o cookie da sessão
+  await limparTentativasLogin(navegador);
   const resposta = NextResponse.redirect(new URL(retorno, request.url), 303);
   resposta.cookies.set(NOME_COOKIE_SESSAO, await criarTokenSessao(), {
     httpOnly: true,
@@ -32,5 +37,15 @@ export async function POST(request: Request) {
     path: "/",
     maxAge: 60 * 60 * 8,
   });
-  return resposta;
+  return guardarNavegador(resposta, request, navegador);
+
+  // volta para o formulário mantendo o destino e o navegador
+  function voltarAoLogin(erro: string) {
+    const destino = new URL("/login", request.url);
+    destino.searchParams.set("erro", erro);
+    destino.searchParams.set("returnTo", retorno);
+    const resposta = NextResponse.redirect(destino, 303);
+    if (tentativa.limite.bloqueado) resposta.headers.set("retry-after", String(tentativa.limite.tentarEm));
+    return guardarNavegador(resposta, request, navegador);
+  }
 }

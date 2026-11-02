@@ -2,6 +2,10 @@
 import type { Metadata } from "next";
 // importa os links entre páginas
 import Link from "next/link";
+// importa o formulário com limite de tentativas
+import FormularioLogin from "../componentes/FormularioLogin";
+// importa a verificação do destino de retorno
+import { caminhoSeguro } from "../lib/sessao";
 
 // define os dados da página de entrada
 export const metadata: Metadata = {
@@ -18,7 +22,7 @@ export default async function PaginaLogin({
   // recebe os dados enviados pela url
   const parametros = await searchParams;
   // escolhe uma página segura para o retorno
-  const retorno = parametros.returnTo?.startsWith("/") ? parametros.returnTo : "/painel";
+  const retorno = caminhoSeguro(parametros.returnTo ?? "/painel");
 
   return (
     <main id="conteudo" className="pagina-login">
@@ -27,18 +31,9 @@ export default async function PaginaLogin({
         <img src="/logo-gecep.png" alt="Logo do GECEP" />
         <span className="rotulo-secao">ÁREA RESTRITA</span>
         <h1>Entrar no painel</h1>
-        <p>Use a senha administrativa definida no arquivo de configuração do projeto.</p>
-        {/* aviso de senha incorreta */}
-        {parametros.erro && <p className="erro-login" role="alert">Senha incorreta ou configuração ausente.</p>}
+        <p>Informe a senha da gestão para acessar o painel.</p>
         {/* formulário de acesso */}
-        <form action="/api/login" method="post">
-          <input type="hidden" name="returnTo" value={retorno} />
-          <label>
-            <span>Senha administrativa</span>
-            <input type="password" name="senha" autoComplete="current-password" required autoFocus />
-          </label>
-          <button type="submit">Entrar</button>
-        </form>
+        <FormularioLogin retorno={retorno} erro={parametros.erro} />
         <Link href="/">Voltar ao portal</Link>
       </section>
     </main>

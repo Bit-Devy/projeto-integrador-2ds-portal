@@ -37,6 +37,14 @@ async function prepararBanco() {
 
   // cria todas as tabelas e índices que ainda não existem
   await d1.batch([
+    d1.prepare(`CREATE TABLE IF NOT EXISTS limites_navegador (
+      navegador TEXT NOT NULL,
+      acao TEXT NOT NULL,
+      tentativas INTEGER NOT NULL DEFAULT 0,
+      expira_em INTEGER NOT NULL,
+      bloqueado_ate INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (navegador, acao)
+    )`),
     d1.prepare(`CREATE TABLE IF NOT EXISTS conteudos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tipo TEXT NOT NULL,
@@ -186,6 +194,10 @@ async function prepararBanco() {
   }
   await adicionarColunasContato(d1);
   await carregarMapa2026(d1);
+
+  // retira do catálogo antigo a documentação interna que não é publicada no portal
+  await d1.prepare(`DELETE FROM conteudos WHERE tipo = 'documentos'
+    AND json_valid(dados_json) = 1 AND json_extract(dados_json, '$.link') LIKE '/documentacao/%'`).run();
 
   // evita repetir os conteúdos iniciais
   const quantidade = await d1.prepare("SELECT COUNT(*) AS total FROM conteudos").first<{ total: number }>();

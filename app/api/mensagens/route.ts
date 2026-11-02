@@ -5,6 +5,8 @@ import { garantirBanco } from "../../../db/inicializar";
 // importa as verificações de administrador e origem
 import { exigirAdministradorApi, origemValida } from "../../lib/autorizacao";
 import { ErroJsonInvalido, lerObjetoJson } from "../../lib/corpo-json";
+// importa os limites de envio por navegador
+import { consumirTentativa, devolverTentativaMensagem, guardarNavegador, identificarNavegador } from "../../lib/limites";
 
 // define o formato de uma mensagem no banco
 type LinhaMensagem = {
@@ -93,17 +95,17 @@ export async function POST(request: Request) {
     if (String(corpo.site ?? "").trim()) return new Response(null, { status: 204 });
 
     // limpa e limita todos os campos
-    const nome = texto(corpo.nome, 100);
-    const turma = texto(corpo.turma, 60);
+    const anonimo = corpo.anonimo === true;
+    const nome = anonimo ? "" : texto(corpo.nome, 100);
+    const turma = anonimo ? "" : texto(corpo.turma, 60);
     const assunto = texto(corpo.assunto, 80);
     const titulo = texto(corpo.titulo, 160);
     const mensagem = texto(corpo.mensagem, 5000);
-    const tipoContato = texto(corpo.tipoContato, 20).toLowerCase();
-    const contato = texto(corpo.contato, 200);
-    const anonimo = corpo.anonimo === true;
+    const tipoContato = anonimo ? "" : texto(corpo.tipoContato, 20).toLowerCase();
+    const contato = anonimo ? "" : texto(corpo.contato, 200);
 
     // confirma os campos obrigatórios
-    if (!nome || !turma || !assunto || !titulo || mensagem.length < 10) {
+    if ((!anonimo && (!nome || !turma)) || !assunto || !titulo || mensagem.length < 10) {
       return Response.json({ erro: "Preencha todos os campos e detalhe um pouco mais a mensagem." }, { status: 400 });
     }
 
@@ -111,15 +113,32 @@ export async function POST(request: Request) {
     const erroContato = validarContato(tipoContato, contato);
     if (erroContato) return Response.json({ erro: erroContato }, { status: 400 });
 
+    // aplica o limite no servidor mesmo que a pessoa tente enviar por outra aba
+    const navegador = identificarNavegador(request);
+    const tentativa = await consumirTentativa("mensagens", navegador);
+    if (!tentativa.permitido) {
+      return guardarNavegador(Response.json({ erro: tentativa.limite.aviso, limite: tentativa.limite }, {
+        status: 429, headers: { "retry-after": String(tentativa.limite.tentarEm) },
+      }), request, navegador);
+    }
+
     // salva a mensagem e devolve seu protocolo
-    const resultado = await getD1()
+    let resultado;
+    try {
+      resultado = await getD1()
       .prepare(`INSERT INTO mensagens (nome, turma, assunto, titulo, mensagem, tipo_contato, contato, anonimo)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, criado_em`)
       .bind(nome, turma, assunto, titulo, mensagem, tipoContato || null, contato || null, anonimo ? 1 : 0)
       .first<{ id: number; criado_em: string }>();
+      if (!resultado) throw new Error("A mensagem não foi salva.");
+    } catch (erro) {
+      // devolve a tentativa quando o banco não consegue salvar a mensagem
+      await devolverTentativaMensagem(navegador);
+      throw erro;
+    }
 
     const protocolo = formatarProtocolo(resultado?.id ?? 0, resultado?.criado_em);
-    return Response.json({ enviado: true, protocolo, criadoEm: resultado?.criado_em }, { status: 201 });
+    return guardarNavegador(Response.json({ enviado: true, protocolo, criadoEm: resultado?.criado_em, limite: tentativa.limite }, { status: 201 }), request, navegador);
   } catch (erro) {
     return respostaErro(erro);
   }
@@ -181,14 +200,14 @@ function texto(valor: unknown, limite: number) {
 function formatarMensagem(linha: LinhaMensagem) {
   return {
     id: linha.id,
-    nome: linha.nome,
-    turma: linha.turma,
+    nome: linha.anonimo ? "" : linha.nome,
+    turma: linha.anonimo ? "" : linha.turma,
     assunto: linha.assunto,
     titulo: linha.titulo,
     mensagem: linha.mensagem,
     protocolo: formatarProtocolo(linha.id, linha.criado_em),
-    tipoContato: linha.tipo_contato ?? "",
-    contato: linha.contato ?? "",
+    tipoContato: linha.anonimo ? "" : linha.tipo_contato ?? "",
+    contato: linha.anonimo ? "" : linha.contato ?? "",
     anonimo: Boolean(linha.anonimo),
     status: linha.status,
     criadoEm: linha.criado_em,

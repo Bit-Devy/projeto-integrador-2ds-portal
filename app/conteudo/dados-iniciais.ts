@@ -158,16 +158,6 @@ export const projetosIniciais: ProjetoGecep[] = [
 export const documentosIniciais: DocumentoGecep[] = [
   {
     tipo: "PDF",
-    categoria: "Projeto",
-    titulo: "Documentação do Projeto - Portal do GECEP",
-    texto: "Problema, objetivos, tecnologias, requisitos, casos de uso, regras de negócio e arquitetura do sistema.",
-    link: "/documentacao/Documentacao-Projeto-GECEP.pdf",
-    dataDocumento: "2026-07-18",
-    real: true,
-    publicado: true,
-  },
-  {
-    tipo: "PDF",
     categoria: "Normas",
     titulo: "Estatuto do GECEP - 2023",
     texto: "Documento que define a organização, os objetivos e o funcionamento do grêmio.",

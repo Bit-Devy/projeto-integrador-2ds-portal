@@ -41,12 +41,9 @@ test("mantém os dados fáceis de editar em um só lugar", async () => {
   }
 });
 
-// verifica a migração e o documento do projeto
-test("inclui migração e documentação em PDF", async () => {
+// verifica a migração inicial do banco
+test("inclui a migração das tabelas principais", async () => {
   const migracao = await readFile("drizzle/0000_smart_quasar.sql", "utf8");
   assert.match(migracao, /CREATE TABLE `conteudos`/);
   assert.match(migracao, /CREATE TABLE `mensagens`/);
-  // confirma se o arquivo começa como um pdf
-  const pdf = await readFile("public/documentacao/Documentacao-Projeto-GECEP.pdf");
-  assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
 });

@@ -2,7 +2,11 @@
 "use client";
 
 // importa eventos e controle de estados
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+// importa a consulta dos limites e o aviso de espera
+import { useLimiteNavegador } from "../lib/useLimiteNavegador";
+import type { EstadoLimite } from "../lib/limites-tipos";
+import AvisoLimite from "./AvisoLimite";
 
 // guarda os tipos de contato disponíveis
 const tiposContato = [
@@ -25,10 +29,24 @@ export default function FormularioParticipacao({ modo = "sugestao" }: { modo?: "
   const [tipoContato, setTipoContato] = useState("");
   // guarda o contato digitado
   const [contato, setContato] = useState("");
+  // guarda a escolha de anonimato e a confirmação antes de ativá-la
+  const [anonimo, setAnonimo] = useState(false);
+  const [confirmandoAnonimato, setConfirmandoAnonimato] = useState(false);
+  const dialogo = useRef<HTMLDialogElement>(null);
+  // consulta o limite mesmo depois de recarregar a página
+  const { limite, liberarEm, carregando, erroConsulta, atualizar, receberLimite } = useLimiteNavegador("mensagens");
+  const envioDesativado = enviando || carregando || Boolean(erroConsulta) || Boolean(limite?.bloqueado);
+
+  // usa o diálogo do navegador para manter o foco dentro do aviso
+  useEffect(() => {
+    if (confirmandoAnonimato) dialogo.current?.showModal();
+    else dialogo.current?.close();
+  }, [confirmandoAnonimato]);
 
   // envia a mensagem para o banco do portal
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    if (envioDesativado) return;
     setEnviando(true);
     setErro("");
     setProtocolo("");
@@ -43,24 +61,26 @@ export default function FormularioParticipacao({ modo = "sugestao" }: { modo?: "
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          nome: dados.get("nome"),
-          turma: dados.get("turma"),
+          nome: anonimo ? "" : dados.get("nome"),
+          turma: anonimo ? "" : dados.get("turma"),
           assunto: dados.get("assunto"),
           titulo: dados.get("titulo"),
           mensagem: dados.get("mensagem"),
-          tipoContato: dados.get("tipoContato"),
-          contato: dados.get("contato"),
-          anonimo: dados.get("anonimo") === "on",
+          tipoContato: anonimo ? "" : dados.get("tipoContato"),
+          contato: anonimo ? "" : dados.get("contato"),
+          anonimo,
           site: dados.get("site"),
         }),
       });
       // lê o protocolo ou o erro da resposta
-      const resultado = await resposta.json() as { protocolo?: string; erro?: string };
+      const resultado = await resposta.json() as { protocolo?: string; erro?: string; limite?: EstadoLimite };
+      if (resultado.limite) receberLimite(resultado.limite);
       if (!resposta.ok) throw new Error(resultado.erro || "Não foi possível enviar agora.");
       setProtocolo(resultado.protocolo ?? "Mensagem recebida");
       formulario.reset();
       setTipoContato("");
       setContato("");
+      setAnonimo(false);
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : "Não foi possível enviar agora.");
     } finally {
@@ -70,15 +90,18 @@ export default function FormularioParticipacao({ modo = "sugestao" }: { modo?: "
 
   return (
     <form className="formulario-participacao" onSubmit={enviar}>
+      {/* mostra o limite de envios sem apagar o texto que já foi escrito */}
+      <AvisoLimite limite={limite} liberarEm={liberarEm} />
+      {erroConsulta && <p className="erro-formulario" role="alert">{erroConsulta} <button type="button" onClick={() => { void atualizar(); }}>Tentar novamente</button></p>}
       {/* identificação do estudante */}
-      <div className="duas-colunas-formulario">
+      <div className={`duas-colunas-formulario ${anonimo ? "campos-identidade-desativados" : ""}`}>
         <label>
           Nome
-          <input type="text" name="nome" placeholder="Como podemos chamar você?" required />
+          <input type="text" name="nome" placeholder="Como podemos chamar você?" required={!anonimo} disabled={anonimo} maxLength={100} />
         </label>
         <label>
           Turma
-          <input type="text" name="turma" placeholder="Ex.: 2º DS tarde" required />
+          <input type="text" name="turma" placeholder="Ex.: 2º DS tarde" required={!anonimo} disabled={anonimo} maxLength={60} />
         </label>
       </div>
       {/* assunto da participação */}
@@ -97,20 +120,21 @@ export default function FormularioParticipacao({ modo = "sugestao" }: { modo?: "
       {/* título da mensagem */}
       <label>
         Título da mensagem
-        <input type="text" name="titulo" placeholder="Resuma o assunto em uma frase" required />
+        <input type="text" name="titulo" placeholder="Resuma o assunto em uma frase" required maxLength={160} />
       </label>
       {/* texto da mensagem */}
       <label>
         Mensagem
-        <textarea name="mensagem" rows={7} placeholder="Explique sua ideia ou demanda com os detalhes importantes" required />
+        <textarea name="mensagem" rows={7} placeholder="Explique sua ideia ou demanda com os detalhes importantes" required minLength={10} maxLength={5000} />
       </label>
       {/* dados opcionais para contato */}
-      <div className="duas-colunas-formulario">
+      <div className={`duas-colunas-formulario ${anonimo ? "campos-identidade-desativados" : ""}`}>
         <label>
           Tipo de contato (opcional)
           <select
             name="tipoContato"
             value={tipoContato}
+            disabled={anonimo}
             onChange={(evento) => {
               setTipoContato(evento.target.value);
               setContato("");
@@ -131,23 +155,44 @@ export default function FormularioParticipacao({ modo = "sugestao" }: { modo?: "
             inputMode={tipoContato === "whatsapp" || tipoContato === "telefone" ? "tel" : tipoContato === "email" ? "email" : "text"}
             autoComplete={tipoContato === "email" ? "email" : tipoContato === "whatsapp" || tipoContato === "telefone" ? "tel" : "off"}
             maxLength={tipoContato === "whatsapp" || tipoContato === "telefone" ? 15 : 200}
-            disabled={!tipoContato}
-            required={Boolean(tipoContato)}
+            disabled={anonimo || !tipoContato}
+            required={!anonimo && Boolean(tipoContato)}
           />
         </label>
       </div>
       {/* opção de identidade preservada */}
       <label className="opcao-anonima">
-        <input type="checkbox" name="anonimo" />
+        <input type="checkbox" name="anonimo" checked={anonimo} onChange={(evento) => {
+          if (evento.target.checked) setConfirmandoAnonimato(true);
+          else setAnonimo(false);
+        }} aria-describedby={anonimo ? "aviso-identidade-preservada" : undefined} />
         Quero que minha identidade seja preservada quando esta mensagem for analisada
       </label>
+      {anonimo && <p id="aviso-identidade-preservada" className="aviso-anonimato" role="status">Sua participação será enviada sem nome, turma ou contato. Não poderemos enviar uma resposta. Evite incluir dados pessoais no título e na mensagem.</p>}
+      {/* pede confirmação antes de retirar a identificação e o contato */}
+      <dialog ref={dialogo} className="dialogo-anonimato" aria-labelledby="titulo-anonimato" aria-describedby="descricao-anonimato" onCancel={(evento) => {
+        evento.preventDefault();
+        setConfirmandoAnonimato(false);
+      }}>
+        <span className="rotulo-secao">SUA PRIVACIDADE</span>
+        <h2 id="titulo-anonimato">Enviar sem se identificar?</h2>
+        <p id="descricao-anonimato">Ao preservar sua identidade, sua participação será enviada sem nome, turma ou informações de contato. Não teremos como enviar uma resposta, mas sua sugestão será levada em consideração pelo GECEP.</p>
+        <p>Deseja continuar sem se identificar?</p>
+        <div className="acoes-dialogo-anonimato">
+          <button type="button" className="botao-secundario" onClick={() => setConfirmandoAnonimato(false)}>Voltar e me identificar</button>
+          <button type="button" className="botao-primario" onClick={() => {
+            setAnonimo(true);
+            setConfirmandoAnonimato(false);
+          }}>Sim, preservar minha identidade</button>
+        </div>
+      </dialog>
       {/* campo escondido contra envios automáticos */}
       <label className="campo-armadilha" aria-hidden="true">
         Não preencha este campo
         <input type="text" name="site" tabIndex={-1} autoComplete="off" />
       </label>
       {/* botão de envio */}
-      <button type="submit" disabled={enviando}>{enviando ? "Enviando..." : modo === "contato" ? "Enviar mensagem" : "Enviar participação"}</button>
+      <button type="submit" disabled={envioDesativado}>{enviando ? "Enviando..." : carregando ? "Aguarde..." : modo === "contato" ? "Enviar mensagem" : "Enviar participação"}</button>
       {/* confirmação com protocolo */}
       {protocolo && (
         <p className="confirmacao-formulario" role="status">

@@ -90,6 +90,7 @@ try {
   await testarConteudo(cookie);
   await testarMensagens(cookie);
   await testarArquivos(cookie);
+  await testarLimitesNavegador(cookie, senha);
 
   console.log("Servidor local, banco, login, mapa, eventos, painel, CRUD e arquivos: OK");
 } catch (erro) {
@@ -99,6 +100,59 @@ try {
 } finally {
   // encerra o servidor mesmo após uma falha
   await encerrarServidor();
+}
+
+// testa os bloqueios reais das apis sem esperar os prazos no relógio
+async function testarLimitesNavegador(cookieAdministrador, senha) {
+  const inicio = await fetch(`${endereco}/api/limites?acao=mensagens`);
+  assert.equal(inicio.status, 200);
+  const navegador = inicio.headers.getSetCookie().find((item) => item.startsWith("gecep_navegador="))?.split(";")[0];
+  assert.ok(navegador);
+  assert.equal(inicio.headers.get("cache-control"), "no-store");
+  const ids = [];
+  try {
+    // confirma o anonimato mesmo quando alguém envia dados pessoais diretamente à api
+    for (let indice = 0; indice < 3; indice += 1) {
+      const resposta = await fetch(`${endereco}/api/mensagens`, {
+        method: "POST", headers: { cookie: navegador, "content-type": "application/json" },
+        body: JSON.stringify({ anonimo: true, nome: "Não guardar", turma: "Não guardar", contato: "Não guardar", tipoContato: "email",
+          assunto: "Teste", titulo: `Limite temporário ${indice}`, mensagem: "Mensagem temporária para verificar o limite por navegador." }),
+      });
+      assert.equal(resposta.status, 201);
+      const dados = await resposta.json();
+      ids.push(Number(dados.protocolo.split("-").at(-1)));
+    }
+    const bloqueada = await fetch(`${endereco}/api/mensagens`, {
+      method: "POST", headers: { cookie: navegador, "content-type": "application/json" },
+      body: JSON.stringify({ anonimo: true, assunto: "Teste", titulo: "Não deve salvar", mensagem: "Esta quarta mensagem deve ser bloqueada pelo servidor." }),
+    });
+    assert.equal(bloqueada.status, 429);
+    assert.ok(Number(bloqueada.headers.get("retry-after")) > 0);
+    const recarregada = await fetch(`${endereco}/api/limites?acao=mensagens`, { headers: { cookie: navegador } });
+    assert.equal((await recarregada.json()).limite.bloqueado, true);
+  } finally {
+    // remove somente as mensagens criadas nesta verificação
+    for (const id of ids) await fetch(`${endereco}/api/mensagens?id=${id}`, { method: "DELETE", headers: { cookie: cookieAdministrador } });
+  }
+
+  // verifica o primeiro bloqueio e impede até uma senha correta durante a espera
+  const preparoLogin = await fetch(`${endereco}/api/limites?acao=login`);
+  const navegadorLogin = preparoLogin.headers.getSetCookie().find((item) => item.startsWith("gecep_navegador="))?.split(";")[0];
+  assert.ok(navegadorLogin);
+  for (let indice = 0; indice < 5; indice += 1) {
+    const resposta = await fetch(`${endereco}/api/login`, {
+      method: "POST", redirect: "manual", headers: { cookie: navegadorLogin },
+      body: new URLSearchParams({ senha: `${senha}-incorreta`, returnTo: "/painel" }),
+    });
+    assert.equal(resposta.status, 303);
+    assert.match(resposta.headers.get("location"), indice < 4 ? /erro=1/ : /erro=limite/);
+  }
+  const bloqueioLogin = await fetch(`${endereco}/api/login`, {
+    method: "POST", redirect: "manual", headers: { cookie: navegadorLogin },
+    body: new URLSearchParams({ senha, returnTo: "/painel" }),
+  });
+  assert.match(bloqueioLogin.headers.get("location"), /erro=limite/);
+  assert.ok(!bloqueioLogin.headers.getSetCookie().some((item) => item.startsWith("gecep_sessao=")));
 }
 
 // espera o servidor responder
@@ -1589,7 +1643,7 @@ async function testarMensagens(cookie) {
   });
   assert.equal(respostaContatoInvalido.status, 400);
 
-  // envia uma mensagem com contato
+  // envia uma mensagem anônima e confirma que dados pessoais são descartados
   const respostaEnvio = await fetch(`${endereco}/api/mensagens`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -1632,8 +1686,10 @@ async function testarMensagens(cookie) {
   const mensagem = lista.find((item) => item.titulo === titulo);
   assert.ok(mensagem?.id);
   assert.match(mensagem.protocolo, /^GECEP-\d{4}-\d{5,}$/);
-  assert.equal(mensagem.tipoContato, "whatsapp");
-  assert.equal(mensagem.contato, "(41) 99999-9999");
+  assert.equal(mensagem.nome, "");
+  assert.equal(mensagem.turma, "");
+  assert.equal(mensagem.tipoContato, "");
+  assert.equal(mensagem.contato, "");
   const mensagemSemContato = lista.find((item) => item.titulo === tituloSemContato);
   assert.ok(mensagemSemContato?.id);
   assert.equal(mensagemSemContato.tipoContato, "");

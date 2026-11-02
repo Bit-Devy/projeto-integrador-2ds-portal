@@ -1,7 +1,16 @@
 // importa os valores sql usados pelas tabelas
 import { sql } from "drizzle-orm";
 // importa os tipos de colunas tabelas e índices
-import { check, index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+
+// guarda as tentativas e os prazos de cada navegador
+export const limitesNavegador = sqliteTable("limites_navegador", {
+  navegador: text("navegador").notNull(),
+  acao: text("acao").notNull(),
+  tentativas: integer("tentativas").notNull().default(0),
+  expiraEm: integer("expira_em").notNull(),
+  bloqueadoAte: integer("bloqueado_ate").notNull().default(0),
+}, (tabela) => [primaryKey({ columns: [tabela.navegador, tabela.acao] })]);
 
 // conteúdos que aparecem no portal
 export const conteudos = sqliteTable(

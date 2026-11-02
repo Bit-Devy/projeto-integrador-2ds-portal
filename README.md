@@ -14,3 +14,12 @@ O `start` usa o runtime Cloudflare local com o banco D1 e os arquivos R2 de
 `ADMIN_PASSWORD` e `SESSION_SECRET` no arquivo `.dev.vars`.
 Para testar as APIs, login, operações do painel e arquivos nesse modo, execute
 `npm run test:start`.
+
+Os formulários de sugestões e contato compartilham o limite de três envios por
+hora em cada navegador. Ao preservar a identidade, nome, turma e contato não
+são enviados nem armazenados junto da mensagem, e não há como responder ao estudante.
+
+O login permite cinco tentativas, seguidas de uma espera de 15 minutos. Mais
+cinco tentativas incorretas bloqueiam o navegador por 24 horas. Uma entrada
+correta reinicia o contador. Os limites ficam no banco e são associados a um
+cookie do navegador; limpar os cookies ou usar outro navegador inicia um novo contador.
