@@ -1,65 +1,25 @@
-# mostra os arquivos que não devem entrar no projeto
+# dependências instaladas pelo npm
+/node_modules/
 
-# dependências
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testes
-/coverage
-/test-results/
-/playwright-report/
-/blob-report/
-
-# relatórios, capturas e arquivos temporários locais
-/output/
-/outputs/
-/tmp/
-
-# scripts pontuais da auditoria local
-/scripts/auditar-casos-adicionais.mjs
-/scripts/auditar-interface.mjs
-/scripts/auditar-portal.mjs
-/scripts/gerar-relatorio-auditoria.py
-/scripts/preparar-fixtures-auditoria.py
-/scripts/relatorio-auditoria-visual-*.py
-/scripts/verificar-execucoes.mjs
-
-# caches de compilação
-__pycache__/
-*.py[cod]
+# arquivos gerados pela compilação
+/dist/
+/.next/
+next-env.d.ts
 *.tsbuildinfo
 
-# arquivos das páginas
-/.next/
-/out/
+# banco, arquivos e cache locais do cloudflare
+/.wrangler/
 
-# arquivos diversos
-.DS_Store
-*.pem
-
-# registros de erro
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# arquivos com configurações privadas
+# configurações privadas e modelo sem dados sensíveis
 .env*
 .dev.vars*
 !.dev.vars.example
 
-# arquivos da hospedagem
-.vercel
+# capturas e resultados locais dos testes visuais
+/output/
 
-# arquivos criados pelas ferramentas do projeto
-next-env.d.ts
-/dist/
-/.wrangler/
-/.sites-runtime/
-/work/
+# registros de erro do npm
+npm-debug.log*
+
+# arquivos locais do sistema
+.DS_Store
