@@ -214,16 +214,16 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     }
   }
 
-  function definirDocumento(valor: DocumentoCampeonato | null) {
+  async function definirDocumento(valor: DocumentoCampeonato | null) {
     if (valor !== null && documento === null && mudou) { setErro("Salve primeiro as alterações do campeonato antes de abrir um documento."); return; }
-    if (valor === null && documento && mudou && !confirmarSaida(true)) return;
+    if (valor === null && documento && mudou && !await confirmarSaida(true)) return;
     setDocumento(valor);
     setMudou(Boolean(valor));
   }
 
-  function definirAtualizacao(valor: FormularioAtualizacao | null) {
+  async function definirAtualizacao(valor: FormularioAtualizacao | null) {
     if (valor !== null && atualizacao === null && mudou) { setErro("Salve primeiro as alterações do campeonato antes de abrir uma atualização."); return; }
-    if (valor === null && atualizacao && mudou && !confirmarSaida(true)) return;
+    if (valor === null && atualizacao && mudou && !await confirmarSaida(true)) return;
     setAtualizacao(valor);
     setMudou(Boolean(valor));
   }
@@ -311,8 +311,8 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     }
   }
 
-  function novo() {
-    if (!confirmarSaida(mudou)) return;
+  async function novo() {
+    if (!await confirmarSaida(mudou)) return;
     setAtualizandoJogos(false);
     setFormulario({ ...formularioVazio, ano: new Date().getFullYear() }); setIdEditando(null); setDetalhes(null);
     setParticipantesLocais([]); setDocumento(null); setAtualizacao(null); setEtapa(0); setMudou(false); setErro(""); setSucesso("");
@@ -324,7 +324,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   }
 
   async function editar(item: Campeonato, etapaInicial = 0, atualizarJogos = false) {
-    if (!confirmarSaida(mudou)) return;
+    if (!await confirmarSaida(mudou)) return;
     setCarregando(true); setErro("");
     try {
       const completo = await carregarDetalhes(item.id);
@@ -352,7 +352,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function fechar() { if (salvando || !confirmarSaida(mudou)) return; voltarVisaoGeral(); }
+  async function fechar() { if (salvando || !await confirmarSaida(mudou)) return; voltarVisaoGeral(); }
 
   async function salvarCampeonato(publicar = false, gerandoChave = false, publicacao?: boolean): Promise<Identificador | null> {
     if (!formulario) return null;
@@ -523,8 +523,8 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   }
 
   // evita fechar o jogo enquanto o envio está em andamento
-  function fecharResultado() {
-    if (salvando || !confirmarSaida(mudou)) return;
+  async function fecharResultado() {
+    if (salvando || !await confirmarSaida(mudou)) return;
     setResultado(null); setPartidaResultado(null); setMudou(false); setErro("");
   }
 
@@ -612,7 +612,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
         {etapa === 1 && <EtapaParticipantes participantes={participantes} novoParticipante={novoParticipante} setNovoParticipante={setNovoParticipante} adicionar={adicionarParticipante} adicionarLote={adicionarLote} renomear={renomearParticipante} remover={removerParticipante} salvando={salvando} />}
         {etapa === 1 && <EtapaFormato formulario={formulario} mudar={mudar} participantes={participantes} gerar={gerarChave} podeGerar={true} salvando={salvando} temChave={Boolean(detalhes?.fases.length)} />}
         {etapa === 2 && <EtapaFormato formulario={formulario} mudar={mudar} participantes={participantes} gerar={gerarChave} podeGerar={true} salvando={salvando || Boolean(fase || partida || resultado)} temChave={Boolean(detalhes?.fases.length)} mostrarFormatos={false} />}
-        {etapa === 2 && <EtapaChave detalhes={detalhes} participantes={participantes} fase={fase} setFase={(valor) => { if (valor && !fase && mudou) { setErro("Salve o campeonato antes de adicionar uma fase."); return; } if (!valor && mudou && !confirmarSaida(true)) return; setFase(valor); setMudou(Boolean(valor)); }} salvarFase={salvarFase} partida={partida} setPartida={(valor) => { if (valor && !partida && mudou) { setErro("Salve o campeonato antes de adicionar um jogo."); return; } if (!valor && mudou && !confirmarSaida(true)) return; setPartida(valor); setMudou(Boolean(valor)); }} salvarPartida={salvarPartida} abrirResultado={abrirResultado} trocar={trocarTurmas} salvando={salvando} erro={erro} sucesso={sucesso} />}
+        {etapa === 2 && <EtapaChave detalhes={detalhes} participantes={participantes} fase={fase} setFase={async (valor) => { if (valor && !fase && mudou) { setErro("Salve o campeonato antes de adicionar uma fase."); return; } if (!valor && mudou && !await confirmarSaida(true)) return; setFase(valor); setMudou(Boolean(valor)); }} salvarFase={salvarFase} partida={partida} setPartida={async (valor) => { if (valor && !partida && mudou) { setErro("Salve o campeonato antes de adicionar um jogo."); return; } if (!valor && mudou && !await confirmarSaida(true)) return; setPartida(valor); setMudou(Boolean(valor)); }} salvarPartida={salvarPartida} abrirResultado={abrirResultado} trocar={trocarTurmas} salvando={salvando} erro={erro} sucesso={sucesso} />}
         {etapa === 3 && <EtapaRevisao formulario={formulario} participantes={participantes} detalhes={detalhes} />}
         {etapa === 3 && <EtapaPublicacao formulario={formulario} mudar={mudar} participantes={participantes} detalhes={detalhes} salvar={() => void salvarEVoltar(true)} salvarRascunho={() => void salvarEVoltar(false)} campeaoSelecionado={campeaoSelecionado} setCampeaoSelecionado={setCampeaoSelecionado} definirCampeao={definirCampeao} salvando={salvando} />}
         {!resultado && !documento && !atualizacao && !fase && !partida && <div className="pev-navegacao-etapas"><button type="button" className="pev-botao" onClick={() => etapa === 0 ? fechar() : irEtapa(etapa - 1)}>{etapa === 0 ? "Cancelar" : "Voltar"}</button><div><button type="button" className="pev-botao" onClick={() => void salvarEVoltar(Boolean(detalhes?.item.publicado))} disabled={salvando}>{salvando ? "Salvando…" : detalhes?.item.publicado ? "Salvar alterações" : "Salvar rascunho"}</button>{etapa < nomesEtapas.length - 1 && <button type="button" className="pev-botao pev-botao--primario" onClick={async () => {

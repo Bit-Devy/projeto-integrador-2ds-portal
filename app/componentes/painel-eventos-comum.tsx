@@ -1,5 +1,8 @@
 "use client";
 
+// importa a confirmação de alterações do próprio painel
+import { confirmarNoPainel } from "./confirmacao-painel";
+
 import { useEffect } from "react";
 
 export type Identificador = number | string;
@@ -159,8 +162,8 @@ export function useAvisoMudancas(mudou: boolean, aoMudarEstadoSujo?: AoMudarEsta
   }, [aoMudarEstadoSujo, mudou]);
 }
 
-export function confirmarSaida(mudou: boolean) {
-  return !mudou || window.confirm("Há mudanças não salvas. Deseja descartá-las?");
+export async function confirmarSaida(mudou: boolean) {
+  return !mudou || await confirmarNoPainel("Alterações não salvas", "Se continuar, as alterações não salvas serão descartadas.");
 }
 
 // Evita um segundo diálogo nativo logo após a confirmação explícita de um

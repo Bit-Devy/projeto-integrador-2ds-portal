@@ -5,13 +5,13 @@
 import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 
 // importa eventos, efeitos e controles de estado
-import { FormEvent, MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 // importa os campos e tipos do painel
 import { configuracaoPainel, tiposConteudoPainel, type CampoPainel } from "../conteudo/campos-painel";
 // importa a ordenação dos registros
 import { ordenarRegistrosMaisRecentes } from "../conteudo/ordenacao";
 // importa os tipos dos conteúdos e mensagens
-import type { MensagemParticipacao, RegistroConteudo, TipoConteudo } from "../conteudo/tipos";
+import type { MensagemParticipacao, RegistroConteudo, TipoConteudo, NoticiaGecep } from "../conteudo/tipos";
 // importa o painel do mapa
 import PainelMapaColegio from "./PainelMapaColegio";
 // importa o cadastro simples de salas e turmas
@@ -24,10 +24,11 @@ import PainelRepresentantes from "./PainelRepresentantes";
 // importa a biblioteca e os documentos usados em todo o portal
 import PainelDocumentos from "./PainelDocumentos";
 import NoticiasPainel from "./NoticiasPainel";
+import { confirmarEncerramentoDestaque } from "./encerrar-destaque";
+import { useSaidaPainel } from "./useSaidaPainel";
 import EscolherArquivo from "./BibliotecaArquivos";
 import SeletorPagina from "./SeletorPagina";
 import {
-  autorizarNavegacaoPainel,
   confirmarSaida,
   useAvisoMudancas,
 } from "./painel-eventos-comum";
@@ -40,6 +41,7 @@ type SecaoEventosPainel = "eventos-internos" | "interclasses" | "reunioes" | "re
 // mostra a área administrativa
 export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: string }) {
   // guarda a seção de conteúdo atual
+  const [noticiaOriginal, setNoticiaOriginal] = useState<NoticiaGecep | null>(null);
   const [revisaoNoticias, setRevisaoNoticias] = useState(0);
   const [noticiaJaPublicada, setNoticiaJaPublicada] = useState(false);
   const [cancelarNoticia, setCancelarNoticia] = useState(false);
@@ -96,9 +98,9 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
   }, [tipo]);
 
   // troca a seção de conteúdo
-  function trocarTipo(novoTipo: TipoConteudo) {
+  async function trocarTipo(novoTipo: TipoConteudo) {
     if (!mensagensAbertas && !mapaAberto && !secaoEventos && tipo === novoTipo) return;
-    if (!prepararTroca()) return;
+    if (!await prepararTroca()) return;
     setCarregando(true);
     setErro("");
     setMensagensAbertas(false);
@@ -110,9 +112,9 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
   }
 
   // abre a seção de mensagens
-  function abrirMensagens() {
+  async function abrirMensagens() {
     if (mensagensAbertas) return;
-    if (!prepararTroca()) return;
+    if (!await prepararTroca()) return;
     setMensagensAbertas(true);
     setMapaAberto(false);
     setSecaoEventos(null);
@@ -122,9 +124,9 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
   }
 
   // abre a seção do mapa
-  function abrirMapa() {
+  async function abrirMapa() {
     if (mapaAberto) return;
-    if (!prepararTroca()) return;
+    if (!await prepararTroca()) return;
     setMapaAberto(true);
     setMensagensAbertas(false);
     setSecaoEventos(null);
@@ -134,9 +136,9 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
   }
 
   // abre uma área administrativa especializada
-  function abrirSecaoEventos(secao: SecaoEventosPainel) {
+  async function abrirSecaoEventos(secao: SecaoEventosPainel) {
     if (secaoEventos === secao) return;
-    if (!prepararTroca()) return;
+    if (!await prepararTroca()) return;
     setSecaoEventos(secao);
     setMapaAberto(false);
     setMensagensAbertas(false);
@@ -146,31 +148,15 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
   }
 
   // centraliza a confirmação antes de desmontar qualquer editor do painel
-  function prepararTroca() {
-    if (!confirmarSaida(estadoSujo)) return false;
+  async function prepararTroca() {
+    if (!await confirmarSaida(estadoSujo)) return false;
     setConteudoSujo(false);
     setPainelFilhoSujo(false);
     return true;
   }
 
-  // confirma links que deixam o painel, inclusive o logout. Links abertos em
-  // outra aba não desmontam o editor atual e, portanto, não descartam dados.
-  function confirmarNavegacao(evento: ReactMouseEvent<HTMLDivElement>) {
-    if (evento.defaultPrevented || evento.button !== 0 || evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.altKey) return;
-    const origem = evento.target instanceof Element ? evento.target : null;
-    const link = origem?.closest<HTMLAnchorElement>("a[href]");
-    if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
-    const destino = link.getAttribute("href");
-    if (!destino || destino.startsWith("#") || !estadoSujo) return;
-    if (!confirmarSaida(true)) {
-      evento.preventDefault();
-      evento.stopPropagation();
-      return;
-    }
-    autorizarNavegacaoPainel();
-    setConteudoSujo(false);
-    setPainelFilhoSujo(false);
-  }
+  // confirma a saída antes de trocar de página ou voltar pelo navegador
+  useSaidaPainel(estadoSujo);
 
   // prepara um formulário vazio
   function novoRegistro() {
@@ -181,6 +167,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
     setFormulario(valores);
     setPublicado(true);
     setNoticiaJaPublicada(false);
+    setNoticiaOriginal(null);
     setIdEditando(null);
     setConteudoSujo(false);
   }
@@ -192,6 +179,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
     // completa campos que ainda não possuem valor
     setFormulario(Object.fromEntries(configuracao.campos.map((campo) => [campo.chave, dados[campo.chave] ?? (campo.tipo === "checkbox" ? false : campo.tipo === "number" ? 0 : "")])));
     setPublicado(item.publicado);
+    setNoticiaOriginal(item.tipo === "noticias" ? item.dados as NoticiaGecep : null);
     setNoticiaJaPublicada(item.publicado || Boolean((item.dados as { jaPublicada?: boolean }).jaPublicada));
     setIdEditando(item.id);
     setConteudoSujo(false);
@@ -260,14 +248,17 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
     }
   }
 
-  function mudarFormulario(campo: string, valor: ValorCampo) {
+  async function mudarFormulario(campo: string, valor: ValorCampo) {
+    if (tipo === "noticias" && campo === "destaque" && valor === false && publicado && noticiaOriginal?.destaque) {
+      if (!await confirmarEncerramentoDestaque(noticiaOriginal.destaqueAte, true)) return;
+    }
     setFormulario((atual) => atual ? { ...atual, [campo]: valor } : atual);
     setConteudoSujo(true);
   }
 
-  function fecharFormulario() {
+  async function fecharFormulario() {
     if (tipo === "noticias" && conteudoSujo) { setCancelarNoticia(true); return; }
-    if (!confirmarSaida(conteudoSujo)) return;
+    if (!await confirmarSaida(conteudoSujo)) return;
     setFormulario(null);
     setIdEditando(null);
     setConteudoSujo(false);
@@ -299,7 +290,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
   }
 
   return (
-    <div className="painel-administrativo" onClickCapture={confirmarNavegacao}>
+    <div className="painel-administrativo">
       {/* menu lateral do painel */}
       <aside className="menu-painel">
         {/* identificação do usuário */}
@@ -354,7 +345,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
             {erro && <p className="erro-painel" role="alert">{erro}</p>}
 
             {/* separa os arquivos privados das versões oficiais e das publicações */}
-            {tipo === "documentos" && <div className="abas-documentos" role="group" aria-label="Áreas de documentos">{([["arquivos", "Arquivos"], ["normas", "Estatuto e Regimento"], ["publicacoes", "Publicações"]] as const).map(([aba, nome]) => <button type="button" key={aba} aria-pressed={abaDocumentos === aba} onClick={() => { if (!prepararTroca()) return; setFormulario(null); setAbaDocumentos(aba); }}>{nome}</button>)}</div>}
+            {tipo === "documentos" && <div className="abas-documentos" role="group" aria-label="Áreas de documentos">{([["arquivos", "Arquivos"], ["normas", "Estatuto e Regimento"], ["publicacoes", "Publicações"]] as const).map(([aba, nome]) => <button type="button" key={aba} aria-pressed={abaDocumentos === aba} onClick={async () => { if (!await prepararTroca()) return; setFormulario(null); setAbaDocumentos(aba); }}>{nome}</button>)}</div>}
 
             {/* formulário ou lista de registros */}
             {tipo === "documentos" && abaDocumentos !== "publicacoes" ? <PainelDocumentos key={abaDocumentos} aba={abaDocumentos} aoMudarEstadoSujo={setPainelFilhoSujo} /> : formulario ? (

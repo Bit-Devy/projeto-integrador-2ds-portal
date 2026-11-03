@@ -139,8 +139,8 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
     setSucesso("");
   }
 
-  function novo(turma = "") {
-    if (!confirmarSaida(mudou)) return;
+  async function novo(turma = "") {
+    if (!await confirmarSaida(mudou)) return;
     const selecionada = turmasPublicadas.find((item) => `${item.nome} · ${nomeTurno(item.turno)}` === turma);
     setFormulario({ ...formularioVazio, ...(selecionada ? dadosDaTurma(selecionada) : {}) });
     setIdEditando(null);
@@ -150,8 +150,8 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function editar(item: Representante) {
-    if (!confirmarSaida(mudou)) return;
+  async function editar(item: Representante) {
+    if (!await confirmarSaida(mudou)) return;
     const { id: _id, atualizadoEm: _atualizadoEm, ...dados } = item;
     void _id;
     void _atualizadoEm;
@@ -163,8 +163,8 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function fechar() {
-    if (!confirmarSaida(mudou)) return;
+  async function fechar() {
+    if (!await confirmarSaida(mudou)) return;
     setFormulario(null);
     setIdEditando(null);
     setMudou(false);

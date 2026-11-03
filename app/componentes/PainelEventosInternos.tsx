@@ -125,8 +125,8 @@ export default function PainelEventosInternos({ aoMudarEstadoSujo }: { aoMudarEs
     setSucesso("");
   }
 
-  function novo() {
-    if (!confirmarSaida(mudou)) return;
+  async function novo() {
+    if (!await confirmarSaida(mudou)) return;
     setFormulario({ ...formularioVazio, documentos: [], imagens: [] });
     setIdEditando(null);
     setMudou(false);
@@ -134,8 +134,8 @@ export default function PainelEventosInternos({ aoMudarEstadoSujo }: { aoMudarEs
     setSucesso("");
   }
 
-  function editar(item: EventoInterno) {
-    if (!confirmarSaida(mudou)) return;
+  async function editar(item: EventoInterno) {
+    if (!await confirmarSaida(mudou)) return;
     const { id: _id, atualizadoEm: _atualizadoEm, ...dados } = item;
     void _id;
     void _atualizadoEm;
@@ -147,8 +147,8 @@ export default function PainelEventosInternos({ aoMudarEstadoSujo }: { aoMudarEs
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function duplicar(item: EventoInterno) {
-    if (!confirmarSaida(mudou)) return;
+  async function duplicar(item: EventoInterno) {
+    if (!await confirmarSaida(mudou)) return;
     const { id: _id, atualizadoEm: _atualizadoEm, ...dados } = item;
     void _id;
     void _atualizadoEm;
@@ -160,8 +160,8 @@ export default function PainelEventosInternos({ aoMudarEstadoSujo }: { aoMudarEs
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function fechar() {
-    if (!confirmarSaida(mudou)) return;
+  async function fechar() {
+    if (!await confirmarSaida(mudou)) return;
     setFormulario(null);
     setIdEditando(null);
     setMudou(false);

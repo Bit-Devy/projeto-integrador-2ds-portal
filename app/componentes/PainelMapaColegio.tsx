@@ -143,9 +143,9 @@ export default function PainelMapaColegio({ aoMudarEstadoSujo }: { aoMudarEstado
   }, [busca, dados, entidade, filtroEstado, filtroTipo, filtroTurno]);
 
   // troca a seção e limpa a tela
-  function trocarEntidade(novaEntidade: EntidadeMapa) {
+  async function trocarEntidade(novaEntidade: EntidadeMapa) {
     if (novaEntidade === entidade) return;
-    if (!confirmarSaida(mudou)) return;
+    if (!await confirmarSaida(mudou)) return;
     setEntidade(novaEntidade);
     setFormulario(null);
     setIdEditando(null);
@@ -227,8 +227,8 @@ export default function PainelMapaColegio({ aoMudarEstadoSujo }: { aoMudarEstado
     setSucesso("");
   }
 
-  function fecharFormulario() {
-    if (!confirmarSaida(mudou)) return;
+  async function fecharFormulario() {
+    if (!await confirmarSaida(mudou)) return;
     setFormulario(null);
     setIdEditando(null);
     setMudou(false);

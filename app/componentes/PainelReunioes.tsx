@@ -212,8 +212,8 @@ export default function PainelReunioes({ aoMudarEstadoSujo }: { aoMudarEstadoSuj
     setSucesso("");
   }
 
-  function novo() {
-    if (!confirmarSaida(mudou)) return;
+  async function novo() {
+    if (!await confirmarSaida(mudou)) return;
     setFormulario({ ...formularioVazio });
     setIdEditando(null);
     setDetalhes(null);
@@ -224,7 +224,7 @@ export default function PainelReunioes({ aoMudarEstadoSujo }: { aoMudarEstadoSuj
   }
 
   async function editar(item: Reuniao, abaInicial: AbaReuniao = "informacoes") {
-    if (!confirmarSaida(mudou)) return;
+    if (!await confirmarSaida(mudou)) return;
     setCarregando(true);
     setErro("");
     try {
@@ -247,8 +247,8 @@ export default function PainelReunioes({ aoMudarEstadoSujo }: { aoMudarEstadoSuj
     }
   }
 
-  function fechar() {
-    if (!confirmarSaida(mudou)) return;
+  async function fechar() {
+    if (!await confirmarSaida(mudou)) return;
     setFormulario(null);
     setIdEditando(null);
     setDetalhes(null);
@@ -470,20 +470,20 @@ export default function PainelReunioes({ aoMudarEstadoSujo }: { aoMudarEstadoSuj
     setAba(nome);
   }
 
-  function definirDocumento(valor: DocumentoReuniao | null) {
-    if (valor === null && documento && mudou && !confirmarSaida(true)) return;
+  async function definirDocumento(valor: DocumentoReuniao | null) {
+    if (valor === null && documento && mudou && !await confirmarSaida(true)) return;
     setDocumento(valor);
     setMudou(Boolean(valor));
   }
 
-  function definirVotacao(valor: VotacaoReuniao | null) {
-    if (valor === null && votacao && mudou && !confirmarSaida(true)) return;
+  async function definirVotacao(valor: VotacaoReuniao | null) {
+    if (valor === null && votacao && mudou && !await confirmarSaida(true)) return;
     setVotacao(valor);
     setMudou(Boolean(valor));
   }
 
-  function definirItemReuniao(valor: ItemReuniao | null) {
-    if (valor === null && itemReuniao && mudou && !confirmarSaida(true)) return;
+  async function definirItemReuniao(valor: ItemReuniao | null) {
+    if (valor === null && itemReuniao && mudou && !await confirmarSaida(true)) return;
     setItemReuniao(valor);
     setMudou(Boolean(valor));
   }
@@ -501,8 +501,8 @@ export default function PainelReunioes({ aoMudarEstadoSujo }: { aoMudarEstadoSuj
     setSucesso("");
   }
 
-  function fecharPresencaManual() {
-    if (!confirmarSaida(mudou)) return;
+  async function fecharPresencaManual() {
+    if (!await confirmarSaida(mudou)) return;
     setPresencaManual(null);
     setMudou(false);
   }

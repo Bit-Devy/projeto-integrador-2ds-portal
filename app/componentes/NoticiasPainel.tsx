@@ -6,6 +6,9 @@ import type { RegistroConteudo, NoticiaGecep } from "../conteudo/tipos";
 import { anoDoPortal, destaqueValido } from "../conteudo/periodos";
 import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 
+// confirma o encerramento antecipado dos destaques
+import { confirmarEncerramentoDestaque } from "./encerrar-destaque";
+
 type Noticia = RegistroConteudo<"noticias">;
 
 // separa os destaques do arquivo de notícias e confirma ações dentro do site
@@ -60,7 +63,7 @@ export default function NoticiasPainel({ editar, atualizacao }: { editar: (item:
     {carregando ? <p role="status">Carregando notícias…</p> : <div className="lista-painel">{!itens.length && <p>Nenhuma notícia nesta seção.</p>}{itens.map((item) => <article key={item.id}>
       <span className={item.publicado ? "estado-publicado" : "estado-rascunho"}>{item.publicado ? "Publicada" : item.dados.jaPublicada ? "Arquivada" : "Rascunho"}</span>
       <div><h2>{item.titulo}</h2><p>{item.dados.data.split("-").reverse().join("/")}</p>{item.dados.destaque && <p>{!destaqueValido(item.dados) && "Prazo encerrado · "}{item.dados.destaqueAte ? `Destaque até ${item.dados.destaqueAte.split("-").reverse().join("/")}` : "Destaque sem prazo definido"}</p>}
-      {visao === "destaques" && <label className="campo-publicado"><CheckboxComAjuda checked={Boolean(item.dados.destaque)} aria-label={`Mostrar em destaque: ${item.titulo}`} explicacao={descricaoCheckbox("destaque")} disabled={salvando} onChange={async () => { setSalvando(true); try { await gravar(item, { ...item.dados, destaque: false }); atualizar(); } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível retirar o destaque."); } finally { setSalvando(false); } }} /><span>Mostrar em destaque</span></label>}</div>
+      {visao === "destaques" && <label className="campo-publicado"><CheckboxComAjuda checked={Boolean(item.dados.destaque)} aria-label={`Mostrar em destaque: ${item.titulo}`} explicacao={descricaoCheckbox("destaque")} disabled={salvando} onChange={async () => { if (!await confirmarEncerramentoDestaque(item.dados.destaqueAte)) return; setSalvando(true); try { await gravar(item, { ...item.dados, destaque: false }); atualizar(); } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível retirar o destaque."); } finally { setSalvando(false); } }} /><span>Mostrar em destaque</span></label>}</div>
       <div className="acoes-item-painel"><button type="button" onClick={() => editar(item)}>Editar</button>{item.publicado && <button type="button" onClick={() => { setErro(""); setAcao({ item, tipo: "arquivar" }); }}>Arquivar</button>}<button type="button" onClick={() => { setErro(""); setAcao({ item, tipo: "excluir" }); }}>Excluir</button></div>
     </article>)}</div>}
     {total > 20 && <nav className="paginacao-eventos" aria-label="Páginas de notícias"><button type="button" disabled={pagina <= 1} onClick={() => { setPagina(pagina - 1); setCarregando(true); }}>Anterior</button><span>{pagina} de {Math.ceil(total / 20)}</span><button type="button" disabled={pagina * 20 >= total} onClick={() => { setPagina(pagina + 1); setCarregando(true); }}>Próxima</button></nav>}

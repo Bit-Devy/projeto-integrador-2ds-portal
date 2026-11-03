@@ -44,23 +44,23 @@ export default function PainelSalas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?:
   useEffect(() => { const inicio = setTimeout(() => { void carregar(); }, 0); return () => clearTimeout(inicio); }, [carregar]);
 
   // permite sair do cadastro sem perder mudanças por acidente
-  function fechar() {
-    if (!confirmarSaida(mudou)) return false;
+  async function fechar() {
+    if (!await confirmarSaida(mudou)) return false;
     setTurma(null); setSala(null); setMudou(false); setErro("");
     return true;
   }
 
   // abre uma turma mantendo os dados existentes do mapa
-  function editarTurma(item?: TurmaAtividadeMapa) {
-    if (!fechar()) return;
+  async function editarTurma(item?: TurmaAtividadeMapa) {
+    if (!await fechar()) return;
     setTurma(item ? { ...item } : { ...turmaVazia });
     const vinculo = dados.ensalamentos.find((registro) => registro.turmaAtividadeId === item?.id && registro.ativo && registro.localId);
     setVincularSala(Boolean(vinculo)); setSalaId(vinculo?.localId ? String(vinculo.localId) : "");
   }
 
   // abre o cadastro curto de uma sala física
-  function editarSala(item?: LocalMapa) {
-    if (!fechar()) return;
+  async function editarSala(item?: LocalMapa) {
+    if (!await fechar()) return;
     setSala(item ? { ...item } : { ...salaVazia });
   }
 
