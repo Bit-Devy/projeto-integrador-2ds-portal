@@ -10,6 +10,11 @@ import { ErroJsonInvalido, lerObjetoJson } from "../../lib/corpo-json";
 // valida os botões e protege os documentos que têm uma versão central
 import { paginasPublicadas, caminhoInterno } from "../../conteudo/paginas";
 
+// importa o arquivo do painel e a confirmação de senha
+import { consultarNoticiasPainel, prepararNoticia } from "../../conteudo/noticias-gestao";
+import { validarSenhaAdministrativa } from "../../lib/sessao";
+import { consumirTentativa, identificarNavegador, guardarNavegador, limparTentativasLogin } from "../../lib/limites";
+
 // lista os tipos aceitos pela api
 const tiposPermitidos: TipoConteudo[] = [
   "membros",
@@ -63,6 +68,11 @@ export async function GET(request: Request) {
       if (resposta) return resposta;
     }
 
+    if (tipo === "noticias" && mostrarTodos && url.searchParams.has("visao")) {
+      const resultado = await consultarNoticiasPainel(url.searchParams);
+      return Response.json({ itens: resultado.linhas.map((linha) => formatarLinha(linha as LinhaConteudo)), pagina: resultado.pagina, total: resultado.total }, { headers: { "cache-control": "private, no-store" } });
+    }
+
     // monta a consulta pública ou privada
     const filtro = mostrarTodos
       ? "SELECT * FROM conteudos WHERE tipo = ?"
@@ -91,7 +101,8 @@ export async function POST(request: Request) {
     // prepara e valida os dados recebidos
     await garantirBanco();
     const corpo = await lerCorpo(request);
-    await validarBotoes(corpo.tipo, corpo.dados);
+    if (corpo.tipo === "noticias") prepararNoticia(corpo.dados, corpo.publicado);
+    if (corpo.publicado) await validarBotoes(corpo.tipo, corpo.dados);
     if (corpo.tipo === "documentos" && corpo.dados.documentoOficial) throw new ErroJsonInvalido("Use a aba Estatuto e Regimento para alterar os PDFs oficiais.");
     const titulo = obterTitulo(corpo.tipo, corpo.dados);
     // salva o conteúdo e devolve a linha criada
@@ -121,16 +132,21 @@ export async function PUT(request: Request) {
     if (!Number.isInteger(id) || id <= 0) throw new Error("Registro inválido.");
     // valida o restante do conteúdo
     const corpo = validarCorpo(dadosRecebidos);
+    const anterior = await getD1().prepare("SELECT * FROM conteudos WHERE id = ?").bind(id).first<LinhaConteudo>();
+    if (anterior && anterior.tipo !== corpo.tipo) throw new ErroJsonInvalido("Não é possível mudar o tipo deste registro.");
+    if (corpo.tipo === "noticias") prepararNoticia(corpo.dados, corpo.publicado, anterior || undefined);
     await protegerDocumentoOficial(id);
-    await validarBotoes(corpo.tipo, corpo.dados);
+    if (corpo.publicado) await validarBotoes(corpo.tipo, corpo.dados);
     if (corpo.tipo === "documentos" && corpo.dados.documentoOficial) throw new ErroJsonInvalido("Use a aba Estatuto e Regimento para alterar os PDFs oficiais.");
     const titulo = obterTitulo(corpo.tipo, corpo.dados);
     // atualiza o registro e sua data de alteração
     const resultado = await getD1()
       .prepare(`UPDATE conteudos
-        SET tipo = ?, titulo = ?, dados_json = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP
+        SET tipo = ?, titulo = ?, dados_json = CASE WHEN tipo = 'noticias' THEN
+          json_set(?, '$.jaPublicada', json(CASE WHEN publicado = 1 OR json_extract(dados_json, '$.jaPublicada') = 1 OR ? = 1 THEN 'true' ELSE 'false' END)) ELSE ? END,
+          publicado = ?, atualizado_em = CURRENT_TIMESTAMP
         WHERE id = ? RETURNING *`)
-      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, id)
+      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, id)
       .first<LinhaConteudo>();
 
     // informa quando o registro não existe
@@ -153,9 +169,22 @@ export async function DELETE(request: Request) {
     await garantirBanco();
     const id = Number(new URL(request.url).searchParams.get("id"));
     if (!Number.isInteger(id) || id <= 0) throw new Error("Registro inválido.");
+    // exige novamente a senha se a notícia já passou pelo portal
+    let senhaConfirmada = false;
+    const registro = await getD1().prepare("SELECT * FROM conteudos WHERE id = ?").bind(id).first<LinhaConteudo>();
+    if (registro?.tipo === "noticias" && (registro.publicado || JSON.parse(registro.dados_json).jaPublicada)) {
+      const corpo = await lerObjetoJson(request);
+      const navegador = identificarNavegador(request);
+      const tentativa = await consumirTentativa("login", navegador);
+      if (!tentativa.permitido) return guardarNavegador(Response.json({ erro: "Aguarde antes de tentar confirmar a senha novamente." }, { status: 429 }), request, navegador);
+      if (!await validarSenhaAdministrativa(String(corpo.senha || ""))) return guardarNavegador(Response.json({ erro: "Senha incorreta. A notícia foi mantida." }, { status: 403 }), request, navegador);
+      await limparTentativasLogin(navegador);
+      senhaConfirmada = true;
+    }
     // remove o registro pelo identificador
     await protegerDocumentoOficial(id);
-    await getD1().prepare("DELETE FROM conteudos WHERE id = ?").bind(id).run();
+    const removido = await getD1().prepare("DELETE FROM conteudos WHERE id = ? AND (tipo <> 'noticias' OR (publicado = 0 AND COALESCE(json_extract(dados_json, '$.jaPublicada'), 0) = 0) OR ? = 1)").bind(id, senhaConfirmada ? 1 : 0).run();
+    if (registro && !removido.meta.changes) return Response.json({ erro: "A notícia mudou durante a operação. Recarregue e confirme a exclusão novamente." }, { status: 409 });
     return Response.json({ removido: true });
   } catch (erro) {
     return respostaErro(erro);
@@ -199,7 +228,9 @@ function validarCorpo(corpo: Record<string, unknown>) {
   if (!titulo || titulo.length > 180) throw new Error("Informe um título válido.");
 
   // encontra os campos obrigatórios vazios
-  const ausentes = camposObrigatorios[tipo].filter((campo) => dados[campo] === "" || dados[campo] === undefined || dados[campo] === null);
+  const rascunhoNoticia = tipo === "noticias" && corpo.publicado === false;
+  if (rascunhoNoticia && !dados.data) dados.data = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const ausentes = (rascunhoNoticia ? ["titulo"] : camposObrigatorios[tipo]).filter((campo) => dados[campo] === "" || dados[campo] === undefined || dados[campo] === null);
   if (ausentes.length) throw new Error(`Preencha os campos obrigatórios: ${ausentes.join(", ")}.`);
   if (["noticias", "movimentos", "eventos"].includes(tipo) || (tipo === "documentos" && dados.dataDocumento)) {
     const data = String(tipo === "documentos" ? dados.dataDocumento : dados.data);
@@ -216,7 +247,7 @@ function validarCorpo(corpo: Record<string, unknown>) {
     if (!["entrada", "saida"].includes(String(dados.tipo))) throw new Error("Escolha entrada ou saída.");
     if (!Number.isFinite(Number(dados.valor)) || Number(dados.valor) < 0) throw new Error("Informe um valor válido.");
   }
-  if (tipo === "noticias" && dados.imagemUrl && (!dados.imagemAlt || !dados.creditoImagem)) {
+  if (tipo === "noticias" && !rascunhoNoticia && dados.imagemUrl && (!dados.imagemAlt || !dados.creditoImagem)) {
     throw new Error("Informe a descrição e o crédito da imagem.");
   }
 

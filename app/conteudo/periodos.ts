@@ -20,3 +20,9 @@ export function anosDisponiveis(datas: string[], selecionado: string, atual = an
 export function pertenceAoAno(data: string, ano: string) {
   return ano === "todos" || data.slice(0, 4) === ano;
 }
+
+// confere o prazo do destaque até o final do dia no paraná
+export function destaqueValido(noticia: { destaque: boolean; destaqueAte?: string }, agora = new Date()) {
+  const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(agora);
+  return noticia.destaque && (!noticia.destaqueAte || noticia.destaqueAte >= hoje);
+}

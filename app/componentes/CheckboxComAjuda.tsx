@@ -10,7 +10,7 @@ export function descricaoCheckbox(chave: string) {
     publicado: "Marcado: permite mostrar este registro no portal depois de salvar. Desmarcado: mantém o registro fora da consulta pública. Anexos também dependem da publicação do conteúdo ao qual pertencem.",
     ativo: "Marcado: mantém este cadastro disponível para uso. Desmarcado: desativa o cadastro e impede seu uso como registro atual, preservando o histórico. A exibição pública também depende da opção de publicação.",
     real: "Marcado: identifica o documento como oficial no catálogo. Desmarcado: identifica como publicação do GECEP. Esta opção não publica o arquivo; a publicação é controlada separadamente.",
-    destaque: "Marcado: permite destacar esta notícia na página inicial, entre as notícias do ano atual. Desmarcado: não dá prioridade de destaque; a notícia publicada continua na lista e ainda pode aparecer na seleção automática quando não há destaques.",
+    destaque: "Marcado: destaca esta notícia do ano atual até a data escolhida. Desmarcado: retira o destaque, mantendo a notícia na lista pública se estiver publicada.",
     botaoInternoAtivo: "Marcado: permite escolher uma página do portal e mostrar um botão para ela no fim da notícia. Desmarcado: oculta esse botão na notícia.",
     botaoExternoAtivo: "Marcado: mostra o botão para o endereço externo informado, com confirmação antes da saída do GECEP. Desmarcado: oculta esse botão na notícia.",
     chavePublicada: "Marcado: libera a chave e os jogos que também estiverem publicados, desde que o campeonato esteja público. Desmarcado: oculta a chave e os jogos da página pública, sem apagar os resultados salvos.",

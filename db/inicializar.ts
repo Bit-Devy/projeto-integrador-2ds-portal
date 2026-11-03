@@ -228,6 +228,9 @@ async function prepararBanco() {
     '$.documentoOficial', ?, '$.link', ?) WHERE tipo = 'documentos' AND json_extract(dados_json, '$.link') = ?`)
     .bind(indice === 0 ? "estatuto" : "regimento", `/api/documentos-oficiais/${indice === 0 ? "estatuto" : "regimento"}`, documento.link)));
 
+  // registra as notícias que já estavam públicas antes deste recurso
+  await d1.prepare("UPDATE conteudos SET dados_json = json_set(dados_json, '$.jaPublicada', json('true')) WHERE tipo = 'noticias' AND publicado = 1 AND COALESCE(json_extract(dados_json, '$.jaPublicada'), 0) = 0").run();
+
   // evita repetir os conteúdos iniciais
   const quantidade = await d1.prepare("SELECT COUNT(*) AS total FROM conteudos").first<{ total: number }>();
   if ((quantidade?.total ?? 0) > 0) {

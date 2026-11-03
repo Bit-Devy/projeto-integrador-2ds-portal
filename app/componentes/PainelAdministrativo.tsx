@@ -5,7 +5,7 @@
 import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 
 // importa eventos, efeitos e controles de estado
-import { FormEvent, MouseEvent as ReactMouseEvent, useEffect, useState } from "react";
+import { FormEvent, MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from "react";
 // importa os campos e tipos do painel
 import { configuracaoPainel, tiposConteudoPainel, type CampoPainel } from "../conteudo/campos-painel";
 // importa a ordenação dos registros
@@ -23,6 +23,7 @@ import PainelReunioes from "./PainelReunioes";
 import PainelRepresentantes from "./PainelRepresentantes";
 // importa a biblioteca e os documentos usados em todo o portal
 import PainelDocumentos from "./PainelDocumentos";
+import NoticiasPainel from "./NoticiasPainel";
 import EscolherArquivo from "./BibliotecaArquivos";
 import SeletorPagina from "./SeletorPagina";
 import {
@@ -39,6 +40,11 @@ type SecaoEventosPainel = "eventos-internos" | "interclasses" | "reunioes" | "re
 // mostra a área administrativa
 export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: string }) {
   // guarda a seção de conteúdo atual
+  const [revisaoNoticias, setRevisaoNoticias] = useState(0);
+  const [noticiaJaPublicada, setNoticiaJaPublicada] = useState(false);
+  const [cancelarNoticia, setCancelarNoticia] = useState(false);
+  const janelaCancelar = useRef<HTMLDialogElement>(null);
+  useEffect(() => { if (cancelarNoticia) janelaCancelar.current?.showModal(); }, [cancelarNoticia]);
   const [tipo, setTipo] = useState<TipoConteudo>("noticias");
   const [abaDocumentos, setAbaDocumentos] = useState<"arquivos" | "normas" | "publicacoes">("arquivos");
   // controla a seção de mensagens
@@ -73,6 +79,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
 
   // carrega os registros da seção atual
   useEffect(() => {
+    if (tipo === "noticias") return;
     // evita atualizar a tela depois de sair
     let ativo = true;
     // consulta todos os registros do tipo
@@ -173,6 +180,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
     );
     setFormulario(valores);
     setPublicado(true);
+    setNoticiaJaPublicada(false);
     setIdEditando(null);
     setConteudoSujo(false);
   }
@@ -184,6 +192,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
     // completa campos que ainda não possuem valor
     setFormulario(Object.fromEntries(configuracao.campos.map((campo) => [campo.chave, dados[campo.chave] ?? (campo.tipo === "checkbox" ? false : campo.tipo === "number" ? 0 : "")])));
     setPublicado(item.publicado);
+    setNoticiaJaPublicada(item.publicado || Boolean((item.dados as { jaPublicada?: boolean }).jaPublicada));
     setIdEditando(item.id);
     setConteudoSujo(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -193,6 +202,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!formulario) return;
+    const rascunho = tipo === "noticias" && (evento.nativeEvent as SubmitEvent).submitter?.getAttribute("value") === "rascunho";
     setSalvando(true);
     setErro("");
 
@@ -201,7 +211,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
       const resposta = await fetch("/api/conteudo", {
         method: idEditando ? "PUT" : "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: idEditando, tipo, dados: formulario, publicado }),
+        body: JSON.stringify({ id: idEditando, tipo, dados: formulario, publicado: tipo === "noticias" ? !rascunho : publicado }),
       });
       // lê o registro salvo
       const resultado = await resposta.json() as { item?: RegistroConteudo; erro?: string };
@@ -210,6 +220,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
       setItens((atuais) => ordenarRegistrosMaisRecentes(idEditando
         ? atuais.map((item) => item.id === idEditando ? resultado.item as RegistroConteudo : item)
         : [...atuais, resultado.item as RegistroConteudo]));
+      setRevisaoNoticias((valor) => valor + 1);
       setFormulario(null);
       setIdEditando(null);
       setConteudoSujo(false);
@@ -255,6 +266,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
   }
 
   function fecharFormulario() {
+    if (tipo === "noticias" && conteudoSujo) { setCancelarNoticia(true); return; }
     if (!confirmarSaida(conteudoSujo)) return;
     setFormulario(null);
     setIdEditando(null);
@@ -311,6 +323,8 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
         <a className="sair-painel" href="/api/logout">Sair do painel</a>
       </aside>
 
+      {/* confirma o descarte sem usar uma janela do navegador */}
+      <dialog ref={janelaCancelar} className="dialogo-anonimato" aria-labelledby="titulo-cancelar-noticia" onCancel={() => setCancelarNoticia(false)}><h2 id="titulo-cancelar-noticia">Descartar alterações?</h2><p>As alterações não salvas desta notícia serão perdidas.</p><div className="acoes-dialogo-anonimato"><button type="button" className="botao-secundario" onClick={() => { janelaCancelar.current?.close(); setCancelarNoticia(false); }}>Continuar editando</button><button type="button" className="botao-primario" onClick={() => { janelaCancelar.current?.close(); setCancelarNoticia(false); setFormulario(null); setIdEditando(null); setConteudoSujo(false); }}>Descartar alterações</button></div></dialog>
       {/* conteúdo da seção escolhida */}
       <div className="conteudo-painel">
         {/* painel do mapa ou das mensagens */}
@@ -344,18 +358,19 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
 
             {/* formulário ou lista de registros */}
             {tipo === "documentos" && abaDocumentos !== "publicacoes" ? <PainelDocumentos key={abaDocumentos} aba={abaDocumentos} aoMudarEstadoSujo={setPainelFilhoSujo} /> : formulario ? (
-              <form className="formulario-painel" onSubmit={salvar}>
+              <form className={tipo === "noticias" ? "formulario-painel formulario-noticia" : "formulario-painel"} onSubmit={salvar}>
                 {/* título do formulário */}
                 <div className="titulo-formulario-painel"><div><small>{idEditando ? "EDITANDO" : "NOVO REGISTRO"}</small><h2>{idEditando ? "Atualizar" : "Adicionar"} {configuracao.singular}</h2></div><button type="button" onClick={fecharFormulario}>Fechar</button></div>
                 {/* campos configurados para a seção */}
                 <div className="grade-campos-painel">
                   {configuracao.campos.filter((campo) => !campo.dependeDe || Boolean(formulario[campo.dependeDe])).map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} key={campo.chave} />)}
-                  <label className="campo-publicado"><CheckboxComAjuda checked={publicado} onChange={(evento) => { setPublicado(evento.target.checked); setConteudoSujo(true); }} explicacao={descricaoCheckbox("publicado")} aria-label={"Publicar este registro no portal"} /><span>Publicar este registro no portal</span></label>
+                  {tipo !== "noticias" && <label className="campo-publicado"><CheckboxComAjuda checked={publicado} onChange={(evento) => { setPublicado(evento.target.checked); setConteudoSujo(true); }} explicacao={descricaoCheckbox("publicado")} aria-label={"Publicar este registro no portal"} /><span>Publicar este registro no portal</span></label>}
                 </div>
+                {tipo === "noticias" && <p className="ajuda-busca">Salvar registro publica a notícia no portal. Salvar em rascunho mantém uma notícia nova apenas no painel.</p>}
                 {/* botões do formulário */}
-                <div className="acoes-formulario-painel"><button type="button" onClick={fecharFormulario}>Cancelar</button><button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Salvar registro"}</button></div>
+                <div className="acoes-formulario-painel"><button type="button" onClick={fecharFormulario}>Cancelar</button>{tipo === "noticias" && !noticiaJaPublicada && <button type="submit" name="acao" value="rascunho" formNoValidate disabled={salvando}>Salvar em rascunho</button>}<button type="submit" name="acao" value="publicar" disabled={salvando}>{salvando ? "Salvando..." : "Salvar registro"}</button></div>
               </form>
-            ) : (
+            ) : tipo === "noticias" ? <NoticiasPainel editar={editarRegistro} atualizacao={revisaoNoticias} /> : (
               <div className="lista-painel">
                 {/* estados da lista */}
                 {carregando && <p>Carregando registros...</p>}
@@ -386,7 +401,7 @@ function CampoFormulario({ campo, valor, mudar, enviarArquivo }: { campo: CampoP
   // oferece páginas publicadas para o botão interno da notícia
   if (campo.tipo === "pagina") return <label><span>{campo.rotulo}</span><SeletorPagina valor={String(valor ?? "")} mudar={(endereco) => mudar(endereco)} /></label>;
   // mostra um campo simples
-  return <label><span>{campo.rotulo}</span><input type={campo.tipo} value={String(valor ?? "")} step={campo.tipo === "number" ? "0.01" : undefined} onChange={(evento) => mudar(campo.tipo === "number" ? Number(evento.target.value) : evento.target.value)} required={campo.obrigatorio} />{campo.dica && <small>{campo.dica}</small>}</label>;
+  return <label className={campo.chave === "destaqueAte" ? "campo-largo" : undefined}><span>{campo.rotulo}</span><input type={campo.tipo} value={String(valor ?? "")} step={campo.tipo === "number" ? "0.01" : undefined} onChange={(evento) => mudar(campo.tipo === "number" ? Number(evento.target.value) : evento.target.value)} required={campo.obrigatorio} />{campo.dica && <small>{campo.dica}</small>}</label>;
 }
 
 

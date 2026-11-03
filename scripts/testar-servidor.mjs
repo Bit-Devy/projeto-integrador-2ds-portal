@@ -89,6 +89,7 @@ try {
   await testarLimiteSeries(cookie);
   await testarAtualizacaoPublicada(cookie);
   await testarConteudo(cookie);
+  await testarGestaoNoticias(cookie);
   await testarPublicacoes2027(cookie);
   await testarMensagens(cookie);
   await testarArquivos(cookie);
@@ -889,6 +890,7 @@ async function testarSistemaEventos(cookie) {
 
 // envia uma requisição autenticada e inclui o erro da API na falha do teste
 async function requisicaoDominio(cookie, caminho, method = "GET", body, statusEsperado = 200) {
+  if (method === "DELETE" && caminho.startsWith("/api/conteudo?") && body === undefined && statusEsperado === 200) body = { senha: await lerSenhaLocal() };
   const resposta = await fetch(`${endereco}${caminho}`, {
     method,
     headers: {
@@ -2023,4 +2025,35 @@ async function testarArquivos(cookie) {
       headers: { cookie },
     });
   }
+}
+
+// verifica rascunho destaque arquivamento e senha na exclusão definitiva
+async function testarGestaoNoticias(cookie) {
+  const titulo = `Notícia temporária da gestão ${Date.now()}`;
+  const rascunho = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados: { titulo } }, 201)).item;
+  const id = rascunho.id;
+  try {
+    assert.equal(rascunho.dados.jaPublicada, false);
+    const ano = rascunho.dados.data.slice(0, 4);
+    assert.ok((await requisicaoDominio(cookie, `/api/conteudo?tipo=noticias&todos=1&visao=rascunhos&ano=${ano}`)).itens.some((item) => item.id === id));
+    const dados = { ...rascunho.dados, categoria: "Teste", resumo: "Registro temporário para conferir as proteções", destaque: true };
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "noticias", publicado: true, dados }, 400);
+    const publicada = (await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "noticias", publicado: true, dados: { ...dados, destaqueAte: "2199-12-31" } })).item;
+    assert.equal(publicada.dados.jaPublicada, true);
+    assert.ok((await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1&visao=destaques")).itens.some((item) => item.id === id));
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "noticias", publicado: true, dados: { ...publicada.dados, destaque: false } });
+    assert.ok(!(await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1&visao=destaques")).itens.some((item) => item.id === id));
+    assert.ok((await requisicaoPublica("/api/conteudo?tipo=noticias")).itens.some((item) => item.id === id));
+    await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE", { senha: "senha errada do teste" }, 403);
+    const arquivada = (await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "noticias", publicado: false, dados: { ...publicada.dados, jaPublicada: false, destaque: false } })).item;
+    assert.equal(arquivada.dados.jaPublicada, true);
+    assert.ok((await requisicaoDominio(cookie, `/api/conteudo?tipo=noticias&todos=1&visao=arquivadas&ano=${ano}`)).itens.some((item) => item.id === id));
+    assert.ok(!(await requisicaoPublica("/api/conteudo?tipo=noticias")).itens.some((item) => item.id === id));
+    await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE", {}, 403);
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "projetos", dados: { titulo, categoria: "Teste", estado: "Planejado", texto: "Teste" } }, 400);
+    const outro = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados: { titulo: `${titulo} rascunho` } }, 201)).item;
+    const exclusao = await fetch(`${endereco}/api/conteudo?id=${outro.id}`, { method: "DELETE", headers: { cookie } });
+    assert.equal(exclusao.status, 200);
+    console.log("Gestão de notícias: rascunhos, destaque, arquivo e confirmação de senha: OK");
+  } finally { await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE"); }
 }

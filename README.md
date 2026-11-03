@@ -48,3 +48,5 @@ Para conferir o projeto, execute `npm run typecheck`, `npm run lint`, `npm test`
 No painel, **Documentos → Arquivos** guarda PDFs, imagens, documentos, planilhas e apresentações privados até serem vinculados a uma publicação. Use **Escolher da biblioteca** nos editores ou continue enviando arquivos diretamente. Em **Estatuto e Regimento**, apenas PDFs são aceitos; **Salvar versão** atualiza os links e o leitor do Estatuto. A aba **Publicações** mantém o catálogo público.
 
 Notícias podem ter um botão para uma página publicada do portal e outro para um site externo, com confirmação de saída. Os filtros anuais começam recolhidos em **Ano: ano atual**; clique para consultar outro período.
+
+O painel de Notícias abre nos destaques em vigor. As abas Ativas, Rascunhos e Arquivadas têm busca, ano e paginação. Novos destaques pedem uma data final. Salvar registro publica a notícia; Salvar em rascunho guarda uma versão ainda não publicada. Arquivar retira do portal sem apagar. Excluir uma notícia que já foi publicada exige novamente a senha, mesmo depois de arquivada.

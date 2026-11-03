@@ -70,6 +70,7 @@ export const configuracaoPainel: Record<TipoConteudo, {
         { valor: "amarelo", nome: "Amarelo" }, { valor: "laranja", nome: "Laranja" },
       ] },
       { chave: "destaque", rotulo: "Mostrar em destaque", tipo: "checkbox" },
+      { chave: "destaqueAte", rotulo: "Mostrar em destaque até", tipo: "date", dependeDe: "destaque", obrigatorio: true, dica: "O destaque termina ao final deste dia, no horário do Paraná." },
       // oferece os dois botões opcionais no final da notícia
       { chave: "botaoInternoAtivo", rotulo: "Adicionar botão para uma página do portal", tipo: "checkbox" },
       { chave: "botaoInternoTexto", rotulo: "Texto do botão do portal", tipo: "text", dependeDe: "botaoInternoAtivo", dica: "Ex.: Conhecer o Estatuto ou Ver o interclasse." },

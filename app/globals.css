@@ -7099,3 +7099,10 @@ html:has(#topo.texto-maior) {
 .checkbox-com-ajuda .icone-ajuda-checkbox:focus-visible { outline: 2px solid #e7b52e; outline-offset: 2px; }
 .descricao-checkbox { position: fixed; z-index: 10000; display: block; width: min(20rem, calc(100vw - 1rem)); padding: 1rem; border: 1px solid #ccdce5; border-top: 3px solid #0878ad; border-radius: 4px; background: white; color: #314c5b; box-shadow: 0 6px 24px #183e5533; font-size: 0.875rem; line-height: 1.6; font-weight: 400; text-align: left; }
 @media (pointer: coarse) { .checkbox-com-ajuda .icone-ajuda-checkbox { width: 1.9rem; height: 1.9rem; min-width: 1.9rem; cursor: pointer; } }
+
+/* mantém os controles do arquivo de notícias no estilo do painel */
+.noticias-painel .biblioteca-filtros input { min-height: 2.75rem; }
+.noticias-painel .dialogo-anonimato label { display: grid; gap: 0.6rem; margin-block: 1rem; font-size: 0.875rem; }
+.noticias-painel .dialogo-anonimato input { padding: 0.75rem; border: 1px solid #cad7de; font: inherit; }
+.noticias-painel .campo-publicado { margin-top: 0.75rem; }
+@media (max-width: 700px) { .formulario-noticia .acoes-formulario-painel { flex-wrap: wrap; } }

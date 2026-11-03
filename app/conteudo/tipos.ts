@@ -48,6 +48,9 @@ export type NoticiaGecep = RegistroBase & {
   link: string;
   cor: string;
   destaque: boolean;
+  destaqueAte?: string;
+  jaPublicada?: boolean;
+  arquivada?: boolean;
   imagemUrl?: string;
   imagemAlt?: string;
   creditoImagem?: string;
