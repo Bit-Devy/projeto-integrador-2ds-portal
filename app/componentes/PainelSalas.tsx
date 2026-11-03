@@ -1,6 +1,9 @@
 // ativa os recursos do navegador
 "use client";
 
+// explica as opções de marcar sem alterar seu funcionamento
+import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
+
 // importa os controles do formulário e os dados já usados no mapa
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { DadosMapa, LocalMapa, TurmaAtividadeMapa } from "../mapa/tipos";
@@ -122,8 +125,8 @@ export default function PainelSalas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?:
         </>}
       </div>
       {/* a atribuição de sala é opcional mas exige uma sala publicada quando usada */}
-      {turma && <details open={vincularSala || undefined} className="salas-vinculo"><summary>Vincular a uma sala (opcional)</summary><label><input type="checkbox" checked={vincularSala} onChange={(e) => { setVincularSala(e.target.checked); setMudou(true); }} />Escolher uma sala para esta turma</label>{vincularSala && <Campo rotulo={`Sala publicada · turno ${nomesTurnos[turma.turno as keyof typeof nomesTurnos]}`}><select required value={salaId} onChange={(e) => { setSalaId(e.target.value); setMudou(true); }}><option value="">Selecione a sala</option>{salasDisponiveis.map((item) => <option key={item.id} value={item.id}>{item.nome || item.numero}</option>)}</select></Campo>}<p>A ocupação usa o turno e a validade da turma. Alterar esses campos também confere conflitos. Sem escolher uma sala, os vínculos existentes são mantidos.</p></details>}
-      <div className="pev-opcoes">{(["ativo", "publicado"] as const).map((campo) => <label key={campo}><input type="checkbox" checked={(turma || sala)![campo]} onChange={(e) => { if (turma) setTurma({ ...turma, [campo]: e.target.checked }); if (sala) setSala({ ...sala, [campo]: e.target.checked }); setMudou(true); }} />{campo === "ativo" ? "Ativo" : "Publicado"}</label>)}</div>
+      {turma && <details open={vincularSala || undefined} className="salas-vinculo"><summary>Vincular a uma sala (opcional)</summary><label><CheckboxComAjuda checked={vincularSala} onChange={(e) => { setVincularSala(e.target.checked); setMudou(true); }} explicacao={descricaoCheckbox("vincularSala")} aria-label={"Escolher uma sala para esta turma"} />Escolher uma sala para esta turma</label>{vincularSala && <Campo rotulo={`Sala publicada · turno ${nomesTurnos[turma.turno as keyof typeof nomesTurnos]}`}><select required value={salaId} onChange={(e) => { setSalaId(e.target.value); setMudou(true); }}><option value="">Selecione a sala</option>{salasDisponiveis.map((item) => <option key={item.id} value={item.id}>{item.nome || item.numero}</option>)}</select></Campo>}<p>A ocupação usa o turno e a validade da turma. Alterar esses campos também confere conflitos. Sem escolher uma sala, os vínculos existentes são mantidos.</p></details>}
+      <div className="pev-opcoes">{(["ativo", "publicado"] as const).map((campo) => <label key={campo}><CheckboxComAjuda checked={(turma || sala)![campo]} onChange={(e) => { if (turma) setTurma({ ...turma, [campo]: e.target.checked }); if (sala) setSala({ ...sala, [campo]: e.target.checked }); setMudou(true); }} explicacao={descricaoCheckbox(campo)} aria-label={campo === "ativo" ? "Ativo" : "Publicado"} />{campo === "ativo" ? "Ativo" : "Publicado"}</label>)}</div>
       <div className="pev-acoes-formulario"><button className="pev-botao" type="button" onClick={fechar}>Cancelar</button><button className="pev-botao pev-botao--primario" type="submit" disabled={salvando}>{salvando ? "Salvando…" : "Salvar cadastro"}</button></div>
     </form>}
   </section>;

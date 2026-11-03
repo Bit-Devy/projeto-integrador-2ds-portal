@@ -7091,3 +7091,11 @@ html:has(#topo.texto-maior) {
   .biblioteca-filtros label { width: 100%; }
   .chamada-noticia-interna { padding: 1.1rem; }
 }
+
+/* identifica as opções com uma ajuda pequena ao lado da caixa */
+.checkbox-com-ajuda { display: inline-flex; align-items: center; gap: 0.4rem; flex-shrink: 0; vertical-align: middle; }
+.checkbox-com-ajuda .icone-ajuda-checkbox { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; min-width: 1.5rem; padding: 0; margin: 0; border: 1px solid #7395a8; border-radius: 50%; color: #075a88; background: #f1f7fa; font: inherit; font-size: 0.8125rem; font-weight: 700; line-height: 1; cursor: help; box-shadow: none; }
+.checkbox-com-ajuda .icone-ajuda-checkbox:hover, .checkbox-com-ajuda .icone-ajuda-checkbox[aria-expanded="true"] { color: white; background: #075a88; border-color: #075a88; }
+.checkbox-com-ajuda .icone-ajuda-checkbox:focus-visible { outline: 2px solid #e7b52e; outline-offset: 2px; }
+.descricao-checkbox { position: fixed; z-index: 10000; display: block; width: min(20rem, calc(100vw - 1rem)); padding: 1rem; border: 1px solid #ccdce5; border-top: 3px solid #0878ad; border-radius: 4px; background: white; color: #314c5b; box-shadow: 0 6px 24px #183e5533; font-size: 0.875rem; line-height: 1.6; font-weight: 400; text-align: left; }
+@media (pointer: coarse) { .checkbox-com-ajuda .icone-ajuda-checkbox { width: 1.9rem; height: 1.9rem; min-width: 1.9rem; cursor: pointer; } }

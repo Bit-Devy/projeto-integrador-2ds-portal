@@ -1,5 +1,8 @@
 "use client";
 
+// explica as opções de marcar sem alterar seu funcionamento
+import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
+
 // permite reutilizar arquivos já enviados ao painel
 import EscolherArquivo from "./BibliotecaArquivos";
 
@@ -287,7 +290,7 @@ export default function PainelEventosInternos({ aoMudarEstadoSujo }: { aoMudarEs
           </div></fieldset>
 
           <div className="pev-publicacao">
-            <label><input type="checkbox" checked={formulario.publicado} onChange={(e) => mudar("publicado", e.target.checked)} /><span>Publicado no portal</span></label>
+            <label><CheckboxComAjuda checked={formulario.publicado} onChange={(e) => mudar("publicado", e.target.checked)} explicacao={descricaoCheckbox("publicado")} aria-label={"Publicado no portal"} /><span>Publicado no portal</span></label>
             <p>{formulario.publicado ? "As informações ficam visíveis ao público depois de salvar." : "Somente administradores podem ver este rascunho."}</p>
           </div>
           {mudou && <p className="pev-alteracoes" role="status">Há mudanças não salvas.</p>}

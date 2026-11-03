@@ -1,5 +1,8 @@
 "use client";
 
+// explica as opções de marcar sem alterar seu funcionamento
+import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
+
 // confere as datas dos mandatos nos indicadores
 import { mandatoVigenteEm } from "../eventos/mandato";
 
@@ -262,7 +265,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
             <Campo rotulo="Observação pública" largo><textarea rows={3} value={formulario.observacaoPublica} onChange={(e) => mudar("observacaoPublica", e.target.value)} /></Campo>
             <Campo rotulo="Observação interna" dica="Nunca aparece na página pública." largo><textarea rows={3} value={formulario.observacaoInterna} onChange={(e) => mudar("observacaoInterna", e.target.value)} /></Campo>
           </div>
-          <div className="pev-opcoes"><div className="opcao-com-ajuda"><label><input type="checkbox" checked={formulario.ativo} onChange={(e) => mudar("ativo", e.target.checked)} /><span>Mandato ativo</span></label><AjudaOpcao texto="Permite usar este mandato dentro das datas de início e fim. Mandatos encerrados deixam a consulta pública automaticamente. O histórico de reuniões é preservado." /></div><div className="opcao-com-ajuda"><label><input type="checkbox" checked={formulario.publicado} onChange={(e) => mudar("publicado", e.target.checked)} /><span>Mostrar no portal</span></label><AjudaOpcao texto="Permite mostrar este representante na página pública. A pessoa só aparece durante o mandato e se a turma estiver ativa, publicada e válida." /></div></div></fieldset>
+          <div className="pev-opcoes"><div className="opcao-com-ajuda"><label><CheckboxComAjuda checked={formulario.ativo} onChange={(e) => mudar("ativo", e.target.checked)} explicacao={descricaoCheckbox("mandato")} aria-label={"Mandato ativo"} /><span>Mandato ativo</span></label></div><div className="opcao-com-ajuda"><label><CheckboxComAjuda checked={formulario.publicado} onChange={(e) => mudar("publicado", e.target.checked)} explicacao={descricaoCheckbox("publicado")} aria-label={"Mostrar no portal"} /><span>Mostrar no portal</span></label></div></div></fieldset>
           <p className="pev-nota-privacidade">Não cadastre telefone, e-mail, endereço ou informações pessoais neste formulário.</p>
           {mudou && <p className="pev-alteracoes" role="status">Há mudanças não salvas.</p>}
           <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={fechar}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>{salvando ? "Salvando…" : "Salvar representante"}</button></div>
@@ -320,9 +323,4 @@ function normalizarRepresentante(registro: Record<string, unknown>): Representan
 // copia os dados da turma escolhida para o mandato
 function dadosDaTurma(turma: TurmaAtividadeMapaPublica) {
   return { turmaAtividadeId: turma.id, turma: turma.nome, nivelEnsino: turma.nivelEnsino, serie: turma.serie || "Não informado", turno: turma.turno };
-}
-
-// permite ler a explicação com mouse teclado ou toque
-function AjudaOpcao({ texto }: { texto: string }) {
-  return <details className="ajuda-opcao"><summary aria-label="Explicar esta opção" title={texto}>ⓘ</summary><p>{texto}</p></details>;
 }

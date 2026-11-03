@@ -1,6 +1,9 @@
 // ativa recursos do navegador
 "use client";
 
+// explica as opções de marcar sem alterar seu funcionamento
+import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
+
 // importa eventos, efeitos e controles de estado
 import { FormEvent, MouseEvent as ReactMouseEvent, useEffect, useState } from "react";
 // importa os campos e tipos do painel
@@ -347,7 +350,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
                 {/* campos configurados para a seção */}
                 <div className="grade-campos-painel">
                   {configuracao.campos.filter((campo) => !campo.dependeDe || Boolean(formulario[campo.dependeDe])).map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} key={campo.chave} />)}
-                  <label className="campo-publicado"><input type="checkbox" checked={publicado} onChange={(evento) => { setPublicado(evento.target.checked); setConteudoSujo(true); }} /><span>Publicar este registro no portal</span></label>
+                  <label className="campo-publicado"><CheckboxComAjuda checked={publicado} onChange={(evento) => { setPublicado(evento.target.checked); setConteudoSujo(true); }} explicacao={descricaoCheckbox("publicado")} aria-label={"Publicar este registro no portal"} /><span>Publicar este registro no portal</span></label>
                 </div>
                 {/* botões do formulário */}
                 <div className="acoes-formulario-painel"><button type="button" onClick={fecharFormulario}>Cancelar</button><button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Salvar registro"}</button></div>
@@ -373,7 +376,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
 // mostra um campo conforme seu tipo
 function CampoFormulario({ campo, valor, mudar, enviarArquivo }: { campo: CampoPainel; valor: ValorCampo | undefined; mudar: (valor: ValorCampo) => void; enviarArquivo: (arquivo?: File) => void }) {
   // mostra uma caixa de seleção
-  if (campo.tipo === "checkbox") return <label className="campo-publicado"><input type="checkbox" checked={Boolean(valor)} onChange={(evento) => mudar(evento.target.checked)} /><span>{campo.rotulo}</span></label>;
+  if (campo.tipo === "checkbox") return <label className="campo-publicado"><CheckboxComAjuda checked={Boolean(valor)} onChange={(evento) => mudar(evento.target.checked)} explicacao={descricaoCheckbox(campo.chave)} aria-label={campo.rotulo} /><span>{campo.rotulo}</span></label>;
   // mostra uma área de texto
   if (campo.tipo === "textarea") return <label className="campo-largo"><span>{campo.rotulo}</span><textarea rows={5} value={String(valor ?? "")} onChange={(evento) => mudar(evento.target.value)} required={campo.obrigatorio} />{campo.dica && <small>{campo.dica}</small>}</label>;
   // mostra uma lista de opções

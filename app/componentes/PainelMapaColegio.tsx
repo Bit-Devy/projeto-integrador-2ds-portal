@@ -1,6 +1,9 @@
 // ativa recursos do navegador
 "use client";
 
+// explica as opções de marcar sem alterar seu funcionamento
+import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
+
 // importa eventos, efeitos e controles do react
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 // importa as alas permitidas
@@ -550,7 +553,7 @@ function CampoSelecao({ chave, rotulo, formulario, mudar, opcoes, obrigatorio = 
 
 // mostra um campo de verdadeiro ou falso
 function CampoBooleano({ chave, rotulo, formulario, mudar }: { chave: string; rotulo: string; formulario: FormularioMapa; mudar: (chave: string, valor: ValorFormulario) => void }) {
-  return <label className="campo-publicado"><input type="checkbox" checked={Boolean(formulario[chave])} onChange={(evento) => mudar(chave, evento.target.checked)} /><span>{rotulo}</span></label>;
+  return <label className="campo-publicado"><CheckboxComAjuda checked={Boolean(formulario[chave])} onChange={(evento) => mudar(chave, evento.target.checked)} explicacao={descricaoCheckbox(chave)} aria-label={rotulo} /><span>{rotulo}</span></label>;
 }
 
 // mostra o resumo de um local
