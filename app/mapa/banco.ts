@@ -215,12 +215,7 @@ export async function criarRegistroMapa(entidade: EntidadeMapa, valor: unknown) 
 
   // valida e cria um local
   if (entidade === "locais") {
-    const dados = validarLocalMapa(valor);
-    await exigirCategoria("local", dados.tipo);
-    const linha = await d1.prepare(`${sqlInserirLocal} RETURNING *`)
-      .bind(...valoresLocal(dados))
-      .first<LinhaLocal>();
-    return linha ? formatarLocal(linha) : null;
+    return salvarLocalComTurma(null, valor);
   }
 
   // valida e cria uma turma ou atividade
@@ -282,11 +277,7 @@ export async function atualizarRegistroMapa(entidade: EntidadeMapa, idRecebido: 
 
   // atualiza um local
   if (entidade === "locais") {
-    if (!await buscarLocal(id)) throw new ErroMapa("Sala ou local não encontrado.", 404);
-    const dados = validarLocalMapa(valor);
-    await exigirCategoria("local", dados.tipo);
-    await d1.prepare(`${sqlAtualizarLocal} WHERE id = ?`).bind(...valoresLocal(dados), id).run();
-    return buscarLocal(id);
+    return salvarLocalComTurma(id, valor);
   }
 
   // atualiza uma turma e seus ensalamentos
@@ -302,6 +293,64 @@ export async function atualizarRegistroMapa(entidade: EntidadeMapa, idRecebido: 
     .bind(...valoresEnsalamento(dados), id)
     .run();
   return buscarEnsalamento(id);
+}
+
+// confere o mesmo conflito nos cadastros de salas e de turmas
+async function conferirOcupacoes(salas: number[], dados: Pick<TurmaMapaValidada, "ativo" | "publicado" | "turno" | "inicioValidade" | "fimValidade">, turmaId: number | null, confirmacao: unknown) {
+  const d1 = getD1();
+  const ocupacoes = new Map<number, { id: number; nome: string }>();
+  if (dados.ativo && dados.publicado) for (const local of salas) {
+    const encontrados = await d1.prepare(`SELECT e.id, t.nome FROM ensalamentos e
+      JOIN turmas_atividades t ON t.id = e.turma_atividade_id
+      WHERE e.local_id = ? AND e.turno = ? AND e.turma_atividade_id <> ?
+        AND e.ativo = 1 AND e.publicado = 1
+        AND COALESCE(NULLIF(e.fim_validade, ''), '9999-12-31') >= ?
+        AND COALESCE(NULLIF(e.inicio_validade, ''), '0001-01-01') <= ?`)
+      .bind(local, dados.turno, turmaId ?? -1, dados.inicioValidade || "0001-01-01", dados.fimValidade || "9999-12-31")
+      .all<{ id: number; nome: string }>();
+    encontrados.results.forEach((item) => ocupacoes.set(item.id, item));
+  }
+  const confirmados = Array.isArray(confirmacao) ? confirmacao : [];
+  if ([...ocupacoes.values()].some((item) => !confirmados.includes(item.id))) {
+    const erro = new ErroMapa("Esta sala já está ocupada neste turno e período. Deseja substituir a ocupação?", 409);
+    erro.conflitos = [...ocupacoes.values()];
+    throw erro;
+  }
+  return [...ocupacoes.values()];
+}
+
+// salva a sala e o vínculo opcional com uma turma existente na mesma transação
+async function salvarLocalComTurma(id: number | null, valor: unknown) {
+  const recebido = objetoRecebido(valor);
+  const existente = id ? await buscarLocal(id) : null;
+  if (id && !existente) throw new ErroMapa("Sala ou local não encontrado.", 404);
+  const dados = validarLocalMapa({ ...existente, ...recebido });
+  await exigirCategoria("local", dados.tipo);
+  const d1 = getD1();
+  const turmaId = recebido.turmaId !== undefined ? idPositivo(recebido.turmaId, "turma publicada") : null;
+  let turma: TurmaAtividadeMapa | null = null;
+  const comandos: D1PreparedStatement[] = [];
+  if (turmaId) {
+    if (!dados.ativo || !dados.publicado) throw new ErroMapa("Ative e publique a sala para vincular uma turma.");
+    if (!await d1.prepare("SELECT id FROM categorias_mapa WHERE grupo = 'local' AND slug = ? AND ativo = 1").bind(dados.tipo).first()) throw new ErroMapa("A categoria da sala precisa estar ativa.");
+    const linha = await d1.prepare(`SELECT t.* FROM turmas_atividades t WHERE t.id = ? AND ${condicaoTurmaPublicada()}`).bind(turmaId).first<LinhaTurma>();
+    if (!linha) throw new ErroMapa("Escolha uma turma já publicada, ativa e dentro da validade.");
+    turma = formatarTurma(linha);
+    const ocupacoes = await conferirOcupacoes(id ? [id] : [], turma, turmaId, recebido.substituirOcupacoes);
+    for (const ocupacao of ocupacoes) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?").bind(ocupacao.id));
+    // guarda a ocupação anterior da turma antes de transferi-la
+    comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND ativo = 1").bind(turmaId));
+  }
+  const chave = `cadastro:${crypto.randomUUID()}`;
+  comandos.push(id
+    ? d1.prepare(`${sqlAtualizarLocal} WHERE id = ?`).bind(...valoresLocal(dados), id)
+    : d1.prepare(`INSERT INTO locais_colegio (chave_importacao, ${colunasLocal}) VALUES (?, ${placeholdersLocal})`).bind(chave, ...valoresLocal(dados)));
+  if (turma) comandos.push(d1.prepare(`INSERT INTO ensalamentos (${colunasEnsalamento})
+    SELECT ?, id, ?, ?, '', ?, ?, 0, 1, 1 FROM locais_colegio WHERE ${id ? "id = ?" : "chave_importacao = ?"}`)
+    .bind(turma.id, turma.turno, turma.tipo, turma.inicioValidade, turma.fimValidade, id ?? chave));
+  await d1.batch(comandos);
+  const linha = await d1.prepare(`SELECT * FROM locais_colegio WHERE ${id ? "id = ?" : "chave_importacao = ?"}`).bind(id ?? chave).first<LinhaLocal>();
+  return linha ? formatarLocal(linha) : null;
 }
 
 // salva a turma e a sala juntas para evitar alterações pela metade
@@ -327,25 +376,8 @@ async function salvarTurmaComSala(id: number | null, valor: unknown) {
   // confere também os vínculos mantidos ao publicar ou trocar turno e validade
   const vinculos = id && !salaId && !desvincular ? await d1.prepare("SELECT local_id FROM ensalamentos WHERE turma_atividade_id = ? AND ativo = 1 AND local_id IS NOT NULL").bind(id).all<{ local_id: number }>() : { results: [] };
   const salas = salaId ? [salaId] : [...new Set(vinculos.results.map((item) => item.local_id))];
-  const ocupacoes = new Map<number, { id: number; nome: string }>();
-  if (dados.ativo && dados.publicado) for (const local of salas) {
-    const encontrados = await d1.prepare(`SELECT e.id, t.nome FROM ensalamentos e
-      JOIN turmas_atividades t ON t.id = e.turma_atividade_id
-      WHERE e.local_id = ? AND e.turno = ? AND e.turma_atividade_id <> ?
-        AND e.ativo = 1 AND e.publicado = 1
-        AND COALESCE(NULLIF(e.fim_validade, ''), '9999-12-31') >= ?
-        AND COALESCE(NULLIF(e.inicio_validade, ''), '0001-01-01') <= ?`)
-      .bind(local, dados.turno, id ?? -1, dados.inicioValidade || "0001-01-01", dados.fimValidade || "9999-12-31")
-      .all<{ id: number; nome: string }>();
-    encontrados.results.forEach((item) => ocupacoes.set(item.id, item));
-  }
-  const confirmados = Array.isArray(recebido.substituirOcupacoes) ? recebido.substituirOcupacoes : [];
-  if ([...ocupacoes.values()].some((item) => !confirmados.includes(item.id))) {
-    const erro = new ErroMapa("Esta sala já está ocupada neste turno e período. Deseja substituir a ocupação?", 409);
-    erro.conflitos = [...ocupacoes.values()];
-    throw erro;
-  }
-  for (const ocupacao of ocupacoes.values()) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?").bind(ocupacao.id));
+  const ocupacoes = await conferirOcupacoes(salas, dados, id, recebido.substituirOcupacoes);
+  for (const ocupacao of ocupacoes) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?").bind(ocupacao.id));
   // libera a sala ao arquivar e conserva os vínculos anteriores como histórico
   if (id && (salaId || desvincular || !dados.ativo)) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?").bind(id));
   const chave = `cadastro:${crypto.randomUUID()}`;
@@ -770,7 +802,6 @@ const colunasLocal = `nome, nome_normalizado, numero, numero_normalizado,
   imagem_url, ordem, ativo, publicado`;
 // cria um marcador para cada valor do local
 const placeholdersLocal = Array.from({ length: 22 }, () => "?").join(", ");
-const sqlInserirLocal = `INSERT INTO locais_colegio (${colunasLocal}) VALUES (${placeholdersLocal})`;
 // atualiza todos os campos editáveis do local
 const sqlAtualizarLocal = `UPDATE locais_colegio SET
   nome = ?, nome_normalizado = ?, numero = ?, numero_normalizado = ?,

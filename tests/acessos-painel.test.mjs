@@ -4,8 +4,17 @@ import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { readFile, readdir } from "node:fs/promises";
 import { cargosPainel, podeAcessar, areaRestrita, obterCargo, areasPainel } from "../app/lib/cargos.ts";
-import { prepararSenha, conferirSenha } from "../app/lib/senhas-painel.ts";
+import { prepararSenha, conferirSenha, garantirAcessos, autenticarSenha } from "../app/lib/senhas-painel.ts";
 import { ambienteDaRequisicao } from "../worker/ambiente.ts";
+import { loginValido, senhaPermitida } from "../app/lib/regras-acesso.ts";
+
+// aceita acentos e símbolos de senha sem aceitar formatos fora das regras
+test("login usa só letras minúsculas e senha não aceita espaços nem underline", () => {
+  for (const login of ["admin", "andré", "joão", "a\u0301rvore"]) assert.equal(loginValido(login), true);
+  for (const login of ["Admin", "andré1", "joão silva", "joao_silva", "joao.silva", "", "a".repeat(61)]) assert.equal(loginValido(login), false);
+  for (const senha of ["Teste*2026.1234", "ábÇ.789!abcde"]) assert.equal(senhaPermitida(senha), true);
+  for (const senha of ["Tem espaço1234", "tem_underline1234", "tab\t12345678", "quebra\n12345678", "", "a".repeat(201)]) assert.equal(senhaPermitida(senha), false);
+});
 
 test("os cargos do estatuto separam edição, consulta e administração de senhas", () => {
   assert.equal(cargosPainel.filter((cargo) => /^Art\. (4[6-9]|5[0-8])$/.test(cargo.artigo)).length, 13);
@@ -37,6 +46,41 @@ test("as senhas usam sal diferente e não ficam recuperáveis no banco", async (
   });
 });
 
+// acrescenta identificadores aos bancos antigos e mantém os mesmos resumos protegidos
+test("a migração preserva senhas antigas e só a configuração altera o login principal", async () => {
+  const sqlite = new DatabaseSync(":memory:");
+  try {
+    const migracoes = (await readdir("drizzle")).filter((nome) => nome.endsWith(".sql")).sort();
+    for (const arquivo of migracoes.slice(0, -1)) sqlite.exec(await readFile(`drizzle/${arquivo}`, "utf8"));
+    const preparar = (sql, valores = []) => ({
+      bind: (...recebidos) => preparar(sql, recebidos),
+      async first() { return sqlite.prepare(sql).get(...valores) ?? null; },
+      async all() { return { results: sqlite.prepare(sql).all(...valores) }; },
+      async run() { return sqlite.prepare(sql).run(...valores); },
+    });
+    const d1 = { prepare: preparar, async batch(comandos) { sqlite.exec("SAVEPOINT lote"); try { const resultados = []; for (const comando of comandos) resultados.push(await comando.all()); sqlite.exec("RELEASE lote"); return resultados; } catch (erro) { sqlite.exec("ROLLBACK TO lote; RELEASE lote"); throw erro; } } };
+    const ambiente = { DB: d1, ADMIN_LOGIN: "admin", ADMIN_PASSWORD: "nao.recriar*2026", SESSION_SECRET: "segredo do teste de migração de login" };
+    await ambienteDaRequisicao.run(ambiente, async () => {
+      for (const [cargo, vaga, senha] of [["geral", 1, "senha.geral*2026"], ["esportes", 2, "senha.esporte*2026"]]) {
+        const protegido = await prepararSenha(senha);
+        sqlite.prepare("INSERT INTO acessos_painel (cargo, vaga, nome, resumo, sal, busca) VALUES (?, ?, ?, ?, ?, ?)").run(cargo, vaga, cargo, protegido.resumo, protegido.sal, protegido.busca);
+      }
+      sqlite.exec("INSERT INTO cargas_iniciais (chave) VALUES ('acessos-painel-v1')");
+      const resumos = sqlite.prepare("SELECT resumo, sal FROM acessos_painel ORDER BY id").all();
+      await garantirAcessos();
+      assert.equal((await autenticarSenha("admin", "senha.geral*2026", true)).id, 1);
+      assert.equal((await autenticarSenha("esportesb", "senha.esporte*2026", false)).id, 2);
+      const versao = sqlite.prepare("SELECT versao FROM acessos_painel WHERE id = 1").get().versao;
+      ambiente.ADMIN_LOGIN = "gestão";
+      await garantirAcessos();
+      assert.equal(await autenticarSenha("admin", "senha.geral*2026", true), null);
+      assert.equal((await autenticarSenha("gestão", "senha.geral*2026", true)).id, 1);
+      assert.equal(sqlite.prepare("SELECT versao FROM acessos_painel WHERE id = 1").get().versao, versao + 1);
+      assert.deepEqual(sqlite.prepare("SELECT resumo, sal FROM acessos_painel ORDER BY id").all(), resumos);
+    });
+  } finally { sqlite.close(); }
+});
+
 test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senhas", async () => {
   const sqlite = new DatabaseSync(":memory:");
   try {
@@ -56,8 +100,11 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
       async delete(chave) { objetos.delete(chave); },
     };
     const { default: worker } = await import(`../dist/server/index.js?acessos=${Date.now()}`);
-    const senhaInicial = "senha geral apenas do teste isolado";
-    const ambiente = { DB: d1, BUCKET: bucket, ADMIN_PASSWORD: senhaInicial, SESSION_SECRET: "segredo longo exclusivo do banco de teste", ASSETS: { fetch: async () => new Response("", { status: 404 }) } };
+    const senhaInicial = "senha.geral.apenas.do.teste.isolado";
+    const loginsPorSenha = new Map([[senhaInicial, "admin"]]);
+    let numeroLogin = 0;
+    const novoLogin = (cargo) => cargo.replace(/[^a-z]/g, "") + String.fromCharCode(97 + numeroLogin++);
+    const ambiente = { DB: d1, BUCKET: bucket, ADMIN_PASSWORD: senhaInicial, ADMIN_LOGIN: "admin", SESSION_SECRET: "segredo longo exclusivo do banco de teste", ASSETS: { fetch: async () => new Response("", { status: 404 }) } };
     async function chamar(caminho, { jar = new Map(), method = "GET", corpo, formulario, arquivo, esperado = 200 } = {}) {
       const headers = { origin: "http://localhost", cookie: [...jar].map(([chave, valor]) => `${chave}=${valor}`).join("; ") };
       if (corpo) headers["content-type"] = "application/json";
@@ -65,10 +112,15 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
       const resposta = await worker.fetch(new Request(`http://localhost${caminho}`, { method, headers, body: arquivo || (formulario ? new URLSearchParams(formulario) : corpo ? JSON.stringify(corpo) : undefined) }), ambiente, { waitUntil() {}, passThroughOnException() {} });
       assert.equal(resposta.status, esperado, `${method} ${caminho}`);
       for (const cookie of resposta.headers.getSetCookie()) { const [nome, ...valor] = cookie.split(";")[0].split("="); jar.set(nome, valor.join("=")); }
+      if (caminho === "/api/acessos" && resposta.ok && method !== "GET") { const criado = await resposta.clone().json(); if (criado.senha) loginsPorSenha.set(criado.senha, criado.login); }
       return resposta;
     }
-    async function entrar(senha, geral = false, jar = new Map()) { const resposta = await chamar("/api/login", { jar, method: "POST", formulario: { senha, geral: geral ? "1" : "0", returnTo: "/painel" }, esperado: 303 }); return { jar, destino: resposta.headers.get("location") }; }
+    async function entrar(senha, geral = false, jar = new Map(), login = loginsPorSenha.get(senha) || "admin") { const resposta = await chamar("/api/login", { jar, method: "POST", formulario: { login, senha, geral: geral ? "1" : "0", returnTo: "/painel" }, esperado: 303 }); return { jar, destino: resposta.headers.get("location") }; }
     const geral = (await entrar(senhaInicial, true)).jar;
+    // a senha sozinha e logins fora do padrão não concedem uma sessão
+    const semLogin = await chamar("/api/login", { method: "POST", formulario: { senha: senhaInicial, geral: "1" }, esperado: 303 });
+    assert.match(semLogin.headers.get("location"), /erro=1/);
+    for (const login of ["Admin", "admin1", "admin ", "admin_", "outro"]) assert.match((await entrar(senhaInicial, true, new Map(), login)).destino, /erro=1/);
     await chamar("/api/historico-acessos", { esperado: 401 });
     const entradasIniciais = await (await chamar("/api/historico-acessos", { jar: geral })).json();
     assert.equal(entradasIniciais.total, 1);
@@ -83,15 +135,23 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS total FROM acessos_painel").get().total, 1);
     assert.match((await entrar(senhaInicial)).destino, /erro=1/);
     await chamar("/api/acessos", { esperado: 401 });
-    const semConfirmar = { cargo: "esportes", nome: "Teste esportes", senhaAtual: senhaInicial };
+    const semConfirmar = { cargo: "esportes", nome: "Teste esportes", login: "tentativa", senhaAtual: senhaInicial };
     await chamar("/api/acessos", { jar: geral, method: "POST", corpo: semConfirmar, esperado: 400 });
     await chamar("/api/acessos", { jar: geral, method: "POST", corpo: { ...semConfirmar, confirmado: true, senhaAtual: "errada" }, esperado: 403 });
-    async function criar(cargo, nome = "Pessoa do teste") { return (await chamar("/api/acessos", { jar: geral, method: "POST", corpo: { cargo, nome, senhaAtual: senhaInicial, confirmado: true }, esperado: 201 })).json(); }
-    const esportes1 = await criar("esportes"); const esportes2 = await criar("esportes");
+    async function criar(cargo, nome = "Pessoa do teste", login = novoLogin(cargo)) { return (await chamar("/api/acessos", { jar: geral, method: "POST", corpo: { cargo, nome, login, senhaAtual: senhaInicial, confirmado: true }, esperado: 201 })).json(); }
+    const esportes1 = await criar("esportes", "Pessoa do teste", "andré"); const esportes2 = await criar("esportes");
     await chamar("/api/acessos", { jar: geral, method: "POST", corpo: { ...semConfirmar, confirmado: true }, esperado: 409 });
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS total FROM acessos_painel WHERE cargo='esportes'").get().total, 2);
     assert.match((await entrar(esportes1.senha, true)).destino, /erro=1/);
     const esportes = (await entrar(esportes1.senha)).jar;
+    assert.equal(esportes1.login, "andré");
+    assert.match((await entrar(esportes1.senha, false, new Map(), "andre\u0301")).destino, /\/painel$/);
+    assert.match((await entrar(esportes1.senha, false, new Map(), "André")).destino, /erro=1/);
+    // o servidor também impede nomes repetidos e senhas proibidas sem depender do formulário
+    await chamar("/api/acessos", { jar: geral, method: "POST", corpo: { cargo: "apoio", login: "andre\u0301", nome: "Duplicado", senhaAtual: senhaInicial, confirmado: true }, esperado: 409 });
+    for (const novaSenha of ["com espaço123456", "com_underline123456", "com\tcontrole123456"]) await chamar("/api/acessos", { jar: geral, method: "POST", corpo: { cargo: "apoio", login: "invalido", nome: "Inválido", novaSenha, senhaAtual: senhaInicial, confirmado: true }, esperado: 400 });
+    const principalConfigurado = sqlite.prepare("SELECT id FROM acessos_painel WHERE login_ambiente = 1").get();
+    await chamar("/api/acessos", { jar: geral, method: "PUT", corpo: { id: principalConfigurado.id, login: "alterado", nome: "Principal", senhaAtual: senhaInicial, confirmado: true }, esperado: 400 });
     await chamar("/api/acessos", { jar: esportes, esperado: 403 });
     await chamar("/api/historico-acessos", { jar: esportes, esperado: 403 });
     await chamar(`/api/historico-acessos?id=${entradaGeral}`, { jar: esportes, esperado: 403 });
@@ -188,13 +248,13 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
     const principal = cadastro.itens.find((item) => item.cargo === "geral");
     await chamar("/api/acessos", { jar: geral, method: "DELETE", corpo: { id: principal.id, senhaAtual: senhaInicial, confirmado: true }, esperado: 409 });
     const geral2 = await criar("geral"); await criar("geral");
-    await chamar("/api/acessos", { jar: geral, method: "POST", corpo: { cargo: "geral", nome: "Excesso", senhaAtual: senhaInicial, confirmado: true }, esperado: 409 });
+    await chamar("/api/acessos", { jar: geral, method: "POST", corpo: { cargo: "geral", nome: "Excesso", login: "excesso", senhaAtual: senhaInicial, confirmado: true }, esperado: 409 });
     // a própria senha geral pode ser trocada sem derrubar quem fez a troca
     const segundoJar = (await entrar(geral2.senha, true)).jar;
     const antigoJar = new Map(segundoJar);
     const entradasAntesTroca = sqlite.prepare("SELECT COUNT(*) AS total FROM entradas_painel").get().total;
-    const atualizada = (await (await chamar("/api/acessos", { jar: segundoJar, method: "PUT", corpo: { id: geral2.id, nome: "Geral alterado", senhaAtual: geral2.senha, novaSenha: "senha geral nova do teste", confirmado: true } })).json()).senha;
-    assert.equal(atualizada, "senha geral nova do teste");
+    const atualizada = (await (await chamar("/api/acessos", { jar: segundoJar, method: "PUT", corpo: { id: geral2.id, nome: "Geral alterado", senhaAtual: geral2.senha, novaSenha: "senha.geral.nova*2026", confirmado: true } })).json()).senha;
+    assert.equal(atualizada, "senha.geral.nova*2026");
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS total FROM entradas_painel").get().total, entradasAntesTroca);
     await chamar("/api/acessos", { jar: segundoJar }); await chamar("/api/acessos", { jar: antigoJar, esperado: 401 });
     assert.match((await entrar(geral2.senha, true)).destino, /erro=1/);
@@ -217,7 +277,7 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
       assert.equal(cadastroAtual.cargos.some((item) => item.chave === cargo), false);
     }
     async function criarAcessoLegado() {
-      return (await chamar("/api/acessos", { jar: segundoJar, method: "POST", corpo: { cargo: "apoio", nome: "Acesso anterior de teste", senhaAtual: atualizada, confirmado: true }, esperado: 201 })).json();
+      return (await chamar("/api/acessos", { jar: segundoJar, method: "POST", corpo: { cargo: "apoio", nome: "Acesso anterior de teste", login: "anterior", senhaAtual: atualizada, confirmado: true }, esperado: 201 })).json();
     }
     // cinco tentativas erradas bloqueiam inclusive o modo geral no mesmo navegador
     const limitado = new Map();

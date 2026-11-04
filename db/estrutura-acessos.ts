@@ -18,3 +18,17 @@ export const comandosEstruturaAcessos = [
     criado_em TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
   )`,
 ];
+
+// acrescenta os logins sem apagar as senhas já protegidas
+export async function garantirColunasLogin(d1: D1Database) {
+  const colunas = await d1.prepare("PRAGMA table_info(acessos_painel)").all<{ name: string }>();
+  for (const [nome, definicao] of [["login", "TEXT NOT NULL DEFAULT ''"], ["login_ambiente", "INTEGER NOT NULL DEFAULT 0"]]) {
+    if (colunas.results.some((coluna) => coluna.name === nome)) continue;
+    try { await d1.prepare(`ALTER TABLE acessos_painel ADD COLUMN ${nome} ${definicao}`).run(); }
+    catch (erro) { if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro; }
+  }
+  await d1.batch([
+    d1.prepare("CREATE UNIQUE INDEX IF NOT EXISTS acessos_painel_login_uq ON acessos_painel (login) WHERE \"acessos_painel\".\"login\" <> ''"),
+    d1.prepare("CREATE UNIQUE INDEX IF NOT EXISTS acessos_painel_login_ambiente_uq ON acessos_painel (login_ambiente) WHERE \"acessos_painel\".\"login_ambiente\" = 1"),
+  ]);
+}

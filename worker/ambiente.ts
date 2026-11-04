@@ -7,6 +7,7 @@ export type AmbientePortal = {
   DB?: D1Database;
   BUCKET?: R2Bucket;
   ADMIN_PASSWORD?: string;
+  ADMIN_LOGIN?: string;
   SESSION_SECRET?: string;
   IMAGES?: {
     input(stream: ReadableStream): {

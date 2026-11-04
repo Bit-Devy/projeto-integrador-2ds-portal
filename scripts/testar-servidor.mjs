@@ -62,7 +62,7 @@ try {
 
   // entra no painel com a senha local
   const senha = await lerSenhaLocal();
-  const formulario = new URLSearchParams({ senha, geral: "1", returnTo: "/painel" });
+  const formulario = new URLSearchParams({ login: await lerLoginLocal(), senha, geral: "1", returnTo: "/painel" });
   const respostaLogin = await fetch(`${endereco}/api/login`, {
     method: "POST",
     redirect: "manual",
@@ -146,14 +146,14 @@ async function testarLimitesNavegador(cookieAdministrador, senha) {
   for (let indice = 0; indice < 5; indice += 1) {
     const resposta = await fetch(`${endereco}/api/login`, {
       method: "POST", redirect: "manual", headers: { cookie: navegadorLogin },
-      body: new URLSearchParams({ senha: `${senha}-incorreta`, geral: "1", returnTo: "/painel" }),
+      body: new URLSearchParams({ login: await lerLoginLocal(), senha: `${senha}-incorreta`, geral: "1", returnTo: "/painel" }),
     });
     assert.equal(resposta.status, 303);
     assert.match(resposta.headers.get("location"), indice < 4 ? /erro=1/ : /erro=limite/);
   }
   const bloqueioLogin = await fetch(`${endereco}/api/login`, {
     method: "POST", redirect: "manual", headers: { cookie: navegadorLogin },
-    body: new URLSearchParams({ senha, geral: "1", returnTo: "/painel" }),
+    body: new URLSearchParams({ login: await lerLoginLocal(), senha, geral: "1", returnTo: "/painel" }),
   });
   assert.match(bloqueioLogin.headers.get("location"), /erro=limite/);
   assert.ok(!bloqueioLogin.headers.getSetCookie().some((item) => item.startsWith("gecep_sessao=")));
@@ -188,6 +188,12 @@ async function lerSenhaLocal() {
   // exige uma senha configurada
   if (!senha) throw new Error("Defina ADMIN_PASSWORD em .dev.vars antes do teste.");
   return senha;
+}
+
+// lê o login principal sem mostrar a configuração privada
+async function lerLoginLocal() {
+  const texto = await readFile(".dev.vars", "utf8");
+  return texto.match(/^ADMIN_LOGIN\s*=\s*["']?([^\r\n"']+)/m)?.[1] || "admin";
 }
 
 // encerra o servidor iniciado pelo teste

@@ -156,7 +156,6 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
         </div>
         {/* botões de acessibilidade */}
         <div className="atalhos-acessibilidade" role="group" aria-label="Opções de acessibilidade">
-          <span>Acessibilidade</span>
           <button type="button" onClick={() => setTextoMaior(true)} aria-pressed={textoMaior} aria-label="Aumentar o texto" title="Aumentar o texto">
             A+
           </button>

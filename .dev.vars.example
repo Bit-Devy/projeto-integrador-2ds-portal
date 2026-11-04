@@ -1,5 +1,8 @@
 # cria a primeira senha geral no banco apenas na configuração inicial
 ADMIN_PASSWORD=troque-esta-senha
 
+# define o login do acesso geral principal usando apenas letras minúsculas
+ADMIN_LOGIN=admin
+
 # use uma frase longa e diferente da senha
 SESSION_SECRET=troque-por-uma-frase-longa-e-unica

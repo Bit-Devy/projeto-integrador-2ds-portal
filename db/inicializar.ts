@@ -17,7 +17,7 @@ import { comandosEstruturaEventos } from "./estrutura-eventos";
 // importa a proteção contra ocupações repetidas das salas
 import { comandosProtecaoSalas } from "./estrutura-salas";
 // importa as tabelas do acesso por cargo
-import { comandosEstruturaAcessos } from "./estrutura-acessos";
+import { comandosEstruturaAcessos, garantirColunasLogin } from "./estrutura-acessos";
 // importa as entradas e as ações feitas no painel
 import { comandosEstruturaHistorico } from "./estrutura-historico";
 
@@ -181,6 +181,7 @@ async function prepararBanco() {
   ]);
 
   await d1.batch(comandosEstruturaAcessos.map((comando) => d1.prepare(comando)));
+  await garantirColunasLogin(d1);
   await d1.batch(comandosEstruturaHistorico.map((comando) => d1.prepare(comando)));
   // mantém a prévia local em paridade com a migração 0004 sem inserir dados fictícios
   await executarEmLotes(

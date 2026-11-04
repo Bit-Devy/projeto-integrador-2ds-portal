@@ -36,6 +36,45 @@ async function comBanco(executar) {
 const turma = (nome, outros = {}) => ({ nome, nivelEnsino: "medio", serie: "2ª série", turno: "manha", tipo: "aula_regular", publicado: true, ativo: true, ...outros });
 const pessoa = (id, outros = {}) => ({ turmaAtividadeId: id, nome: "Pessoa fictícia", turma: "Texto adulterado", turno: "noite", nivelEnsino: "outro", serie: "Inválida", funcao: "titular", publicado: true, ativo: true, ...outros });
 
+// o cadastro da sala usa a turma já existente sem duplicá-la
+test("criar sala pode vincular uma turma publicada no turno e na validade dela", () => comBanco(async (sqlite, sala) => {
+  const item = await criarRegistroMapa("turmas", turma("2DS", { turno: "tarde", salaId: sala.id }));
+  const criada = await criarRegistroMapa("locais", { nome: "Sala nova", ala: "Par", tipo: "sala_aula", ativo: true, publicado: true, turmaId: item.id });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS total FROM turmas_atividades").get().total, 1);
+  const publico = await obterDadosMapa();
+  assert.equal(publico.ensalamentos.length, 1);
+  assert.equal(publico.ensalamentos[0].localId, criada.id);
+  assert.equal(publico.ensalamentos[0].turno, "tarde");
+  assert.equal(sqlite.prepare("SELECT ativo FROM ensalamentos WHERE local_id = ?").get(sala.id).ativo, 0);
+  await atualizarRegistroMapa("locais", criada.id, { ...criada, descricao: "Só muda a descrição" });
+  assert.equal((await obterDadosMapa()).ensalamentos.length, 1);
+}));
+
+// uma turma fora do público não pode ocupar uma sala por esse atalho
+test("sala só aceita turma existente ativa publicada e dentro da validade", () => comBanco(async (sqlite) => {
+  const antes = sqlite.prepare("SELECT COUNT(*) AS total FROM locais_colegio").get().total;
+  for (const outros of [{ ativo: false }, { publicado: false }, { fimValidade: "2000-01-01" }, { inicioValidade: "2999-01-01" }]) {
+    const item = await criarRegistroMapa("turmas", turma("Indisponível", outros));
+    await assert.rejects(criarRegistroMapa("locais", { nome: "Não salvar", tipo: "sala_aula", ala: "Par", publicado: true, turmaId: item.id }), /turma já publicada/);
+  }
+  await assert.rejects(criarRegistroMapa("locais", { nome: "Não salvar", tipo: "sala_aula", ala: "Par", publicado: true, turmaId: 999999 }), /turma já publicada/);
+  const ativa = await criarRegistroMapa("turmas", turma("Ativa"));
+  await assert.rejects(criarRegistroMapa("locais", { nome: "Rascunho", tipo: "sala_aula", turmaId: ativa.id }), /Ative e publique/);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS total FROM locais_colegio").get().total, antes);
+}));
+
+// recusar um conflito também mantém os dados físicos da sala sem alterações
+test("editar sala com turma conflitante exige confirmação e salva tudo junto", () => comBanco(async (sqlite, sala) => {
+  const primeira = await criarRegistroMapa("turmas", turma("2A", { salaId: sala.id }));
+  const segunda = await criarRegistroMapa("turmas", turma("2B"));
+  let conflitos;
+  await assert.rejects(atualizarRegistroMapa("locais", sala.id, { ...sala, nome: "Sala renomeada", turmaId: segunda.id }), (erro) => { conflitos = erro.conflitos; return erro.status === 409; });
+  assert.equal(sqlite.prepare("SELECT nome FROM locais_colegio WHERE id = ?").get(sala.id).nome, sala.nome);
+  await atualizarRegistroMapa("locais", sala.id, { ...sala, nome: "Sala renomeada", turmaId: segunda.id, substituirOcupacoes: conflitos.map((item) => item.id) });
+  assert.equal((await obterDadosMapa()).ensalamentos[0].turmaAtividadeId, segunda.id);
+  assert.equal(sqlite.prepare("SELECT ativo FROM ensalamentos WHERE turma_atividade_id = ?").get(primeira.id).ativo, 0);
+}));
+
 // simula a virada do ano com o mesmo filtro usado no banco publicado
 test("em janeiro de 2027 só mostra mandatos válidos naquele período", () => comBanco(async (sqlite) => {
   sqlite.function("date", (valor) => valor === "now" ? "2027-01-01" : valor);

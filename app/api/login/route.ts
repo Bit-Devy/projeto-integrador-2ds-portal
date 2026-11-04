@@ -14,8 +14,9 @@ export async function POST(request: Request) {
   // bloqueia chamadas de outra origem
   if (!origemValida(request)) return new Response("Origem inválida.", { status: 403 });
 
-  // lê a senha e o destino recebidos
+  // lê o login a senha e o destino recebidos
   const formulario = await request.formData();
+  const login = String(formulario.get("login") ?? "");
   const senha = String(formulario.get("senha") ?? "");
   const retorno = caminhoSeguro(String(formulario.get("returnTo") ?? "/painel"));
 
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
 
   // devolve ao login quando a senha está errada
   const geral = formulario.get("geral") === "1";
-  const acesso = await autenticarSenha(senha, geral);
+  const acesso = await autenticarSenha(login, senha, geral);
   if (!acesso) {
     return voltarAoLogin(tentativa.limite.bloqueado ? "limite" : "1");
   }

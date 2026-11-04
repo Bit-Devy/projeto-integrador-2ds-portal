@@ -4,7 +4,7 @@
 // mantém neste painel apenas o cadastro dos espaços físicos do colégio
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
-import { alasMapa, type CategoriaMapa, type DadosMapa, type LocalMapa } from "../mapa/tipos";
+import { alasMapa, nomesTurnos, type CategoriaMapa, type DadosMapa, type LocalMapa } from "../mapa/tipos";
 import { confirmarSaida, useAvisoMudancas, type AoMudarEstadoSujo } from "./painel-eventos-comum";
 import { confirmarNoPainel } from "./confirmacao-painel";
 type ValorFormulario = string | number | boolean | null;
@@ -24,6 +24,8 @@ export default function PainelMapaColegio({ aoMudarEstadoSujo }: { aoMudarEstado
   const [mudou, setMudou] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
+  const [vincularTurma, setVincularTurma] = useState(false);
+  const [turmaId, setTurmaId] = useState("");
   useAvisoMudancas(mudou, aoMudarEstadoSujo);
   // consulta também as salas que ainda não estão públicas
   const carregar = useCallback(async () => {
@@ -38,22 +40,39 @@ export default function PainelMapaColegio({ aoMudarEstadoSujo }: { aoMudarEstado
   function novoRegistro() {
     setFormulario({ nome: "", numero: "", nomeAlternativo: "", tipo: categoriasLocal.find((item) => item.slug === "sala_aula")?.slug || categoriasLocal[0]?.slug || "outro", ala: "", andar: "", bloco: "", setor: "", corredor: "", referencia: "", descricao: "", instrucoes: "", observacoes: "", acessibilidade: "", horario: "", imagemUrl: "", ordem: 0, ativo: true, publicado: true });
     setIdEditando(null); setMudou(false); setErro(""); setSucesso("");
+    setVincularTurma(false); setTurmaId("");
   }
   // acompanha as mudanças para avisar antes de fechar sem salvar
-  function editarRegistro(local: LocalMapa) { setFormulario({ ...local }); setIdEditando(local.id); setMudou(false); setErro(""); setSucesso(""); }
+  function editarRegistro(local: LocalMapa) { setFormulario({ ...local }); setIdEditando(local.id); setMudou(false); setErro(""); setSucesso(""); setVincularTurma(false); setTurmaId(""); }
   function mudar(chave: string, valor: ValorFormulario) { setFormulario((atual) => atual ? { ...atual, [chave]: valor } : atual); setMudou(true); setSucesso(""); }
   async function fecharFormulario() { if (salvando || !await confirmarSaida(mudou)) return; setFormulario(null); setMudou(false); }
   // salva apenas os dados físicos da sala neste painel
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault(); if (!formulario || salvando) return;
+    const turma = dados.turmas.find((item) => item.id === Number(turmaId));
+    const outrosLocais = vincularTurma ? dados.ensalamentos.filter((item) => item.turmaAtividadeId === turma?.id && item.ativo && item.localId && item.localId !== idEditando) : [];
+    if (outrosLocais.length && !await confirmarNoPainel("Transferir a turma para esta sala?", `A turma “${turma?.nome}” já possui uma sala vinculada. Ao salvar, ela será transferida para esta sala no turno ${nomesTurnos[turma!.turno]}. A ocupação anterior ficará no histórico.`, "Transferir turma", "Continuar editando")) return;
     setSalvando(true); setErro(""); setSucesso("");
     try {
-      const resposta = await fetch("/api/mapa", { method: idEditando ? "PUT" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ entidade: "locais", id: idEditando, dados: formulario }) });
-      const resultado = await resposta.json(); if (!resposta.ok) throw new Error(resultado.erro || "Não foi possível salvar a sala.");
+      // revisa conflitos antes de salvar a sala e a ocupação juntas
+      let substituicoes: number[] = [];
+      while (true) {
+        const resposta = await fetch("/api/mapa", { method: idEditando ? "PUT" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ entidade: "locais", id: idEditando, dados: { ...formulario, ...(vincularTurma ? { turmaId: Number(turmaId), substituirOcupacoes: substituicoes } : {}) } }) });
+        const resultado = await resposta.json();
+        if (resposta.status === 409 && resultado.conflitos?.length) {
+          if (!await confirmarNoPainel("Substituir a ocupação desta sala?", `Esta sala está ocupada por ${resultado.conflitos.map((item: { nome: string }) => item.nome).join(", ")} neste turno e período. Deseja substituir? A ocupação anterior ficará no histórico.`, "Substituir ocupação", "Continuar editando")) return;
+          substituicoes = resultado.conflitos.map((item: { id: number }) => item.id); continue;
+        }
+        if (!resposta.ok) throw new Error(resultado.erro || "Não foi possível salvar a sala.");
+        break;
+      }
       setFormulario(null); setMudou(false); setSucesso("Sala salva. Ela já pode ser escolhida no cadastro de turmas quando estiver ativa e publicada."); await carregar();
     } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível salvar a sala."); }
     finally { setSalvando(false); }
   }
+  // oferece somente turmas que já podem aparecer no portal
+  const hoje = new Date().toISOString().slice(0, 10);
+  const turmasDisponiveis = dados.turmas.filter((item) => item.ativo && item.publicado && (!item.inicioValidade || item.inicioValidade <= hoje) && (!item.fimValidade || item.fimValidade >= hoje) && dados.categorias.some((categoria) => categoria.grupo === "atividade" && categoria.slug === item.tipo && categoria.ativo));
   // confirma a exclusão e impede remover uma sala ainda vinculada
   async function excluir(local: LocalMapa) {
     if (!await confirmarNoPainel("Excluir sala?", `Excluir “${local.nome}”? Salas com vínculos de turmas precisam ser desvinculadas antes.`, "Excluir sala", "Cancelar")) return;
@@ -81,6 +100,8 @@ export default function PainelMapaColegio({ aoMudarEstadoSujo }: { aoMudarEstado
     {formulario ? <form className="formulario-painel formulario-mapa-painel" onSubmit={salvar}>
       <div className="titulo-formulario-painel"><h2>{idEditando ? "Atualizar sala" : "Cadastrar sala"}</h2><button type="button" onClick={fecharFormulario}>Fechar</button></div>
       <div className="grade-campos-painel"><CamposLocal formulario={formulario} mudar={mudar} categorias={categoriasLocal} enviarImagem={enviarImagem} /></div>
+      {/* vincula uma turma existente sem criar um segundo cadastro */}
+      <details className="salas-vinculo"><summary>Vincular turma (opcional)</summary><label><CheckboxComAjuda checked={vincularTurma} onChange={(evento) => { setVincularTurma(evento.target.checked); setMudou(true); }} explicacao="Marcado: vincula uma turma já publicada a esta sala usando o turno e a validade dela. Desmarcado: salva a sala sem adicionar ou trocar vínculos de turma." aria-label="Escolher uma turma existente" />Escolher uma turma existente</label>{vincularTurma && <div className="grade-campos-painel"><label><span>Turma publicada</span><select required value={turmaId} onChange={(evento) => { setTurmaId(evento.target.value); setMudou(true); }}><option value="">Selecione a turma</option>{turmasDisponiveis.map((item) => <option key={item.id} value={item.id}>{item.nome} · {nomesTurnos[item.turno]}</option>)}</select></label></div>}<p>O vínculo usa o turno e a validade da turma escolhida. Se ela já tiver uma sala, você poderá confirmar a transferência. Para criar uma turma nova, use o menu Turmas.</p></details>
       <div className="acoes-formulario-painel"><button type="button" onClick={fecharFormulario}>Cancelar</button><button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Salvar sala"}</button></div>
     </form> : <>
       <div className="ferramentas-salas"><label>Buscar sala ou local<input type="search" value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Número, nome ou ala" /></label><label>Tipo do local<select value={filtroTipo} onChange={(evento) => setFiltroTipo(evento.target.value)}><option value="">Todos</option>{categoriasLocal.map((item) => <option key={item.id} value={item.slug}>{item.nome}</option>)}</select></label><label>Publicação<select value={filtroEstado} onChange={(evento) => setFiltroEstado(evento.target.value)}><option value="">Todas</option><option value="publicado">Publicadas</option><option value="oculto">Fora do público</option></select></label></div>

@@ -662,11 +662,14 @@ export const presencasReuniao = sqliteTable(
 export const acessosPainel = sqliteTable("acessos_painel", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   cargo: text("cargo").notNull(), vaga: integer("vaga").notNull(), nome: text("nome").notNull(),
+  login: text("login").notNull().default(""), loginAmbiente: integer("login_ambiente", { mode: "boolean" }).notNull().default(false),
   resumo: text("resumo").notNull(), sal: text("sal").notNull(), busca: text("busca").notNull().unique(),
   versao: integer("versao").notNull().default(1),
   criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
   atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (tabela) => [uniqueIndex("acessos_painel_cargo_vaga_uq").on(tabela.cargo, tabela.vaga),
+  uniqueIndex("acessos_painel_login_uq").on(tabela.login).where(sql`${tabela.login} <> ''`),
+  uniqueIndex("acessos_painel_login_ambiente_uq").on(tabela.loginAmbiente).where(sql`${tabela.loginAmbiente} = 1`),
   check("acessos_painel_vaga_ck", sql`${tabela.vaga} >= 1 AND ${tabela.vaga} <= CASE WHEN ${tabela.cargo} = 'geral' THEN 3 ELSE 2 END`)]);
 export const auditoriaAcessos = sqliteTable("auditoria_acessos", {
   id: integer("id").primaryKey({ autoIncrement: true }), autorId: integer("autor_id").notNull(),
