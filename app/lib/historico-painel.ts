@@ -80,6 +80,12 @@ function resumirAcao(contexto: ContextoAcao, nome: string, registro: Objeto) {
   };
   if (especiais[acao]) return especiais[acao];
   if (metodo === "DELETE" || (entidade === "participantes" && dados.ativo === false)) return `${alvo.nome}${citado} ${flexionar(alvo.arquivar ? "arquivado" : "excluído")}`;
+  // explica quando uma turma sai do público ou volta do arquivo
+  if (recurso === "mapa" && entidade === "turmas" && metodo === "PUT") {
+    if (dados.ativo === false) return `Turma${citado} arquivada`;
+    if (anterior?.ativo === 0 && dados.ativo === true) return `Turma${citado} restaurada`;
+    if (dados.publicado === false && anterior?.publicado === 1) return `Turma${citado} retirada do público`;
+  }
   if (recurso === "conteudo" && (contexto.tipo === "noticias" || anterior?.tipo === "noticias")) {
     const antigos = objetoJson(anterior?.dados_json);
     if (dados.publicado === false) return antigos.jaPublicada || anterior?.publicado ? `Notícia${citado} arquivada` : `Rascunho da notícia${citado} salvo`;

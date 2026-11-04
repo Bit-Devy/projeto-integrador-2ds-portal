@@ -248,7 +248,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
             <Campo rotulo="Nome"><input value={formulario.nome} onChange={(e) => mudar("nome", e.target.value)} required maxLength={160} autoComplete="off" /></Campo>
             <Campo rotulo="Nome de exibição" dica="Deixe em branco para usar o nome acima."><input value={formulario.nomeExibicao} onChange={(e) => mudar("nomeExibicao", e.target.value)} maxLength={160} /></Campo>
             {/* oferece somente turmas publicadas e preenche os dados sem digitação livre */}
-            <Campo rotulo="Turma publicada" dica="A turma precisa estar ativa e dentro da validade. Cadastre novas turmas no menu Salas."><select value={formulario.turmaAtividadeId ?? ""} required onChange={(e) => {
+            <Campo rotulo="Turma publicada" dica="A turma precisa estar ativa e dentro da validade. Cadastre novas turmas no menu Turmas."><select value={formulario.turmaAtividadeId ?? ""} required onChange={(e) => {
               const turma = turmasPublicadas.find((item) => item.id === Number(e.target.value));
               setFormulario((atual) => atual ? { ...atual, ...(turma ? dadosDaTurma(turma) : { turmaAtividadeId: null, turma: "", serie: "" }) } : atual);
               setMudou(true);

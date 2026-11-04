@@ -14,8 +14,8 @@ import { ordenarRegistrosMaisRecentes } from "../conteudo/ordenacao";
 import type { MensagemParticipacao, RegistroConteudo, TipoConteudo, NoticiaGecep } from "../conteudo/tipos";
 // importa o painel do mapa
 import PainelMapaColegio from "./PainelMapaColegio";
-// importa o cadastro simples de salas e turmas
-import PainelSalas from "./PainelSalas";
+// importa o cadastro de turmas e seus vínculos com as salas
+import PainelTurmas from "./PainelTurmas";
 // importa as áreas do sistema de eventos
 import PainelEventosInternos from "./PainelEventosInternos";
 import PainelInterclasses from "./PainelInterclasses";
@@ -41,7 +41,7 @@ import {
 // define os valores aceitos nos campos
 type ValorCampo = string | number | boolean;
 // identifica as novas áreas administrativas especializadas
-type SecaoEventosPainel = "eventos-internos" | "interclasses" | "reunioes" | "representantes" | "salas";
+type SecaoEventosPainel = "eventos-internos" | "interclasses" | "reunioes" | "representantes" | "turmas";
 
 // mostra a área administrativa
 export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPainel }) {
@@ -277,7 +277,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     setConteudoSujo(false);
   }
 
-  const recursoAtual: RecursoPainel = mapaAberto || secaoEventos === "salas" ? "mapa" : mensagensAbertas ? "mensagens" : secaoEventos === "eventos-internos" ? "eventos" : secaoEventos || recursoConteudo(tipo);
+  const recursoAtual: RecursoPainel = mapaAberto || secaoEventos === "turmas" ? "mapa" : mensagensAbertas ? "mensagens" : secaoEventos === "eventos-internos" ? "eventos" : secaoEventos || recursoConteudo(tipo);
   const somenteConsulta = !pode(recursoAtual, true);
   return (
     <div className="painel-administrativo">
@@ -295,7 +295,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
           {pode("interclasses") && <button type="button" className={secaoEventos === "interclasses" ? "ativo" : ""} onClick={() => abrirSecaoEventos("interclasses")}>Interclasses e campeonatos</button>}
           {pode("reunioes") && <button type="button" className={secaoEventos === "reunioes" ? "ativo" : ""} onClick={() => abrirSecaoEventos("reunioes")}>Reuniões, atas e presenças</button>}
           {pode("representantes") && <button type="button" className={secaoEventos === "representantes" ? "ativo" : ""} onClick={() => abrirSecaoEventos("representantes")}>Representantes</button>}
-          {pode("mapa") && <button type="button" className={secaoEventos === "salas" ? "ativo" : ""} onClick={() => abrirSecaoEventos("salas")}>Salas</button>}
+          {pode("mapa") && <button type="button" className={secaoEventos === "turmas" ? "ativo" : ""} onClick={() => abrirSecaoEventos("turmas")}>Turmas</button>}
           {pode("mapa") && <button type="button" className={mapaAberto ? "ativo" : ""} onClick={abrirMapa}>Mapa e ensalamento</button>}
           {pode("mensagens") && <button type="button" className={mensagensAbertas ? "ativo" : ""} onClick={abrirMensagens}>Mensagens recebidas</button>}
           {usuario.cargo === "geral" && <>
@@ -321,8 +321,8 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
           <PainelReunioes cargo={usuario.cargo} aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : secaoEventos === "representantes" ? (
           <PainelRepresentantes aoMudarEstadoSujo={setPainelFilhoSujo} />
-        ) : secaoEventos === "salas" ? (
-          <PainelSalas aoMudarEstadoSujo={setPainelFilhoSujo} />
+        ) : secaoEventos === "turmas" ? (
+          <PainelTurmas aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : mapaAberto ? (
           <PainelMapaColegio aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : mensagensAbertas ? (

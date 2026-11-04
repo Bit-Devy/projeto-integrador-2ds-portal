@@ -1493,6 +1493,8 @@ async function testarMapa(cookie) {
     // exclui os dados temporários
     await excluirMapa(cookie, "ensalamentos", idEnsalamento);
     idEnsalamento = 0;
+    // arquiva a turma antes de permitir sua exclusão
+    await requisicaoMapa(cookie, "PUT", { entidade: "turmas", id: idTurma, dados: { ativo: false, publicado: false } });
     await excluirMapa(cookie, "turmas", idTurma);
     idTurma = 0;
     await excluirMapa(cookie, "locais", idLocal);
@@ -1526,6 +1528,7 @@ async function obterMapaPublico(chave) {
 
 // tenta excluir um item durante a limpeza
 async function excluirMapaSemFalhar(cookie, entidade, id) {
+  if (entidade === "turmas") await fetch(`${endereco}/api/mapa`, { method: "PUT", headers: { cookie, "content-type": "application/json" }, body: JSON.stringify({ entidade, id, dados: { ativo: false, publicado: false } }) });
   await fetch(`${endereco}/api/mapa?entidade=${entidade}&id=${id}`, { method: "DELETE", headers: { cookie } });
 }
 

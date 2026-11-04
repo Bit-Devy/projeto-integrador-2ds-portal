@@ -310,37 +310,44 @@ async function salvarTurmaComSala(id: number | null, valor: unknown) {
   const existente = id ? await buscarTurma(id) : null;
   if (id && !existente) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
   const dados = validarTurmaMapa({ ...existente, ...recebido });
+  if (!dados.ativo) dados.publicado = false;
   await exigirCategoria("atividade", dados.tipo);
   const d1 = getD1();
   const atribuir = recebido.salaId !== undefined;
   const salaId = atribuir ? idPositivo(recebido.salaId, "sala publicada") : null;
   const comandos: D1PreparedStatement[] = [];
+  const desvincular = recebido.desvincularSala === true;
+  if (desvincular && salaId) throw new ErroMapa("Escolha vincular ou remover a sala, não as duas opções.");
   if (salaId) {
     const sala = await buscarLocal(salaId);
     if (!sala?.ativo || !sala.publicado) throw new ErroMapa("Escolha uma sala ativa e publicada.");
     const categoria = await d1.prepare("SELECT id FROM categorias_mapa WHERE grupo = 'local' AND slug = ? AND ativo = 1").bind(sala.tipo).first();
     if (!categoria) throw new ErroMapa("A categoria da sala precisa estar ativa.");
-    // a confirmação só vale para as ocupações que a pessoa acabou de conferir
-    if (dados.ativo && dados.publicado) {
-      const ocupacoes = await d1.prepare(`SELECT e.id, t.nome FROM ensalamentos e
-        JOIN turmas_atividades t ON t.id = e.turma_atividade_id
-        WHERE e.local_id = ? AND e.turno = ? AND e.turma_atividade_id <> ?
-          AND e.ativo = 1 AND e.publicado = 1
-          AND COALESCE(NULLIF(e.fim_validade, ''), '9999-12-31') >= ?
-          AND COALESCE(NULLIF(e.inicio_validade, ''), '0001-01-01') <= ?`)
-        .bind(salaId, dados.turno, id ?? -1, dados.inicioValidade || "0001-01-01", dados.fimValidade || "9999-12-31")
-        .all<{ id: number; nome: string }>();
-      const confirmados = Array.isArray(recebido.substituirOcupacoes) ? recebido.substituirOcupacoes : [];
-      if (ocupacoes.results.some((item) => !confirmados.includes(item.id))) {
-        const erro = new ErroMapa("Esta sala já está ocupada neste turno e período. Deseja substituir a ocupação?", 409);
-        erro.conflitos = ocupacoes.results;
-        throw erro;
-      }
-      for (const ocupacao of ocupacoes.results) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?").bind(ocupacao.id));
-    }
-    // conserva os vínculos antigos como histórico ao escolher uma nova sala
-    if (id) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?").bind(id));
   }
+  // confere também os vínculos mantidos ao publicar ou trocar turno e validade
+  const vinculos = id && !salaId && !desvincular ? await d1.prepare("SELECT local_id FROM ensalamentos WHERE turma_atividade_id = ? AND ativo = 1 AND local_id IS NOT NULL").bind(id).all<{ local_id: number }>() : { results: [] };
+  const salas = salaId ? [salaId] : [...new Set(vinculos.results.map((item) => item.local_id))];
+  const ocupacoes = new Map<number, { id: number; nome: string }>();
+  if (dados.ativo && dados.publicado) for (const local of salas) {
+    const encontrados = await d1.prepare(`SELECT e.id, t.nome FROM ensalamentos e
+      JOIN turmas_atividades t ON t.id = e.turma_atividade_id
+      WHERE e.local_id = ? AND e.turno = ? AND e.turma_atividade_id <> ?
+        AND e.ativo = 1 AND e.publicado = 1
+        AND COALESCE(NULLIF(e.fim_validade, ''), '9999-12-31') >= ?
+        AND COALESCE(NULLIF(e.inicio_validade, ''), '0001-01-01') <= ?`)
+      .bind(local, dados.turno, id ?? -1, dados.inicioValidade || "0001-01-01", dados.fimValidade || "9999-12-31")
+      .all<{ id: number; nome: string }>();
+    encontrados.results.forEach((item) => ocupacoes.set(item.id, item));
+  }
+  const confirmados = Array.isArray(recebido.substituirOcupacoes) ? recebido.substituirOcupacoes : [];
+  if ([...ocupacoes.values()].some((item) => !confirmados.includes(item.id))) {
+    const erro = new ErroMapa("Esta sala já está ocupada neste turno e período. Deseja substituir a ocupação?", 409);
+    erro.conflitos = [...ocupacoes.values()];
+    throw erro;
+  }
+  for (const ocupacao of ocupacoes.values()) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?").bind(ocupacao.id));
+  // libera a sala ao arquivar e conserva os vínculos anteriores como histórico
+  if (id && (salaId || desvincular || !dados.ativo)) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?").bind(id));
   const chave = `cadastro:${crypto.randomUUID()}`;
   comandos.push(id
     ? d1.prepare(`${sqlAtualizarTurma} WHERE id = ?`).bind(...valoresTurma(dados), id)
@@ -353,8 +360,9 @@ async function salvarTurmaComSala(id: number | null, valor: unknown) {
     comandos.push(d1.prepare(`INSERT INTO ensalamentos (${colunasEnsalamento})
       SELECT id, ?, ?, ?, '', ?, ?, 0, ?, ? FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`)
       .bind(salaId, dados.turno, dados.tipo, dados.inicioValidade, dados.fimValidade, numeroBooleano(dados.ativo), numeroBooleano(dados.publicado), id ?? chave));
-  } else if (id) {
-    comandos.push(d1.prepare("UPDATE ensalamentos SET turno = ?, tipo = ?, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?").bind(dados.turno, dados.tipo, id));
+  } else if (id && !desvincular && dados.ativo) {
+    comandos.push(d1.prepare(`UPDATE ensalamentos SET turno = ?, tipo = ?, inicio_validade = ?, fim_validade = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP
+      WHERE turma_atividade_id = ? AND ativo = 1`).bind(dados.turno, dados.tipo, dados.inicioValidade, dados.fimValidade, numeroBooleano(dados.publicado), id));
   }
   await d1.batch(comandos);
   const linha = await d1.prepare(`SELECT * FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`).bind(id ?? chave).first<LinhaTurma>();
@@ -381,13 +389,21 @@ export async function excluirRegistroMapa(entidade: EntidadeMapa, idRecebido: un
       throw new ErroMapa("O local possui ensalamentos. Troque ou exclua esses vínculos antes.", 409);
     }
     await d1.prepare("DELETE FROM locais_colegio WHERE id = ?").bind(id).run();
-  // exclui uma turma sem ensalamentos
+  // só exclui turmas arquivadas e conserva os nomes usados nos registros históricos
   } else if (entidade === "turmas") {
-    if (!await buscarTurma(id)) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
-    if (await contar("ensalamentos", "turma_atividade_id", id)) {
-      throw new ErroMapa("A turma possui ensalamentos. Exclua esses vínculos antes.", 409);
-    }
-    await d1.prepare("DELETE FROM turmas_atividades WHERE id = ?").bind(id).run();
+    const turma = await buscarTurma(id);
+    if (!turma) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
+    if (turma.ativo || turma.publicado) throw new ErroMapa("Arquive a turma antes de excluí-la.", 409);
+    const arquivada = "EXISTS (SELECT 1 FROM turmas_atividades WHERE id = ? AND ativo = 0 AND publicado = 0)";
+    const resultado = await d1.batch([
+      d1.prepare(`UPDATE representantes SET turma_atividade_id = NULL, ativo = 0, publicado = 0,
+        arquivado_em = COALESCE(arquivado_em, CURRENT_TIMESTAMP), atualizado_em = CURRENT_TIMESTAMP
+        WHERE turma_atividade_id = ? AND ${arquivada}`).bind(id, id),
+      d1.prepare(`UPDATE participantes_campeonato SET turma_atividade_id = NULL WHERE turma_atividade_id = ? AND ${arquivada}`).bind(id, id),
+      d1.prepare(`DELETE FROM ensalamentos WHERE turma_atividade_id = ? AND ${arquivada}`).bind(id, id),
+      d1.prepare("DELETE FROM turmas_atividades WHERE id = ? AND ativo = 0 AND publicado = 0 RETURNING id").bind(id),
+    ]);
+    if (!resultado[3].results.length) throw new ErroMapa("A turma mudou durante a exclusão. Recarregue a lista e tente novamente.", 409);
   // exclui um ensalamento
   } else {
     if (!await buscarEnsalamento(id)) throw new ErroMapa("Ensalamento não encontrado.", 404);

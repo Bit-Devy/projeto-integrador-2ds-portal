@@ -22,7 +22,7 @@ Para executar a versão compilada, use `npm run build` e depois `npm run start`.
 - **Eventos e calendário:** consulta de atividades, datas e programações publicadas
 - **Interclasses:** campeonatos, participantes, fases, chaves, partidas, placares e resultados
 - **Reuniões e atas:** pautas, registros, presenças, votações e documentos publicados pela gestão
-- **Salas:** cadastro simples de turmas e salas físicas, com vínculo opcional ao ensalamento e confirmação ao substituir uma ocupação
+- **Turmas:** cadastro e busca de turmas, vínculo opcional com salas por turno e período, confirmação de conflitos e opções de retirar do público, arquivar, restaurar e excluir turmas arquivadas
 - **Mapa do colégio:** pesquisa de salas, espaços, turmas e atividades com filtros de turno e tipo
 - **Transparência:** receitas, despesas, categorias e comprovantes, com totais separados por ano e consulta do histórico
 - **Estatuto e documentos:** acesso à última versão das normas e aos arquivos publicados do grêmio
@@ -33,7 +33,7 @@ Para executar a versão compilada, use `npm run build` e depois `npm run start`.
 
 ## Uso básico
 
-Acesse `/painel` e use a senha do seu cargo. Para o painel completo, marque **Acesso geral** e use uma senha geral. Na primeira entrada, a senha de `ADMIN_PASSWORD` cria o primeiro acesso geral; depois, as senhas são administradas no banco pelo menu **Registro de senhas**. Esse menu permite até duas senhas por cargo e três gerais, sempre com revisão e confirmação da senha de quem está conectado. Trocar ou revogar uma senha encerra suas sessões anteriores, e a última senha geral não pode ser revogada. A senha inicial não volta a funcionar depois de trocada no painel. Cadastre ou edite os itens nas áreas do painel e use a opção de publicação para disponibilizá-los aos estudantes. Rascunhos e informações internas ficam na área administrativa. Para cadastrar um representante, publique primeiro uma turma ativa no menu Salas. O nível, a série e o turno do representante são preenchidos a partir dessa turma.
+Acesse `/painel` e use a senha do seu cargo. Para o painel completo, marque **Acesso geral** e use uma senha geral. Na primeira entrada, a senha de `ADMIN_PASSWORD` cria o primeiro acesso geral; depois, as senhas são administradas no banco pelo menu **Registro de senhas**. Esse menu permite até duas senhas por cargo e três gerais, sempre com revisão e confirmação da senha de quem está conectado. Trocar ou revogar uma senha encerra suas sessões anteriores, e a última senha geral não pode ser revogada. A senha inicial não volta a funcionar depois de trocada no painel. Cadastre ou edite os itens nas áreas do painel e use a opção de publicação para disponibilizá-los aos estudantes. Rascunhos e informações internas ficam na área administrativa. Para cadastrar um representante, publique primeiro uma turma ativa no menu **Turmas**. O nível, a série e o turno do representante são preenchidos a partir dessa turma. Cadastre as salas em **Mapa e ensalamento** e escolha a sala no cadastro da turma. Arquivar uma turma libera sua ocupação; excluir uma turma arquivada preserva os registros históricos de representantes, reuniões e campeonatos.
 
 Nos formulários, a opção de preservar identidade pede confirmação e desativa nome, turma e contato. Esses dados não acompanham o envio anônimo, e a gestão não poderá responder diretamente. Evite incluir dados pessoais no texto da mensagem.
 
