@@ -67,6 +67,7 @@ type Filtros = { sql: string[]; valores: unknown[] };
 export async function listarEventos(parametros: URLSearchParams, todos = false): Promise<ListaPaginada<EventoInternoPublico | EventoInternoAdministrativo>> {
   const { pagina, limite, offset } = paginacao(parametros);
   const filtros: Filtros = { sql: [], valores: [] };
+  if (todos && parametros.get("areaResponsavel")) adicionarIgual(filtros, "e.area_responsavel", parametros.get("areaResponsavel"));
   const situacaoRecebida = textoFiltro(parametros.get("situacao"), 40);
   const situacao = situacaoRecebida === "acontecendo_agora" ? "em_andamento" : situacaoRecebida;
   if (!todos) {
@@ -375,7 +376,7 @@ function formatarEvento(linha: Linha, anexos: Array<DocumentoPublico | Documento
   };
   if (!todos) return publico;
   return {
-    ...publico,
+    ...publico, areaResponsavel: string(linha.area_responsavel) || "geral",
     observacoesInternas: string(linha.observacoes_internas), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
     arquivadoEm: nuloString(linha.arquivado_em), criadoEm: string(linha.criado_em),
   } satisfies EventoInternoAdministrativo;
@@ -1571,6 +1572,7 @@ export async function arquivarAtualizacaoCampeonato(idRecebido: unknown) {
 export async function listarReunioes(parametros: URLSearchParams, todos = false): Promise<ListaPaginada<ReuniaoPublica | ReuniaoAdministrativa>> {
   const { pagina, limite, offset } = paginacao(parametros);
   const filtros: Filtros = { sql: [], valores: [] };
+  if (todos && parametros.get("areaResponsavel")) adicionarIgual(filtros, "r.area_responsavel", parametros.get("areaResponsavel"));
   const situacao = textoFiltro(parametros.get("situacao"), 40);
   if (!todos) {
     filtros.sql.push("r.publicado = 1", "r.ativo = 1", "r.arquivado_em IS NULL");
@@ -2384,7 +2386,7 @@ function formatarReuniao(linha: Linha, todos: boolean): ReuniaoPublica | Reuniao
   };
   if (!todos) return publico;
   return {
-    ...publico, pautaInterna: string(linha.pauta_interna), observacoesInternas: string(linha.observacoes_internas),
+    ...publico, areaResponsavel: string(linha.area_responsavel) || "geral", pautaInterna: string(linha.pauta_interna), observacoesInternas: string(linha.observacoes_internas),
     quantidadeParticipantesPublicada: publicaQuantidade, publicado: bool(linha.publicado), ativo: bool(linha.ativo),
     arquivadoEm: nuloString(linha.arquivado_em), criadoEm: string(linha.criado_em),
   } satisfies ReuniaoAdministrativa;

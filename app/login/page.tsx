@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default async function PaginaLogin({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string; returnTo?: string }>;
+  searchParams: Promise<{ erro?: string; returnTo?: string; geral?: string }>;
 }) {
   // recebe os dados enviados pela url
   const parametros = await searchParams;
@@ -31,9 +31,9 @@ export default async function PaginaLogin({
         <img src="/logo-gecep.png" alt="Logo do GECEP" />
         <span className="rotulo-secao">ÁREA RESTRITA</span>
         <h1>Entrar no painel</h1>
-        <p>Informe a senha da gestão para acessar o painel.</p>
+        <p>Informe a senha do seu cargo para acessar o painel.</p>
         {/* formulário de acesso */}
-        <FormularioLogin retorno={retorno} erro={parametros.erro} />
+        <FormularioLogin retorno={retorno} erro={parametros.erro} geralInicial={parametros.geral === "1"} />
         <Link href="/">Voltar ao portal</Link>
       </section>
     </main>

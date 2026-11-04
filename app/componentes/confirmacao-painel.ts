@@ -1,3 +1,4 @@
+import { identificadorLocal } from "./identificador-local";
 // abre uma confirmação acessível do site sem bloquear o navegador
 let aberta = false;
 export function confirmarNoPainel(titulo: string, mensagem: string, confirmar = "Descartar e continuar", cancelar = "Continuar editando"): Promise<boolean> {
@@ -8,7 +9,7 @@ export function confirmarNoPainel(titulo: string, mensagem: string, confirmar = 
     const dialogo = document.createElement("dialog");
     dialogo.className = "dialogo-anonimato";
     const cabecalho = document.createElement("h2");
-    cabecalho.id = `confirmacao-${crypto.randomUUID()}`;
+    cabecalho.id = `confirmacao-${identificadorLocal()}`;
     cabecalho.textContent = titulo;
     dialogo.setAttribute("aria-labelledby", cabecalho.id);
     const texto = document.createElement("p"); texto.textContent = mensagem;

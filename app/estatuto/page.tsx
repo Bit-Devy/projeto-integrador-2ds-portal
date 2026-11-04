@@ -21,7 +21,7 @@ export default async function PaginaEstatuto() {
       {/* apresentação e botões do documento */}
       <section className="limite pagina-conteudo grade-estatuto-abertura">
         <div><span className="rotulo-secao">ÚLTIMA VERSÃO DO ESTATUTO</span><h2>As regras que orientam o funcionamento do grêmio</h2><p>O Estatuto é a referência oficial para compreender direitos, órgãos, eleições, patrimônio e funcionamento do GECEP.</p><div className="botoes-inicio"><a className="botao-primario" href={linkEstatuto} target="_blank" rel="noreferrer">Abrir PDF oficial</a><a className="botao-secundario" href={linkEstatuto} download>Baixar documento</a></div></div>
-        <div className="cartao-documento-grande"><span>PDF</span><div><strong>Estatuto do Grêmio Estudantil do Colégio Estadual do Paraná</strong><small>{estatuto?.versao ? `Versão ${estatuto.versao}` : "Última versão"}{estatuto?.atualizadoEm ? ` · Atualizado em ${estatuto.atualizadoEm.slice(0, 10).split("-").reverse().join("/")}` : ""}</small></div></div>
+        <div className="cartao-documento-grande"><span>PDF</span><div><strong>Estatuto do Grêmio Estudantil do Colégio Estadual do Paraná</strong><small>{estatuto?.versao ? `Versão ${estatuto.versao}` : "Última versão"}{estatuto?.atualizadoEm ? ` · Atualizado em ${new Date(`${estatuto.atualizadoEm.replace(" ", "T")}Z`).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : ""}</small></div></div>
       </section>
 
       {/* resumo dos assuntos do estatuto */}

@@ -14,7 +14,7 @@ export async function GET() {
 // troca o pdf e atualiza o catálogo público no mesmo lote
 export async function PUT(request: Request) {
   if (!origemValida(request)) return Response.json({ erro: "Origem inválida." }, { status: 403 });
-  const { resposta } = await exigirAdministradorApi();
+  const { resposta } = await exigirAdministradorApi("oficiais");
   if (resposta) return resposta;
   try {
     await garantirBanco();

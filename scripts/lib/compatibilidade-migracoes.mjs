@@ -8,6 +8,7 @@ const migracoesDaPrevia = [
   "0007_amusing_toad_men.sql",
   "0008_massive_shooting_star.sql",
   "0009_grey_spectrum.sql",
+  "0010_aspiring_fantastic_four.sql",
 ];
 const identificador = (valor) => `"${valor.replaceAll('"', '""')}"`;
 const normalizarSql = (sql) => sql.match(/'(?:''|[^'])*'|[^']+/g).map((trecho) => trecho.startsWith("'")
@@ -25,7 +26,8 @@ export function lerEstrutura(banco) {
       .map(({ table, from, to, on_update, on_delete, match }) => JSON.stringify([table, from, to, on_update, on_delete, match])).sort(),
     indices: banco.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND sql IS NOT NULL ORDER BY name").all(name)
       .map((indice) => ({ nome: indice.name, sql: normalizarSql(indice.sql) })),
-    verificacoes: (sql.match(/CHECK[^\n]+/gi) ?? []).map(normalizarSql).sort(),
+    // considera iguais as restrições com ou sem o nome da própria tabela
+    verificacoes: (sql.match(/CHECK[^\n]+/gi) ?? []).map((trecho) => normalizarSql(trecho).replaceAll(`${name.toLowerCase()}.`, "")).sort(),
   }));
 }
 

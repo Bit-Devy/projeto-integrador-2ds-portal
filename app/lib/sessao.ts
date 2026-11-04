@@ -3,7 +3,9 @@ import { cookies } from "next/headers";
 // importa o redirecionamento do next
 import { redirect } from "next/navigation";
 // importa as variáveis do ambiente
-import { obterAmbiente } from "../../worker/ambiente";
+import { segredoSessao, garantirAcessos, confirmarSenhaDoAcesso, type AcessoSalvo } from "./senhas-painel";
+import { obterCargo } from "./cargos";
+import { getD1 } from "../../db";
 
 // define o nome e a duração do cookie de sessão
 export const NOME_COOKIE_SESSAO = "gecep_sessao";
@@ -14,6 +16,9 @@ const codificador = new TextEncoder();
 // define o usuário guardado pela sessão
 export type UsuarioPainel = {
   nome: string;
+  cargo: string;
+  acessoId: number;
+  versao: number;
 };
 
 // verifica se existe uma sessão válida
@@ -23,12 +28,18 @@ export async function obterUsuarioPainel(): Promise<UsuarioPainel | null> {
   const token = armazenamento.get(NOME_COOKIE_SESSAO)?.value;
   if (!token) return null;
   try {
-    if (!(await tokenValido(token))) return null;
+    const conteudo = await tokenValido(token);
+    if (!conteudo) return null;
+    const [tipo, validade, id, versao] = conteudo.split(":");
+    if (tipo !== "cargo" || !validade || !/^\d+$/.test(id || "") || !/^\d+$/.test(versao || "")) return null;
+    await garantirAcessos();
+    const acesso = await getD1().prepare("SELECT * FROM acessos_painel WHERE id = ? AND versao = ?").bind(Number(id), Number(versao)).first<AcessoSalvo>();
+    if (!acesso || !obterCargo(acesso.cargo)) return null;
+    return { nome: acesso.nome, cargo: acesso.cargo, acessoId: acesso.id, versao: acesso.versao };
   } catch {
     // cookies incompletos ou adulterados são tratados como sessão ausente
     return null;
   }
-  return { nome: "Gestão do GECEP" };
 }
 
 // exige uma sessão válida antes de abrir o painel
@@ -39,37 +50,22 @@ export async function exigirUsuarioPainel(retorno = "/painel") {
 }
 
 // cria o código guardado no navegador depois do login
-export async function criarTokenSessao() {
+export async function criarTokenSessao(acesso: Pick<AcessoSalvo, "id" | "versao">) {
   // exige um segredo configurado no ambiente
   const segredo = obterSegredo();
   if (!segredo) throw new Error("Defina SESSION_SECRET antes de usar o painel.");
 
   // cria o conteúdo e sua assinatura
   const validade = Math.floor(Date.now() / 1000) + DURACAO_SESSAO;
-  const conteudo = `gestao:${validade}`;
+  const conteudo = `cargo:${validade}:${acesso.id}:${acesso.versao}`;
   const assinatura = await assinar(conteudo, segredo);
   return `${conteudo}.${assinatura}`;
 }
 
 // compara a senha recebida sem revelar diferenças de tempo
 export async function validarSenhaAdministrativa(senhaRecebida: string) {
-  const senhaCorreta = obterSenha();
-  if (!senhaCorreta) return false;
-
-  // calcula os resumos das duas senhas ao mesmo tempo
-  const [recebida, correta] = await Promise.all([
-    crypto.subtle.digest("SHA-256", codificador.encode(senhaRecebida)),
-    crypto.subtle.digest("SHA-256", codificador.encode(senhaCorreta)),
-  ]);
-
-  // compara todos os bytes dos resumos
-  const a = new Uint8Array(recebida);
-  const b = new Uint8Array(correta);
-  let diferenca = a.length ^ b.length;
-  for (let indice = 0; indice < Math.min(a.length, b.length); indice += 1) {
-    diferenca |= a[indice] ^ b[indice];
-  }
-  return diferenca === 0;
+  const usuario = await obterUsuarioPainel();
+  return Boolean(usuario && await confirmarSenhaDoAcesso(senhaRecebida, usuario.acessoId, usuario.versao));
 }
 
 // impede redirecionamentos para endereços externos
@@ -98,12 +94,13 @@ async function tokenValido(token: string) {
 
   // confirma a assinatura com a chave secreta
   const chave = await criarChave(segredo, ["verify"]);
-  return crypto.subtle.verify(
+  const confere = await crypto.subtle.verify(
     "HMAC",
     chave,
     base64UrlParaBytes(assinaturaRecebida),
     codificador.encode(conteudo),
   );
+  return confere ? conteudo : false;
 }
 
 // assina o conteúdo da sessão
@@ -125,14 +122,7 @@ function criarChave(segredo: string, usos: KeyUsage[]) {
 }
 
 // lê o segredo da sessão
-function obterSegredo() {
-  return obterAmbiente().SESSION_SECRET ?? process.env.SESSION_SECRET ?? "";
-}
-
-// lê a senha administrativa
-function obterSenha() {
-  return obterAmbiente().ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? "";
-}
+function obterSegredo() { return segredoSessao(); }
 
 // transforma bytes em texto seguro para endereço
 function bytesParaBase64Url(bytes: Uint8Array) {

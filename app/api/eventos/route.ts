@@ -13,6 +13,7 @@ import {
 } from "../../eventos/banco";
 import { dadosDoCorpo, ErroEventos } from "../../eventos/validacao";
 import {
+  guardarArea,
   lerObjeto,
   prepararEscrita,
   prepararLeitura,
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
     const corpo = await lerObjeto(request);
     if (corpo.acao === "duplicar") {
       const item = await duplicarEvento(corpo.id);
+      await guardarArea(request, "eventos", item, corpo);
       await sincronizarArquivosDoEvento(item);
       return Response.json({ item }, { status: 201 });
     }
@@ -54,6 +56,7 @@ export async function POST(request: Request) {
       return Response.json({ item }, { status: 201 });
     }
     const item = await criarEvento(dadosDoCorpo(corpo));
+    await guardarArea(request, "eventos", item, corpo);
     await sincronizarArquivosDoEvento(item);
     return Response.json({ item }, { status: 201 });
   } catch (erro) {
@@ -76,11 +79,13 @@ export async function PUT(request: Request) {
     }
     if (corpo.acao === "duplicar") {
       const item = await duplicarEvento(corpo.id);
+      await guardarArea(request, "eventos", item, corpo);
       await sincronizarArquivosDoEvento(item);
       return Response.json({ item });
     }
     const anterior = await obterEvento(String(corpo.id ?? ""), true);
     const item = await atualizarEvento(corpo.id, dadosDoCorpo(corpo));
+    await guardarArea(request, "eventos", item, corpo);
     await sincronizarArquivosDoEvento(anterior, item);
     return Response.json({ item });
   } catch (erro) {

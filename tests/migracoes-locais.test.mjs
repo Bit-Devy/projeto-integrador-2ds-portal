@@ -106,3 +106,15 @@ test("uma migração futura que falha no ensaio não altera registros nem histó
     assert.deepEqual(retrato(banco), antes);
   } finally { banco.close(); }
 });
+
+// compara a mesma regra criada pelo inicializador e pelo drizzle
+test("reconhece a mesma restrição com ou sem o nome da tabela", () => {
+  const a = new DatabaseSync(":memory:"); const b = new DatabaseSync(":memory:");
+  try {
+    a.exec("CREATE TABLE acesso(vaga INTEGER CHECK(acesso.vaga >= 1 AND acesso.vaga <= 3))");
+    b.exec("CREATE TABLE acesso(vaga INTEGER CHECK(vaga >= 1 AND vaga <= 3))");
+    assert.deepEqual(conferirEstrutura(lerEstrutura(a), lerEstrutura(b)), []);
+    b.exec("DROP TABLE acesso; CREATE TABLE acesso(vaga INTEGER CHECK(vaga >= 1 AND vaga <= 4))");
+    assert.notDeepEqual(conferirEstrutura(lerEstrutura(a), lerEstrutura(b)), []);
+  } finally { a.close(); b.close(); }
+});

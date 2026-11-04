@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     const exportar = parametros.get("exportar") === "1";
     // exige administrador para dados privados ou exportação
     if (todos || exportar) {
-      const { resposta } = await exigirAdministradorApi();
+      const { resposta } = await exigirAdministradorApi("mapa", request.method !== "GET");
       if (resposta) return resposta;
     }
     // valida o turno recebido
@@ -139,7 +139,7 @@ async function autorizarEscrita(request: Request) {
   if (!origemValida(request)) {
     return Response.json({ erro: "Origem inválida." }, { status: 403 });
   }
-  const { resposta } = await exigirAdministradorApi();
+  const { resposta } = await exigirAdministradorApi("mapa", request.method !== "GET");
   return resposta;
 }
 

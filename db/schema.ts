@@ -202,6 +202,7 @@ export const cargasIniciais = sqliteTable("cargas_iniciais", {
 export const eventosInternos = sqliteTable(
   "eventos_internos",
   {
+    areaResponsavel: text("area_responsavel").notNull().default("geral"),
     id: integer("id").primaryKey({ autoIncrement: true }),
     slug: text("slug").notNull(),
     titulo: text("titulo").notNull(),
@@ -501,6 +502,7 @@ export const representantes = sqliteTable(
 export const reunioes = sqliteTable(
   "reunioes",
   {
+    areaResponsavel: text("area_responsavel").notNull().default("geral"),
     id: integer("id").primaryKey({ autoIncrement: true }),
     slug: text("slug").notNull(),
     titulo: text("titulo").notNull(),
@@ -655,3 +657,19 @@ export const presencasReuniao = sqliteTable(
     check("presencas_reuniao_situacao_ck", sql`${tabela.situacao} IN ('presente', 'ausente', 'justificada', 'nao_se_aplica', 'nao_informada')`),
   ],
 );
+
+// guarda as senhas protegidas e o histórico das alterações
+export const acessosPainel = sqliteTable("acessos_painel", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  cargo: text("cargo").notNull(), vaga: integer("vaga").notNull(), nome: text("nome").notNull(),
+  resumo: text("resumo").notNull(), sal: text("sal").notNull(), busca: text("busca").notNull().unique(),
+  versao: integer("versao").notNull().default(1),
+  criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+  atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (tabela) => [uniqueIndex("acessos_painel_cargo_vaga_uq").on(tabela.cargo, tabela.vaga),
+  check("acessos_painel_vaga_ck", sql`${tabela.vaga} >= 1 AND ${tabela.vaga} <= CASE WHEN ${tabela.cargo} = 'geral' THEN 3 ELSE 2 END`)]);
+export const auditoriaAcessos = sqliteTable("auditoria_acessos", {
+  id: integer("id").primaryKey({ autoIncrement: true }), autorId: integer("autor_id").notNull(),
+  autorNome: text("autor_nome").notNull(), acao: text("acao").notNull(), cargo: text("cargo").notNull(), acessoId: integer("acesso_id"),
+  criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

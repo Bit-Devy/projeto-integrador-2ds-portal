@@ -9,6 +9,8 @@ export async function consultarNoticiasPainel(parametros: URLSearchParams) {
   const pagina = Math.max(1, Math.min(100000, Number(parametros.get("pagina")) || 1));
   const filtros = ["tipo = 'noticias'"];
   const valores: unknown[] = [];
+  const area = parametros.get("areaResponsavel");
+  if (area) { filtros.push("json_extract(dados_json, '$.areaResponsavel') = ?"); valores.push(area); }
   if (visao === "destaques") {
     filtros.push("publicado = 1 AND json_extract(dados_json, '$.destaque') = 1 AND substr(json_extract(dados_json, '$.data'), 1, 4) = ? AND (COALESCE(json_extract(dados_json, '$.destaqueAte'), '') = '' OR json_extract(dados_json, '$.destaqueAte') >= ?)");
     valores.push(String(anoDoPortal()), new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date()));

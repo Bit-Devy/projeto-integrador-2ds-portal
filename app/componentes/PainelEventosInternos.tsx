@@ -1,5 +1,9 @@
 "use client";
 
+// identifica a diretoria responsável por cada publicação
+import AreaResponsavel from "./AreaResponsavel";
+import { areaRestrita } from "../lib/cargos";
+
 // explica as opções de marcar sem alterar seu funcionamento
 import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 
@@ -31,6 +35,7 @@ import {
 } from "./painel-eventos-comum";
 
 type EventoInterno = {
+  areaResponsavel: string;
   id: Identificador;
   titulo: string;
   subtitulo: string;
@@ -63,7 +68,7 @@ type EventoInterno = {
 type FormularioEvento = Omit<EventoInterno, "id" | "atualizadoEm">;
 
 const formularioVazio: FormularioEvento = {
-  titulo: "", subtitulo: "", slug: "", descricaoCurta: "", descricao: "", categoria: "",
+  areaResponsavel: "geral", titulo: "", subtitulo: "", slug: "", descricaoCurta: "", descricao: "", categoria: "",
   imagemCapaUrl: "", dataInicial: "", dataFinal: "", horarioInicial: "", horarioFinal: "", local: "", turno: "",
   publicoDestinado: "", organizacao: "", programacao: "", orientacoes: "", linkExterno: "",
   documentos: [], imagens: [], observacoesPublicas: "", observacoesInternas: "", situacao: "proximo", publicado: false, arquivado: false,
@@ -74,7 +79,7 @@ const situacoesEvento = [
   ["encerrado", "Encerrado"], ["adiado", "Adiado"], ["cancelado", "Cancelado"],
 ] as const;
 
-export default function PainelEventosInternos({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?: AoMudarEstadoSujo } = {}) {
+export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSujo }: { cargo?: string; aoMudarEstadoSujo?: AoMudarEstadoSujo } = {}) {
   const [itens, setItens] = useState<EventoInterno[]>([]);
   const [formulario, setFormulario] = useState<FormularioEvento | null>(null);
   const [idEditando, setIdEditando] = useState<Identificador | null>(null);
@@ -127,7 +132,7 @@ export default function PainelEventosInternos({ aoMudarEstadoSujo }: { aoMudarEs
 
   async function novo() {
     if (!await confirmarSaida(mudou)) return;
-    setFormulario({ ...formularioVazio, documentos: [], imagens: [] });
+    setFormulario({ ...formularioVazio, areaResponsavel: areaRestrita(cargo) || "geral", documentos: [], imagens: [] });
     setIdEditando(null);
     setMudou(false);
     setErro("");
@@ -246,6 +251,7 @@ export default function PainelEventosInternos({ aoMudarEstadoSujo }: { aoMudarEs
           </div>
 
           <fieldset className="pev-bloco"><legend>Apresentação</legend><div className="pev-grade-campos">
+            <AreaResponsavel cargo={cargo} valor={formulario.areaResponsavel} mudar={(valor) => mudar("areaResponsavel", valor)} />
             <Campo rotulo="Título"><input value={formulario.titulo} onChange={(e) => mudar("titulo", e.target.value)} required maxLength={180} /></Campo>
             <Campo rotulo="Subtítulo"><input value={formulario.subtitulo} onChange={(e) => mudar("subtitulo", e.target.value)} maxLength={220} /></Campo>
             <Campo rotulo="Endereço amigável" dica="Pode deixar em branco: o painel cria a partir do título."><input value={formulario.slug} onChange={(e) => mudar("slug", criarSlug(e.target.value))} placeholder="mostra-cultural-2026" /></Campo>
@@ -342,7 +348,7 @@ function normalizarEvento(registro: Record<string, unknown>): EventoInterno {
     }
     return [];
   };
-  return {
+  return { areaResponsavel: obterTexto(registro, "areaResponsavel") || "geral",
     id: (registro.id as Identificador) ?? crypto.randomUUID(),
     titulo: obterTexto(registro, "titulo", "nome"), subtitulo: obterTexto(registro, "subtitulo"),
     slug: obterTexto(registro, "slug"), descricaoCurta: obterTexto(registro, "descricaoCurta", "resumo"),

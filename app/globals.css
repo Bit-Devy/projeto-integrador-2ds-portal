@@ -5528,8 +5528,7 @@ html:has(#topo.texto-maior) {
   box-shadow: inset 4px 0 0 var(--azul-claro);
 }
 
-/* botão de cópia */
-.botao-copia,
+/* botão de saída do painel */
 .sair-painel {
   /* calcula o tamanho conforme o espaço disponível */
   width: calc(100% - 28px);
@@ -7106,3 +7105,28 @@ html:has(#topo.texto-maior) {
 .noticias-painel .dialogo-anonimato input { padding: 0.75rem; border: 1px solid #cad7de; font: inherit; }
 .noticias-painel .campo-publicado { margin-top: 0.75rem; }
 @media (max-width: 700px) { .formulario-noticia .acoes-formulario-painel { flex-wrap: wrap; } }
+
+/* mantém os acessos no mesmo azul e branco do painel */
+.cartao-login .entrada-acesso-geral { display: flex; align-items: center; gap: .55rem; font-size: .8rem; color: #596d7a; margin: .25rem 0 1rem; }
+.cartao-login .entrada-acesso-geral input { width: 1rem; height: 1rem; margin: 0; }
+.busca-cargos { display: grid; gap: .4rem; max-width: 32rem; margin: 1.5rem 0; }
+.busca-cargos input, .dialogo-senhas input { width: 100%; min-width: 0; border: 1px solid #b9cbd6; padding: .75rem; font: inherit; background: white; color: #263b49; border-radius: 0; }
+.grade-senhas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: 1rem; }
+.grade-senhas > article { border: 1px solid #d6e1e8; border-top: .25rem solid #007caf; background: white; padding: 1.3rem; }
+.grade-senhas > article.cargo-geral { background: #edf6fa; border-top-color: #004f75; }
+.grade-senhas h2 { font-size: 1.15rem; line-height: 1.4; color: #005f87; margin: .6rem 0; }
+.grade-senhas p, .grade-senhas small { font-size: .85rem; line-height: 1.65; }
+.senha-cadastrada { border-top: 1px solid #d6e1e8; padding: .85rem 0; display: grid; gap: .3rem; overflow-wrap: anywhere; }
+.senha-cadastrada > div { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .3rem; }
+.senha-cadastrada button { border: 1px solid #007caf; background: white; color: #006893; padding: .45rem .65rem; font: inherit; font-size: .8rem; cursor: pointer; }
+.painel-senhas button:disabled { opacity: .45; cursor: not-allowed; }
+.dialogo-senhas { max-height: 90dvh; overflow-y: auto; }
+.dialogo-senhas label { display: grid; gap: .45rem; margin: 1rem 0 .5rem; font-size: .9rem; }
+.dialogo-senhas small { display: block; font-size: .8rem; line-height: 1.6; }
+.senha-gerada { display: block; padding: 1rem; background: #edf6fa; border: 1px solid #b8d6e6; font-family: monospace; font-size: 1.1rem; overflow-wrap: anywhere; user-select: all; }
+.historico-senhas { margin: 1.5rem 0; border-top: 1px solid #d6e1e8; padding-top: 1rem; font-size: .85rem; line-height: 1.8; }
+.historico-senhas summary { color: #006893; cursor: pointer; }
+.detalhes-consulta { border-top: .25rem solid #007caf; background: #f4f8fa; padding: 1.25rem; margin-top: 1rem; overflow-wrap: anywhere; }
+.detalhes-consulta dl > div { padding: .5rem 0; border-bottom: 1px solid #d6e1e8; }
+.detalhes-consulta dt { font-weight: 600; color: #005f87; }
+.detalhes-consulta dd { margin: .3rem 0; white-space: pre-wrap; }

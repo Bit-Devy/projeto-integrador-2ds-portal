@@ -31,7 +31,7 @@ const mensagensPorPagina = 6;
 // lista as mensagens para o painel
 export async function GET(request: Request) {
   // exige um administrador conectado
-  const { resposta } = await exigirAdministradorApi();
+  const { resposta } = await exigirAdministradorApi("mensagens", request.method !== "GET");
   if (resposta) return resposta;
 
   try {
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   // exige uma chamada válida de administrador
   if (!origemValida(request)) return Response.json({ erro: "Origem inválida." }, { status: 403 });
-  const { resposta } = await exigirAdministradorApi();
+  const { resposta } = await exigirAdministradorApi("mensagens", request.method !== "GET");
   if (resposta) return resposta;
 
   try {
@@ -175,7 +175,7 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   // exige uma chamada válida de administrador
   if (!origemValida(request)) return Response.json({ erro: "Origem inválida." }, { status: 403 });
-  const { resposta } = await exigirAdministradorApi();
+  const { resposta } = await exigirAdministradorApi("mensagens", request.method !== "GET");
   if (resposta) return resposta;
 
   try {

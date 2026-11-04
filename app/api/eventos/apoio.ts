@@ -1,3 +1,9 @@
+import { validarArquivosDoCargo } from "../../arquivos/acesso";
+import { ErroJsonInvalido } from "../../lib/corpo-json";
+import { getD1 } from "../../../db";
+import { areaRestrita, type RecursoPainel } from "../../lib/cargos";
+import { definirAreaRegistro } from "../../lib/areas-registros";
+import { obterUsuarioPainel } from "../../lib/sessao";
 import { garantirBanco } from "../../../db/inicializar";
 import { possuiReferenciaPublica } from "../../arquivos/publicacao";
 import { obterAmbiente } from "../../../worker/ambiente";
@@ -10,8 +16,16 @@ export async function prepararLeitura(request: Request) {
   const parametros = new URL(request.url).searchParams;
   const todos = parametros.get("todos") === "1";
   if (todos) {
-    const { resposta } = await exigirAdministradorApi();
+    const recurso = recursoDaChamada(request);
+    const { acesso, resposta } = await exigirAdministradorApi(recurso, false);
     if (resposta) return { parametros, todos, bloqueio: resposta };
+    const area = areaRestrita(acesso.usuario!.cargo);
+    parametros.delete("areaResponsavel");
+    if (area && ["eventos", "reunioes"].includes(recurso)) {
+      parametros.set("areaResponsavel", area);
+      const id = new URL(request.url).pathname.split("/")[3];
+      if (id && !await registroDaArea(recurso, id, area)) return { parametros, todos, bloqueio: Response.json({ erro: "Registro de outra área ou não encontrado." }, { status: 403 }) };
+    }
   }
   return { parametros, todos, bloqueio: null };
 }
@@ -19,18 +33,41 @@ export async function prepararLeitura(request: Request) {
 // aplica a proteção comum a toda mutação do novo domínio
 export async function prepararEscrita(request: Request) {
   if (!origemValida(request)) return Response.json({ erro: "Origem inválida." }, { status: 403 });
-  const { resposta } = await exigirAdministradorApi();
+  const recurso = recursoDaChamada(request);
+  const { acesso, resposta } = await exigirAdministradorApi(recurso);
   if (resposta) return resposta;
   await garantirBanco();
+  const area = areaRestrita(acesso.usuario!.cargo);
+  if (area && ["eventos", "reunioes"].includes(recurso)) {
+    let corpo: Record<string, unknown> = {};
+    if (request.method !== "DELETE") { try { corpo = await request.clone().json(); } catch { return Response.json({ erro: "Envie um corpo JSON válido." }, { status: 400 }); } }
+    if (!corpo || typeof corpo !== "object" || Array.isArray(corpo)) return Response.json({ erro: "Envie um objeto JSON válido." }, { status: 400 });
+    const parametros = new URL(request.url).searchParams;
+    const entidade = String(corpo.entidade || parametros.get("entidade") || "");
+    let id: unknown = corpo.id ?? parametros.get("id");
+    if (request.method === "POST" && entidade) id = corpo.eventoId ?? corpo.reuniaoId ?? corpo.id;
+    else if (entidade) {
+      const tabelas = recurso === "eventos" ? { documentos: "documentos_eventos" } : { documentos: "documentos_reuniao", itens: "itens_reuniao", presencas: "presencas_reuniao", votacoes: "votacoes_reuniao" };
+      const tabela = (tabelas as Record<string, string>)[entidade];
+      if (!tabela) return Response.json({ erro: "Área de edição inválida." }, { status: 400 });
+      const pai = await getD1().prepare(`SELECT ${recurso === "eventos" ? "evento_id" : "reuniao_id"} AS id FROM ${tabela} WHERE id = ?`).bind(Number(id) || 0).first<{ id: number }>();
+      id = pai?.id || 0;
+    }
+    if ((request.method !== "POST" || corpo.acao || entidade) && !await registroDaArea(recurso, String(id || ""), area)) return Response.json({ erro: "Registro de outra área ou não encontrado." }, { status: 403 });
+  }
   return null;
 }
 
 // lê JSON como objeto e converte corpos quebrados em um erro de cliente claro
 export async function lerObjeto(request: Request) {
   try {
-    return objetoRecebido(await request.json());
+    const corpo = objetoRecebido(await request.json());
+    const usuario = await obterUsuarioPainel();
+    if (usuario) await validarArquivosDoCargo(corpo, usuario);
+    return corpo;
   } catch (erro) {
     if (erro instanceof ErroEventos) throw erro;
+    if (erro instanceof ErroJsonInvalido) throw new ErroEventos(erro.message, 403);
     throw new ErroEventos("Envie um corpo JSON válido.");
   }
 }
@@ -118,4 +155,20 @@ export function identificadorDaRota(valor: string) {
   const recebido = decodeURIComponent(valor).trim();
   if (!recebido || recebido.length > 180) throw new ErroEventos("Informe um identificador válido.");
   return recebido;
+}
+
+// escolhe a permissão pelo caminho real da api
+function recursoDaChamada(request: Request): RecursoPainel {
+  return ({ eventos: "eventos", interclasses: "interclasses", reunioes: "reunioes", representantes: "representantes" } as Record<string, RecursoPainel>)[new URL(request.url).pathname.split("/")[2]] || "geral";
+}
+async function registroDaArea(recurso: string, id: string, area: string) {
+  const tabela = recurso === "eventos" ? "eventos_internos" : "reunioes";
+  return Boolean(await getD1().prepare(`SELECT id FROM ${tabela} WHERE (CAST(id AS TEXT) = ? OR slug = ?) AND area_responsavel = ?`).bind(id, id, area).first());
+}
+// atribui a área ao salvar sem confiar no cargo informado pelo formulário
+export async function guardarArea(request: Request, recurso: "eventos" | "reunioes", registro: { id: unknown; areaResponsavel?: string }, corpo: Record<string, unknown>) {
+  const usuario = await obterUsuarioPainel();
+  if (!usuario) throw new ErroEventos("Sessão encerrada.", 401);
+  const dados = corpo.dados && typeof corpo.dados === "object" ? corpo.dados as Record<string, unknown> : corpo;
+  registro.areaResponsavel = await definirAreaRegistro(recurso, registro.id, dados.areaResponsavel, usuario);
 }

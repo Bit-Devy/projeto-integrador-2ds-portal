@@ -16,6 +16,8 @@ import {
 import { comandosEstruturaEventos } from "./estrutura-eventos";
 // importa a proteção contra ocupações repetidas das salas
 import { comandosProtecaoSalas } from "./estrutura-salas";
+// importa as tabelas do acesso por cargo
+import { comandosEstruturaAcessos } from "./estrutura-acessos";
 
 // guarda uma única inicialização em andamento
 let tarefaInicializacao: Promise<void> | null = null;
@@ -176,11 +178,21 @@ async function prepararBanco() {
     )`),
   ]);
 
+  await d1.batch(comandosEstruturaAcessos.map((comando) => d1.prepare(comando)));
   // mantém a prévia local em paridade com a migração 0004 sem inserir dados fictícios
   await executarEmLotes(
     d1,
     comandosEstruturaEventos.map((comando) => d1.prepare(comando)),
   );
+
+  // separa as publicações de cada diretoria sem alterar os registros antigos
+  for (const tabela of ["eventos_internos", "reunioes"]) {
+    const colunas = await d1.prepare(`PRAGMA table_info(${tabela})`).all<{ name: string }>();
+    if (!colunas.results.some((coluna) => coluna.name === "area_responsavel")) {
+      try { await d1.prepare(`ALTER TABLE ${tabela} ADD COLUMN area_responsavel TEXT NOT NULL DEFAULT 'geral'`).run(); }
+      catch (erro) { if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro; }
+    }
+  }
 
   // aplica ajustes e a carga do mapa
   const colunasCampeonato = await d1.prepare("PRAGMA table_info(campeonatos)").all<{ name: string }>();

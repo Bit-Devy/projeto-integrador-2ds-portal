@@ -1,7 +1,8 @@
 // importa a resposta com redirecionamento
 import { NextResponse } from "next/server";
 // importa os recursos da sessão administrativa
-import { criarTokenSessao, caminhoSeguro, NOME_COOKIE_SESSAO, validarSenhaAdministrativa } from "../../lib/sessao";
+import { criarTokenSessao, caminhoSeguro, NOME_COOKIE_SESSAO } from "../../lib/sessao";
+import { autenticarSenha } from "../../lib/senhas-painel";
 // importa a verificação da origem da chamada
 import { origemValida } from "../../lib/autorizacao";
 // importa os limites de tentativas por navegador
@@ -23,14 +24,16 @@ export async function POST(request: Request) {
   if (!tentativa.permitido) return voltarAoLogin("limite");
 
   // devolve ao login quando a senha está errada
-  if (!(await validarSenhaAdministrativa(senha))) {
+  const geral = formulario.get("geral") === "1";
+  const acesso = await autenticarSenha(senha, geral);
+  if (!acesso) {
     return voltarAoLogin(tentativa.limite.bloqueado ? "limite" : "1");
   }
 
   // redireciona e grava o cookie da sessão
   await limparTentativasLogin(navegador);
   const resposta = NextResponse.redirect(new URL(retorno, request.url), 303);
-  resposta.cookies.set(NOME_COOKIE_SESSAO, await criarTokenSessao(), {
+  resposta.cookies.set(NOME_COOKIE_SESSAO, await criarTokenSessao(acesso), {
     httpOnly: true,
     sameSite: "lax",
     secure: new URL(request.url).protocol === "https:",
@@ -43,6 +46,7 @@ export async function POST(request: Request) {
   function voltarAoLogin(erro: string) {
     const destino = new URL("/login", request.url);
     destino.searchParams.set("erro", erro);
+    if (formulario.get("geral") === "1") destino.searchParams.set("geral", "1");
     destino.searchParams.set("returnTo", retorno);
     const resposta = NextResponse.redirect(destino, 303);
     if (tentativa.limite.bloqueado) resposta.headers.set("retry-after", String(tentativa.limite.tentarEm));

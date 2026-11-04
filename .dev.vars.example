@@ -1,4 +1,4 @@
-# senha usada para entrar em /painel
+# cria a primeira senha geral no banco apenas na configuração inicial
 ADMIN_PASSWORD=troque-esta-senha
 
 # use uma frase longa e diferente da senha

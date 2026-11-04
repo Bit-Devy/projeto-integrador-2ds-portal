@@ -62,7 +62,7 @@ try {
 
   // entra no painel com a senha local
   const senha = await lerSenhaLocal();
-  const formulario = new URLSearchParams({ senha, returnTo: "/painel" });
+  const formulario = new URLSearchParams({ senha, geral: "1", returnTo: "/painel" });
   const respostaLogin = await fetch(`${endereco}/api/login`, {
     method: "POST",
     redirect: "manual",
@@ -146,14 +146,14 @@ async function testarLimitesNavegador(cookieAdministrador, senha) {
   for (let indice = 0; indice < 5; indice += 1) {
     const resposta = await fetch(`${endereco}/api/login`, {
       method: "POST", redirect: "manual", headers: { cookie: navegadorLogin },
-      body: new URLSearchParams({ senha: `${senha}-incorreta`, returnTo: "/painel" }),
+      body: new URLSearchParams({ senha: `${senha}-incorreta`, geral: "1", returnTo: "/painel" }),
     });
     assert.equal(resposta.status, 303);
     assert.match(resposta.headers.get("location"), indice < 4 ? /erro=1/ : /erro=limite/);
   }
   const bloqueioLogin = await fetch(`${endereco}/api/login`, {
     method: "POST", redirect: "manual", headers: { cookie: navegadorLogin },
-    body: new URLSearchParams({ senha, returnTo: "/painel" }),
+    body: new URLSearchParams({ senha, geral: "1", returnTo: "/painel" }),
   });
   assert.match(bloqueioLogin.headers.get("location"), /erro=limite/);
   assert.ok(!bloqueioLogin.headers.getSetCookie().some((item) => item.startsWith("gecep_sessao=")));

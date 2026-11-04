@@ -1,5 +1,7 @@
 "use client";
 
+import { identificadorLocal } from "./identificador-local";
+
 // protege os links e o botão voltar enquanto há alterações no editor
 import { useEffect } from "react";
 import { confirmarSaida, autorizarNavegacaoPainel } from "./painel-eventos-comum";
@@ -9,7 +11,7 @@ export function useSaidaPainel(mudou: boolean) {
     if (!mudou) return;
     const endereco = window.location.href;
     const estadoAnterior = window.history.state;
-    const marca = crypto.randomUUID();
+    const marca = identificadorLocal();
     let saindo = false;
     let removendo = false;
     const estadoGuardado = { ...(estadoAnterior || {}), protecaoGecep: marca };

@@ -24,6 +24,10 @@ import PainelRepresentantes from "./PainelRepresentantes";
 // importa a biblioteca e os documentos usados em todo o portal
 import PainelDocumentos from "./PainelDocumentos";
 import NoticiasPainel from "./NoticiasPainel";
+import PainelSenhas from "./PainelSenhas";
+import PainelConsulta from "./PainelConsulta";
+import { areaRestrita, areasPainel, obterCargo, podeAcessar, recursoConteudo, type RecursoPainel } from "../lib/cargos";
+import type { UsuarioPainel } from "../lib/sessao";
 import { confirmarEncerramentoDestaque } from "./encerrar-destaque";
 import { useSaidaPainel } from "./useSaidaPainel";
 import EscolherArquivo from "./BibliotecaArquivos";
@@ -39,7 +43,11 @@ type ValorCampo = string | number | boolean;
 type SecaoEventosPainel = "eventos-internos" | "interclasses" | "reunioes" | "representantes" | "salas";
 
 // mostra a área administrativa
-export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: string }) {
+export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPainel }) {
+  const cargo = obterCargo(usuario.cargo)!;
+  const nomeUsuario = `${usuario.nome} · ${cargo.nome}`;
+  const pode = (recurso: RecursoPainel, escrita = false) => podeAcessar(usuario.cargo, recurso, escrita);
+  const [senhasAbertas, setSenhasAbertas] = useState(false);
   // guarda a seção de conteúdo atual
   const [noticiaOriginal, setNoticiaOriginal] = useState<NoticiaGecep | null>(null);
   const [revisaoNoticias, setRevisaoNoticias] = useState(0);
@@ -47,7 +55,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
   const [cancelarNoticia, setCancelarNoticia] = useState(false);
   const janelaCancelar = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (cancelarNoticia) janelaCancelar.current?.showModal(); }, [cancelarNoticia]);
-  const [tipo, setTipo] = useState<TipoConteudo>("noticias");
+  const [tipo, setTipo] = useState<TipoConteudo>(() => tiposConteudoPainel.find((tipo) => tipo !== "eventos" && pode(recursoConteudo(tipo))) || "noticias");
   const [abaDocumentos, setAbaDocumentos] = useState<"arquivos" | "normas" | "publicacoes">("arquivos");
   // controla a seção de mensagens
   const [mensagensAbertas, setMensagensAbertas] = useState(false);
@@ -81,7 +89,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
 
   // carrega os registros da seção atual
   useEffect(() => {
-    if (tipo === "noticias") return;
+    if (tipo === "noticias" || senhasAbertas || secaoEventos || mapaAberto || mensagensAbertas || !podeAcessar(usuario.cargo, recursoConteudo(tipo), true)) return;
     // evita atualizar a tela depois de sair
     let ativo = true;
     // consulta todos os registros do tipo
@@ -95,11 +103,11 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
       .catch((falha) => ativo && setErro(falha instanceof Error ? falha.message : "Erro inesperado."))
       .finally(() => ativo && setCarregando(false));
     return () => { ativo = false; };
-  }, [tipo]);
+  }, [tipo, usuario.cargo, senhasAbertas, secaoEventos, mapaAberto, mensagensAbertas]);
 
   // troca a seção de conteúdo
   async function trocarTipo(novoTipo: TipoConteudo) {
-    if (!mensagensAbertas && !mapaAberto && !secaoEventos && tipo === novoTipo) return;
+    if (!senhasAbertas && !mensagensAbertas && !mapaAberto && !secaoEventos && tipo === novoTipo) return;
     if (!await prepararTroca()) return;
     setCarregando(true);
     setErro("");
@@ -152,6 +160,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
     if (!await confirmarSaida(estadoSujo)) return false;
     setConteudoSujo(false);
     setPainelFilhoSujo(false);
+    setSenhasAbertas(false);
     return true;
   }
 
@@ -164,7 +173,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
     const valores = Object.fromEntries(
       configuracao.campos.map((campo) => [campo.chave, campo.tipo === "checkbox" ? false : campo.tipo === "number" ? 0 : campo.opcoes?.[0]?.valor ?? ""]),
     );
-    setFormulario(valores);
+    setFormulario({ ...valores, areaResponsavel: areaRestrita(usuario.cargo) || "geral" });
     setPublicado(true);
     setNoticiaJaPublicada(false);
     setNoticiaOriginal(null);
@@ -178,6 +187,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
     const dados = item.dados as unknown as Record<string, ValorCampo>;
     // completa campos que ainda não possuem valor
     setFormulario(Object.fromEntries(configuracao.campos.map((campo) => [campo.chave, dados[campo.chave] ?? (campo.tipo === "checkbox" ? false : campo.tipo === "number" ? 0 : "")])));
+    setFormulario((atual) => atual ? { ...atual, areaResponsavel: String(dados.areaResponsavel || "geral") } : atual);
     setPublicado(item.publicado);
     setNoticiaOriginal(item.tipo === "noticias" ? item.dados as NoticiaGecep : null);
     setNoticiaJaPublicada(item.publicado || Boolean((item.dados as { jaPublicada?: boolean }).jaPublicada));
@@ -264,31 +274,8 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
     setConteudoSujo(false);
   }
 
-  // baixa uma cópia de todos os conteúdos
-  async function baixarCopia() {
-    setErro("");
-    try {
-      // busca todos os tipos de conteúdo
-      const pares = await Promise.all(tiposConteudoPainel.map(async (nomeTipo) => {
-        const resposta = await fetch(`/api/conteudo?tipo=${nomeTipo}&todos=1`);
-        if (!resposta.ok) throw new Error("Não foi possível montar a cópia dos dados.");
-        const dados = await resposta.json() as { itens: RegistroConteudo[] };
-        return [nomeTipo, dados.itens] as const;
-      }));
-      // cria o arquivo de cópia
-      const arquivo = new Blob([JSON.stringify({ versao: 1, exportadoEm: new Date().toISOString(), conteudos: Object.fromEntries(pares) }, null, 2)], { type: "application/json" });
-      // inicia o download do arquivo
-      const url = URL.createObjectURL(arquivo);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `copia-dados-gecep-${new Date().toISOString().slice(0, 10)}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : "Erro ao gerar a cópia.");
-    }
-  }
-
+  const recursoAtual: RecursoPainel = mapaAberto || secaoEventos === "salas" ? "mapa" : mensagensAbertas ? "mensagens" : secaoEventos === "eventos-internos" ? "eventos" : secaoEventos || recursoConteudo(tipo);
+  const somenteConsulta = !pode(recursoAtual, true);
   return (
     <div className="painel-administrativo">
       {/* menu lateral do painel */}
@@ -299,18 +286,18 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
         <nav aria-label="Seções do painel">
           {/* Eventos legados continuam no backup e na migração, mas novas edições
               usam somente o painel relacional para não criar duas fontes. */}
-          {tiposConteudoPainel.filter((nomeTipo) => nomeTipo !== "eventos").map((nomeTipo) => <button type="button" className={!mensagensAbertas && !mapaAberto && !secaoEventos && tipo === nomeTipo ? "ativo" : ""} onClick={() => trocarTipo(nomeTipo)} key={nomeTipo}>{configuracaoPainel[nomeTipo].nome}</button>)}
+          {tiposConteudoPainel.filter((nomeTipo) => nomeTipo !== "eventos" && pode(recursoConteudo(nomeTipo))).map((nomeTipo) => <button type="button" className={!senhasAbertas && !mensagensAbertas && !mapaAberto && !secaoEventos && tipo === nomeTipo ? "ativo" : ""} onClick={() => trocarTipo(nomeTipo)} key={nomeTipo}>{configuracaoPainel[nomeTipo].nome}</button>)}
           <span className="grupo-menu-painel">Eventos, reuniões e turmas</span>
-          <button type="button" className={secaoEventos === "eventos-internos" ? "ativo" : ""} onClick={() => abrirSecaoEventos("eventos-internos")}>Eventos internos</button>
-          <button type="button" className={secaoEventos === "interclasses" ? "ativo" : ""} onClick={() => abrirSecaoEventos("interclasses")}>Interclasses e campeonatos</button>
-          <button type="button" className={secaoEventos === "reunioes" ? "ativo" : ""} onClick={() => abrirSecaoEventos("reunioes")}>Reuniões, atas e presenças</button>
-          <button type="button" className={secaoEventos === "representantes" ? "ativo" : ""} onClick={() => abrirSecaoEventos("representantes")}>Representantes</button>
-          <button type="button" className={secaoEventos === "salas" ? "ativo" : ""} onClick={() => abrirSecaoEventos("salas")}>Salas</button>
-          <button type="button" className={mapaAberto ? "ativo" : ""} onClick={abrirMapa}>Mapa e ensalamento</button>
-          <button type="button" className={mensagensAbertas ? "ativo" : ""} onClick={abrirMensagens}>Mensagens recebidas</button>
+          {pode("eventos") && <button type="button" className={secaoEventos === "eventos-internos" ? "ativo" : ""} onClick={() => abrirSecaoEventos("eventos-internos")}>Eventos internos</button>}
+          {pode("interclasses") && <button type="button" className={secaoEventos === "interclasses" ? "ativo" : ""} onClick={() => abrirSecaoEventos("interclasses")}>Interclasses e campeonatos</button>}
+          {pode("reunioes") && <button type="button" className={secaoEventos === "reunioes" ? "ativo" : ""} onClick={() => abrirSecaoEventos("reunioes")}>Reuniões, atas e presenças</button>}
+          {pode("representantes") && <button type="button" className={secaoEventos === "representantes" ? "ativo" : ""} onClick={() => abrirSecaoEventos("representantes")}>Representantes</button>}
+          {pode("mapa") && <button type="button" className={secaoEventos === "salas" ? "ativo" : ""} onClick={() => abrirSecaoEventos("salas")}>Salas</button>}
+          {pode("mapa") && <button type="button" className={mapaAberto ? "ativo" : ""} onClick={abrirMapa}>Mapa e ensalamento</button>}
+          {pode("mensagens") && <button type="button" className={mensagensAbertas ? "ativo" : ""} onClick={abrirMensagens}>Mensagens recebidas</button>}
+          {usuario.cargo === "geral" && <button type="button" className={senhasAbertas ? "ativo" : ""} onClick={async () => { if (!await prepararTroca()) return; setFormulario(null); setSecaoEventos(null); setMapaAberto(false); setMensagensAbertas(false); setSenhasAbertas(true); }}>Registro de senhas</button>}
         </nav>
-        {/* cópia e saída do painel */}
-        <button type="button" className="botao-copia" onClick={baixarCopia}>Baixar cópia dos conteúdos</button>
+        {/* saída do painel */}
         <a className="sair-painel" href="/api/logout">Sair do painel</a>
       </aside>
 
@@ -319,12 +306,12 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
       {/* conteúdo da seção escolhida */}
       <div className="conteudo-painel">
         {/* painel do mapa ou das mensagens */}
-        {secaoEventos === "eventos-internos" ? (
-          <PainelEventosInternos aoMudarEstadoSujo={setPainelFilhoSujo} />
+        {senhasAbertas ? <PainelSenhas aoMudarEstadoSujo={setPainelFilhoSujo} /> : somenteConsulta ? <PainelConsulta key={recursoAtual} recurso={recursoAtual} publicos={cargo.publicos} /> : secaoEventos === "eventos-internos" ? (
+          <PainelEventosInternos cargo={usuario.cargo} aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : secaoEventos === "interclasses" ? (
           <PainelInterclasses aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : secaoEventos === "reunioes" ? (
-          <PainelReunioes aoMudarEstadoSujo={setPainelFilhoSujo} />
+          <PainelReunioes cargo={usuario.cargo} aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : secaoEventos === "representantes" ? (
           <PainelRepresentantes aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : secaoEventos === "salas" ? (
@@ -345,7 +332,7 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
             {erro && <p className="erro-painel" role="alert">{erro}</p>}
 
             {/* separa os arquivos privados das versões oficiais e das publicações */}
-            {tipo === "documentos" && <div className="abas-documentos" role="group" aria-label="Áreas de documentos">{([["arquivos", "Arquivos"], ["normas", "Estatuto e Regimento"], ["publicacoes", "Publicações"]] as const).map(([aba, nome]) => <button type="button" key={aba} aria-pressed={abaDocumentos === aba} onClick={async () => { if (!await prepararTroca()) return; setFormulario(null); setAbaDocumentos(aba); }}>{nome}</button>)}</div>}
+            {tipo === "documentos" && <div className="abas-documentos" role="group" aria-label="Áreas de documentos">{([["arquivos", "Arquivos"], ["normas", "Estatuto e Regimento"], ["publicacoes", "Publicações"]] as const).filter(([aba]) => aba !== "normas" || pode("oficiais", true)).map(([aba, nome]) => <button type="button" key={aba} aria-pressed={abaDocumentos === aba} onClick={async () => { if (!await prepararTroca()) return; setFormulario(null); setAbaDocumentos(aba); }}>{nome}</button>)}</div>}
 
             {/* formulário ou lista de registros */}
             {tipo === "documentos" && abaDocumentos !== "publicacoes" ? <PainelDocumentos key={abaDocumentos} aba={abaDocumentos} aoMudarEstadoSujo={setPainelFilhoSujo} /> : formulario ? (
@@ -354,6 +341,8 @@ export default function PainelAdministrativo({ nomeUsuario }: { nomeUsuario: str
                 <div className="titulo-formulario-painel"><div><small>{idEditando ? "EDITANDO" : "NOVO REGISTRO"}</small><h2>{idEditando ? "Atualizar" : "Adicionar"} {configuracao.singular}</h2></div><button type="button" onClick={fecharFormulario}>Fechar</button></div>
                 {/* campos configurados para a seção */}
                 <div className="grade-campos-painel">
+                  {["noticias", "projetos", "documentos"].includes(tipo) && <label className="campo-largo"><span>Área responsável</span>{areaRestrita(usuario.cargo) ? <input value={areasPainel.find((area) => area.chave === areaRestrita(usuario.cargo))?.nome || ""} readOnly /> : <select value={String(formulario.areaResponsavel || "geral")} onChange={(evento) => void mudarFormulario("areaResponsavel", evento.target.value)}>{areasPainel.map((area) => <option key={area.chave} value={area.chave}>{area.nome}</option>)}</select>}<small>A área define quem pode editar esta publicação. Use Colégio e comunidade escolar para assuntos do CEP que afetam os estudantes. Comunicação e acesso geral acompanham todas as áreas.</small></label>}
+
                   {configuracao.campos.filter((campo) => !campo.dependeDe || Boolean(formulario[campo.dependeDe])).map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} key={campo.chave} />)}
                   {tipo !== "noticias" && <label className="campo-publicado"><CheckboxComAjuda checked={publicado} onChange={(evento) => { setPublicado(evento.target.checked); setConteudoSujo(true); }} explicacao={descricaoCheckbox("publicado")} aria-label={"Publicar este registro no portal"} /><span>Publicar este registro no portal</span></label>}
                 </div>

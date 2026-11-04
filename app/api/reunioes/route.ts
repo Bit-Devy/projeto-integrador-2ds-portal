@@ -20,6 +20,7 @@ import {
 } from "../../eventos/banco";
 import { dadosDoCorpo, ErroEventos, objetoRecebido } from "../../eventos/validacao";
 import {
+  guardarArea,
   lerObjeto,
   prepararEscrita,
   prepararLeitura,
@@ -47,6 +48,7 @@ export async function POST(request: Request) {
     const corpo = await lerObjeto(request);
     if (corpo.acao === "duplicar") {
       const item = await duplicarReuniao(corpo.id);
+      await guardarArea(request, "reunioes", item.item, corpo);
       await sincronizarArquivosDoEvento({ documentos: item.documentos });
       return Response.json({ item }, { status: 201 });
     }
@@ -63,6 +65,7 @@ export async function POST(request: Request) {
     if (entidade === "presencas") return Response.json({ item: await criarPresencaReuniao(reuniaoId, corpo.dados) }, { status: 201 });
     if (entidade) throw new ErroEventos("Escolha uma área válida da reunião.");
     const item = await criarReuniao(dadosDoCorpo(corpo));
+    await guardarArea(request, "reunioes", item, corpo);
     return Response.json({ item }, { status: 201 });
   } catch (erro) {
     return responderErroEventos(erro, "POST /api/reunioes");
@@ -95,6 +98,7 @@ export async function PUT(request: Request) {
     if (entidade) throw new ErroEventos("Escolha uma área editável válida da reunião.");
     const anterior = await obterReuniao(String(corpo.id ?? ""), true);
     const item = await atualizarReuniao(corpo.id, dadosDoCorpo(corpo));
+    await guardarArea(request, "reunioes", item, corpo);
     const atual = await obterReuniao(String(corpo.id ?? ""), true);
     await sincronizarArquivosDoEvento(
       { documentos: anterior.documentos },

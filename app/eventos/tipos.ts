@@ -77,6 +77,7 @@ export type EventoInternoPublico = {
 };
 
 export type EventoInternoAdministrativo = EventoInternoPublico & {
+  areaResponsavel: string;
   observacoesInternas: string;
   publicado: boolean;
   ativo: boolean;
@@ -323,6 +324,7 @@ export type ReuniaoPublica = {
 };
 
 export type ReuniaoAdministrativa = ReuniaoPublica & {
+  areaResponsavel: string;
   pautaInterna: string;
   observacoesInternas: string;
   quantidadeParticipantesPublicada: boolean;

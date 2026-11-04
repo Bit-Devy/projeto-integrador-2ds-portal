@@ -12,6 +12,10 @@ import { paginasPublicadas, caminhoInterno } from "../../conteudo/paginas";
 
 // importa o arquivo do painel e a confirmação de senha
 import { consultarNoticiasPainel, prepararNoticia } from "../../conteudo/noticias-gestao";
+import { validarArquivosDoCargo } from "../../arquivos/acesso";
+import { areaRestrita, recursoConteudo } from "../../lib/cargos";
+import { areaPermitida, escolherArea, erroArea } from "../../lib/areas-registros";
+import { obterUsuarioPainel } from "../../lib/sessao";
 import { validarSenhaAdministrativa } from "../../lib/sessao";
 import { consumirTentativa, identificarNavegador, guardarNavegador, limparTentativasLogin } from "../../lib/limites";
 
@@ -64,8 +68,11 @@ export async function GET(request: Request) {
 
     // exige administrador para mostrar rascunhos
     if (mostrarTodos) {
-      const { resposta } = await exigirAdministradorApi();
+      const { acesso, resposta } = await exigirAdministradorApi(recursoConteudo(tipo), false);
       if (resposta) return resposta;
+      const area = areaRestrita(acesso.usuario!.cargo);
+      if (area) url.searchParams.set("areaResponsavel", area);
+      else url.searchParams.delete("areaResponsavel");
     }
 
     if (tipo === "noticias" && mostrarTodos && url.searchParams.has("visao")) {
@@ -74,6 +81,7 @@ export async function GET(request: Request) {
     }
 
     // monta a consulta pública ou privada
+    const area = mostrarTodos && ["noticias", "projetos", "documentos", "eventos"].includes(tipo) ? url.searchParams.get("areaResponsavel") : null;
     const filtro = mostrarTodos
       ? "SELECT * FROM conteudos WHERE tipo = ?"
       : "SELECT * FROM conteudos WHERE tipo = ? AND publicado = 1";
@@ -81,8 +89,8 @@ export async function GET(request: Request) {
     const ano = url.searchParams.get("ano");
     if (ano && !/^(19|20|21)\d{2}$/.test(ano)) throw new Error("Informe um ano válido.");
     // usa a data da publicação para consultar um ano sem apagar o histórico
-    const consulta = `${filtro}${ano ? " AND substr(COALESCE(NULLIF(json_extract(dados_json, '$.data'), ''), json_extract(dados_json, '$.dataDocumento')), 1, 4) = ?" : ""} ${ordemMaisRecente}`;
-    const resultado = await getD1().prepare(consulta).bind(...(ano ? [tipo, ano] : [tipo])).all<LinhaConteudo>();
+    const consulta = `${filtro}${area ? " AND json_extract(dados_json, '$.areaResponsavel') = ?" : ""}${ano ? " AND substr(COALESCE(NULLIF(json_extract(dados_json, '$.data'), ''), json_extract(dados_json, '$.dataDocumento')), 1, 4) = ?" : ""} ${ordemMaisRecente}`;
+    const resultado = await getD1().prepare(consulta).bind(tipo, ...(area ? [area] : []), ...(ano ? [ano] : [])).all<LinhaConteudo>();
 
     return Response.json({ itens: resultado.results.map(formatarLinha) });
   } catch (erro) {
@@ -94,13 +102,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   // exige uma chamada válida de administrador
   if (!origemValida(request)) return Response.json({ erro: "Origem inválida." }, { status: 403 });
-  const { resposta } = await exigirAdministradorApi();
-  if (resposta) return resposta;
+  const usuario = await obterUsuarioPainel();
+  if (!usuario) return Response.json({ erro: "Entre no painel para realizar esta ação." }, { status: 401 });
 
   try {
     // prepara e valida os dados recebidos
     await garantirBanco();
     const corpo = await lerCorpo(request);
+    const { resposta: bloqueio } = await exigirAdministradorApi(recursoConteudo(corpo.tipo));
+    if (bloqueio) return bloqueio;
+    corpo.dados.areaResponsavel = escolherArea(usuario, corpo.dados.areaResponsavel);
+    await validarArquivosDoCargo(corpo.dados, usuario);
     if (corpo.tipo === "noticias") prepararNoticia(corpo.dados, corpo.publicado);
     if (corpo.publicado) await validarBotoes(corpo.tipo, corpo.dados);
     if (corpo.tipo === "documentos" && corpo.dados.documentoOficial) throw new ErroJsonInvalido("Use a aba Estatuto e Regimento para alterar os PDFs oficiais.");
@@ -121,8 +133,8 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   // exige uma chamada válida de administrador
   if (!origemValida(request)) return Response.json({ erro: "Origem inválida." }, { status: 403 });
-  const { resposta } = await exigirAdministradorApi();
-  if (resposta) return resposta;
+  const usuario = await obterUsuarioPainel();
+  if (!usuario) return Response.json({ erro: "Entre no painel para realizar esta ação." }, { status: 401 });
 
   try {
     // prepara o banco e lê o identificador
@@ -133,6 +145,12 @@ export async function PUT(request: Request) {
     // valida o restante do conteúdo
     const corpo = validarCorpo(dadosRecebidos);
     const anterior = await getD1().prepare("SELECT * FROM conteudos WHERE id = ?").bind(id).first<LinhaConteudo>();
+    const { resposta: bloqueio } = await exigirAdministradorApi(recursoConteudo(corpo.tipo));
+    if (bloqueio) return bloqueio;
+    const areaAnterior = anterior ? JSON.parse(anterior.dados_json).areaResponsavel || "geral" : "geral";
+    if (anterior && corpo.tipo !== "movimentos" && !areaPermitida(usuario, areaAnterior)) return erroArea();
+    corpo.dados.areaResponsavel = escolherArea(usuario, corpo.dados.areaResponsavel, areaAnterior);
+    await validarArquivosDoCargo(corpo.dados, usuario);
     if (anterior && anterior.tipo !== corpo.tipo) throw new ErroJsonInvalido("Não é possível mudar o tipo deste registro.");
     if (corpo.tipo === "noticias") prepararNoticia(corpo.dados, corpo.publicado, anterior || undefined);
     await protegerDocumentoOficial(id);
@@ -161,8 +179,8 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   // exige uma chamada válida de administrador
   if (!origemValida(request)) return Response.json({ erro: "Origem inválida." }, { status: 403 });
-  const { resposta } = await exigirAdministradorApi();
-  if (resposta) return resposta;
+  const usuario = await obterUsuarioPainel();
+  if (!usuario) return Response.json({ erro: "Entre no painel para realizar esta ação." }, { status: 401 });
 
   try {
     // prepara o banco e valida o identificador
@@ -172,6 +190,11 @@ export async function DELETE(request: Request) {
     // exige novamente a senha se a notícia já passou pelo portal
     let senhaConfirmada = false;
     const registro = await getD1().prepare("SELECT * FROM conteudos WHERE id = ?").bind(id).first<LinhaConteudo>();
+    if (registro) {
+      const { resposta: bloqueio } = await exigirAdministradorApi(recursoConteudo(registro.tipo));
+      if (bloqueio) return bloqueio;
+      if (registro.tipo !== "movimentos" && !areaPermitida(usuario, JSON.parse(registro.dados_json).areaResponsavel || "geral")) return erroArea();
+    }
     if (registro?.tipo === "noticias" && (registro.publicado || JSON.parse(registro.dados_json).jaPublicada)) {
       const corpo = await lerObjetoJson(request);
       const navegador = identificarNavegador(request);
