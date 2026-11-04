@@ -673,3 +673,18 @@ export const auditoriaAcessos = sqliteTable("auditoria_acessos", {
   autorNome: text("autor_nome").notNull(), acao: text("acao").notNull(), cargo: text("cargo").notNull(), acessoId: integer("acesso_id"),
   criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+// guarda cada entrada sem depender de a senha continuar cadastrada
+export const entradasPainel = sqliteTable("entradas_painel", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  acessoId: integer("acesso_id").notNull(), nome: text("nome").notNull(), cargo: text("cargo").notNull(),
+  entradaEm: text("entrada_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (tabela) => [index("entradas_painel_data_idx").on(tabela.entradaEm, tabela.id)]);
+
+// relaciona as alterações concluídas com a entrada que as realizou
+export const acoesPainel = sqliteTable("acoes_painel", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  entradaId: integer("entrada_id").notNull().references(() => entradasPainel.id, { onDelete: "restrict" }),
+  resumo: text("resumo").notNull(), recurso: text("recurso").notNull(),
+  criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (tabela) => [index("acoes_painel_entrada_idx").on(tabela.entradaId, tabela.id)]);

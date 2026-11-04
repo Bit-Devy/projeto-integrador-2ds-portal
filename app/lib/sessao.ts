@@ -19,6 +19,7 @@ export type UsuarioPainel = {
   cargo: string;
   acessoId: number;
   versao: number;
+  entradaId: number;
 };
 
 // verifica se existe uma sessão válida
@@ -27,15 +28,21 @@ export async function obterUsuarioPainel(): Promise<UsuarioPainel | null> {
   const armazenamento = await cookies();
   const token = armazenamento.get(NOME_COOKIE_SESSAO)?.value;
   if (!token) return null;
+  return obterUsuarioPeloToken(token);
+}
+
+// permite conferir a mesma sessão no servidor e nas páginas
+export async function obterUsuarioPeloToken(token: string): Promise<UsuarioPainel | null> {
   try {
     const conteudo = await tokenValido(token);
     if (!conteudo) return null;
-    const [tipo, validade, id, versao] = conteudo.split(":");
-    if (tipo !== "cargo" || !validade || !/^\d+$/.test(id || "") || !/^\d+$/.test(versao || "")) return null;
+    const [tipo, validade, id, versao, entrada] = conteudo.split(":");
+    if (tipo !== "cargo" || !validade || !/^\d+$/.test(id || "") || !/^\d+$/.test(versao || "") || !/^\d+$/.test(entrada || "")) return null;
     await garantirAcessos();
     const acesso = await getD1().prepare("SELECT * FROM acessos_painel WHERE id = ? AND versao = ?").bind(Number(id), Number(versao)).first<AcessoSalvo>();
     if (!acesso || !obterCargo(acesso.cargo)) return null;
-    return { nome: acesso.nome, cargo: acesso.cargo, acessoId: acesso.id, versao: acesso.versao };
+    if (!await getD1().prepare("SELECT id FROM entradas_painel WHERE id = ? AND acesso_id = ?").bind(Number(entrada), acesso.id).first()) return null;
+    return { nome: acesso.nome, cargo: acesso.cargo, acessoId: acesso.id, versao: acesso.versao, entradaId: Number(entrada) };
   } catch {
     // cookies incompletos ou adulterados são tratados como sessão ausente
     return null;
@@ -50,14 +57,14 @@ export async function exigirUsuarioPainel(retorno = "/painel") {
 }
 
 // cria o código guardado no navegador depois do login
-export async function criarTokenSessao(acesso: Pick<AcessoSalvo, "id" | "versao">) {
+export async function criarTokenSessao(acesso: Pick<AcessoSalvo, "id" | "versao">, entradaId: number) {
   // exige um segredo configurado no ambiente
   const segredo = obterSegredo();
   if (!segredo) throw new Error("Defina SESSION_SECRET antes de usar o painel.");
 
   // cria o conteúdo e sua assinatura
   const validade = Math.floor(Date.now() / 1000) + DURACAO_SESSAO;
-  const conteudo = `cargo:${validade}:${acesso.id}:${acesso.versao}`;
+  const conteudo = `cargo:${validade}:${acesso.id}:${acesso.versao}:${entradaId}`;
   const assinatura = await assinar(conteudo, segredo);
   return `${conteudo}.${assinatura}`;
 }

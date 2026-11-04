@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 // importa os recursos da sessão administrativa
 import { criarTokenSessao, caminhoSeguro, NOME_COOKIE_SESSAO } from "../../lib/sessao";
+import { registrarEntradaPainel } from "../../lib/historico-painel";
 import { autenticarSenha } from "../../lib/senhas-painel";
 // importa a verificação da origem da chamada
 import { origemValida } from "../../lib/autorizacao";
@@ -32,8 +33,9 @@ export async function POST(request: Request) {
 
   // redireciona e grava o cookie da sessão
   await limparTentativasLogin(navegador);
+  const entradaId = await registrarEntradaPainel(acesso);
   const resposta = NextResponse.redirect(new URL(retorno, request.url), 303);
-  resposta.cookies.set(NOME_COOKIE_SESSAO, await criarTokenSessao(acesso), {
+  resposta.cookies.set(NOME_COOKIE_SESSAO, await criarTokenSessao(acesso, entradaId), {
     httpOnly: true,
     sameSite: "lax",
     secure: new URL(request.url).protocol === "https:",

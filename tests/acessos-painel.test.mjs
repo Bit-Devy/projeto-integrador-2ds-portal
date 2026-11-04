@@ -69,6 +69,17 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
     }
     async function entrar(senha, geral = false, jar = new Map()) { const resposta = await chamar("/api/login", { jar, method: "POST", formulario: { senha, geral: geral ? "1" : "0", returnTo: "/painel" }, esperado: 303 }); return { jar, destino: resposta.headers.get("location") }; }
     const geral = (await entrar(senhaInicial, true)).jar;
+    await chamar("/api/historico-acessos", { esperado: 401 });
+    const entradasIniciais = await (await chamar("/api/historico-acessos", { jar: geral })).json();
+    assert.equal(entradasIniciais.total, 1);
+    const entradaGeral = entradasIniciais.itens[0].id;
+    assert.ok(entradasIniciais.itens[0].entradaEm);
+    const outraEntrada = (await entrar(senhaInicial, true)).jar;
+    const entradasRepetidas = await (await chamar("/api/historico-acessos", { jar: outraEntrada })).json();
+    assert.equal(entradasRepetidas.total, 2);
+    assert.notEqual(entradasRepetidas.itens[0].id, entradaGeral);
+    const semAcoes = await (await chamar(`/api/historico-acessos?id=${entradasRepetidas.itens[0].id}`, { jar: geral })).json();
+    assert.equal(semAcoes.total, 0);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS total FROM acessos_painel").get().total, 1);
     assert.match((await entrar(senhaInicial)).destino, /erro=1/);
     await chamar("/api/acessos", { esperado: 401 });
@@ -82,9 +93,23 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
     assert.match((await entrar(esportes1.senha, true)).destino, /erro=1/);
     const esportes = (await entrar(esportes1.senha)).jar;
     await chamar("/api/acessos", { jar: esportes, esperado: 403 });
+    await chamar("/api/historico-acessos", { jar: esportes, esperado: 403 });
+    await chamar(`/api/historico-acessos?id=${entradaGeral}`, { jar: esportes, esperado: 403 });
     await chamar("/api/conteudo?tipo=movimentos&todos=1", { jar: esportes, esperado: 403 });
     await chamar("/api/documentos-oficiais", { jar: esportes, method: "PUT", corpo: {}, esperado: 403 });
     await chamar("/api/mapa", { jar: esportes, method: "POST", corpo: {}, esperado: 403 });
+    // o histórico recebe frases do servidor e ignora consultas e operações recusadas
+    const totalAntesFalha = sqlite.prepare("SELECT COUNT(*) AS total FROM acoes_painel WHERE entrada_id = ?").get(entradaGeral).total;
+    await chamar("/api/representantes", { jar: geral, method: "POST", corpo: { dados: {} }, esperado: 400 });
+    await chamar("/api/conteudo?tipo=noticias&todos=1", { jar: geral });
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS total FROM acoes_painel WHERE entrada_id = ?").get(entradaGeral).total, totalAntesFalha);
+    const representanteHistorico = (await (await chamar("/api/representantes", { jar: geral, method: "POST", corpo: { dados: { nome: "Davi do teste de histórico", nivelEnsino: "Ensino Médio", serie: "3ª série", turma: "3º J", turno: "manha", funcao: "titular", inicioMandato: "2000-01-01", fimMandato: "2199-12-31", publicado: false, ativo: true } }, esperado: 201 })).json()).item;
+    await chamar(`/api/representantes?id=${representanteHistorico.id}`, { jar: geral, method: "DELETE" });
+    const acoesRepresentante = await (await chamar(`/api/historico-acessos?id=${entradaGeral}`, { jar: geral })).json();
+    assert.ok(acoesRepresentante.acoes.some((item) => item.resumo === "Representante “Davi do teste de histórico” cadastrado"));
+    assert.ok(acoesRepresentante.acoes.some((item) => item.resumo === "Representante “Davi do teste de histórico” arquivado"));
+    const textoHistorico = JSON.stringify(acoesRepresentante);
+    for (const segredo of [senhaInicial, esportes1.senha, esportes2.senha]) assert.equal(textoHistorico.includes(segredo), false);
     const noticia = { tipo: "noticias", dados: { titulo: "Notícia de teste", categoria: "Aviso", resumo: "Resumo", data: "2026-11-03", areaResponsavel: "social" }, publicado: true };
     const idSocial = (await (await chamar("/api/conteudo", { jar: geral, method: "POST", corpo: noticia, esperado: 201 })).json()).item.id;
     const propria = (await (await chamar("/api/conteudo", { jar: esportes, method: "POST", corpo: noticia, esperado: 201 })).json()).item;
@@ -167,8 +192,10 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
     // a própria senha geral pode ser trocada sem derrubar quem fez a troca
     const segundoJar = (await entrar(geral2.senha, true)).jar;
     const antigoJar = new Map(segundoJar);
+    const entradasAntesTroca = sqlite.prepare("SELECT COUNT(*) AS total FROM entradas_painel").get().total;
     const atualizada = (await (await chamar("/api/acessos", { jar: segundoJar, method: "PUT", corpo: { id: geral2.id, nome: "Geral alterado", senhaAtual: geral2.senha, novaSenha: "senha geral nova do teste", confirmado: true } })).json()).senha;
     assert.equal(atualizada, "senha geral nova do teste");
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS total FROM entradas_painel").get().total, entradasAntesTroca);
     await chamar("/api/acessos", { jar: segundoJar }); await chamar("/api/acessos", { jar: antigoJar, esperado: 401 });
     assert.match((await entrar(geral2.senha, true)).destino, /erro=1/);
     // a senha inicial não volta a funcionar depois de ser trocada
@@ -199,6 +226,15 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
     assert.match(bloqueado.destino, /erro=limite/);
     const estadoLimite = await (await chamar("/api/limites?acao=login", { jar: limitado })).json();
     assert.equal(estadoLimite.limite.bloqueado, true);
+    // as ações continuam separadas depois de trocar ou revogar uma senha
+    const historicoPreservado = await (await chamar(`/api/historico-acessos?id=${entradaGeral}`, { jar: segundoJar })).json();
+    assert.ok(historicoPreservado.acoes.some((item) => item.resumo.includes("Davi do teste de histórico")));
+    const paginaHistorico = await (await chamar("/api/historico-acessos", { jar: segundoJar })).json();
+    assert.ok(paginaHistorico.itens.length <= 20);
+    await chamar("/api/historico-acessos?id=inválido", { jar: segundoJar, esperado: 400 });
+    await chamar("/api/historico-acessos?id=9999999", { jar: segundoJar, esperado: 404 });
+    const buscaSemCuringa = await (await chamar("/api/historico-acessos?busca=%25", { jar: segundoJar })).json();
+    assert.equal(buscaSemCuringa.total, 0);
     // a segunda vaga permanece utilizável após revogar a primeira
     assert.match((await entrar(esportes2.senha)).destino, /\/painel$/);
   } finally { sqlite.close(); }

@@ -25,6 +25,7 @@ import PainelRepresentantes from "./PainelRepresentantes";
 import PainelDocumentos from "./PainelDocumentos";
 import NoticiasPainel from "./NoticiasPainel";
 import PainelSenhas from "./PainelSenhas";
+import PainelHistoricoAcessos from "./PainelHistoricoAcessos";
 import PainelConsulta from "./PainelConsulta";
 import { areaRestrita, areasPainel, obterCargo, podeAcessar, recursoConteudo, type RecursoPainel } from "../lib/cargos";
 import type { UsuarioPainel } from "../lib/sessao";
@@ -48,6 +49,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
   const nomeUsuario = `${usuario.nome} · ${cargo.nome}`;
   const pode = (recurso: RecursoPainel, escrita = false) => podeAcessar(usuario.cargo, recurso, escrita);
   const [senhasAbertas, setSenhasAbertas] = useState(false);
+  const [historicoAberto, setHistoricoAberto] = useState(false);
   // guarda a seção de conteúdo atual
   const [noticiaOriginal, setNoticiaOriginal] = useState<NoticiaGecep | null>(null);
   const [revisaoNoticias, setRevisaoNoticias] = useState(0);
@@ -89,7 +91,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
 
   // carrega os registros da seção atual
   useEffect(() => {
-    if (tipo === "noticias" || senhasAbertas || secaoEventos || mapaAberto || mensagensAbertas || !podeAcessar(usuario.cargo, recursoConteudo(tipo), true)) return;
+    if (tipo === "noticias" || senhasAbertas || historicoAberto || secaoEventos || mapaAberto || mensagensAbertas || !podeAcessar(usuario.cargo, recursoConteudo(tipo), true)) return;
     // evita atualizar a tela depois de sair
     let ativo = true;
     // consulta todos os registros do tipo
@@ -103,11 +105,11 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
       .catch((falha) => ativo && setErro(falha instanceof Error ? falha.message : "Erro inesperado."))
       .finally(() => ativo && setCarregando(false));
     return () => { ativo = false; };
-  }, [tipo, usuario.cargo, senhasAbertas, secaoEventos, mapaAberto, mensagensAbertas]);
+  }, [tipo, usuario.cargo, senhasAbertas, historicoAberto, secaoEventos, mapaAberto, mensagensAbertas]);
 
   // troca a seção de conteúdo
   async function trocarTipo(novoTipo: TipoConteudo) {
-    if (!senhasAbertas && !mensagensAbertas && !mapaAberto && !secaoEventos && tipo === novoTipo) return;
+    if (!senhasAbertas && !historicoAberto && !mensagensAbertas && !mapaAberto && !secaoEventos && tipo === novoTipo) return;
     if (!await prepararTroca()) return;
     setCarregando(true);
     setErro("");
@@ -161,6 +163,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     setConteudoSujo(false);
     setPainelFilhoSujo(false);
     setSenhasAbertas(false);
+    setHistoricoAberto(false);
     return true;
   }
 
@@ -286,7 +289,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
         <nav aria-label="Seções do painel">
           {/* Eventos legados continuam no backup e na migração, mas novas edições
               usam somente o painel relacional para não criar duas fontes. */}
-          {tiposConteudoPainel.filter((nomeTipo) => nomeTipo !== "eventos" && pode(recursoConteudo(nomeTipo))).map((nomeTipo) => <button type="button" className={!senhasAbertas && !mensagensAbertas && !mapaAberto && !secaoEventos && tipo === nomeTipo ? "ativo" : ""} onClick={() => trocarTipo(nomeTipo)} key={nomeTipo}>{configuracaoPainel[nomeTipo].nome}</button>)}
+          {tiposConteudoPainel.filter((nomeTipo) => nomeTipo !== "eventos" && pode(recursoConteudo(nomeTipo))).map((nomeTipo) => <button type="button" className={!senhasAbertas && !historicoAberto && !mensagensAbertas && !mapaAberto && !secaoEventos && tipo === nomeTipo ? "ativo" : ""} onClick={() => trocarTipo(nomeTipo)} key={nomeTipo}>{configuracaoPainel[nomeTipo].nome}</button>)}
           <span className="grupo-menu-painel">Eventos, reuniões e turmas</span>
           {pode("eventos") && <button type="button" className={secaoEventos === "eventos-internos" ? "ativo" : ""} onClick={() => abrirSecaoEventos("eventos-internos")}>Eventos internos</button>}
           {pode("interclasses") && <button type="button" className={secaoEventos === "interclasses" ? "ativo" : ""} onClick={() => abrirSecaoEventos("interclasses")}>Interclasses e campeonatos</button>}
@@ -295,7 +298,11 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
           {pode("mapa") && <button type="button" className={secaoEventos === "salas" ? "ativo" : ""} onClick={() => abrirSecaoEventos("salas")}>Salas</button>}
           {pode("mapa") && <button type="button" className={mapaAberto ? "ativo" : ""} onClick={abrirMapa}>Mapa e ensalamento</button>}
           {pode("mensagens") && <button type="button" className={mensagensAbertas ? "ativo" : ""} onClick={abrirMensagens}>Mensagens recebidas</button>}
-          {usuario.cargo === "geral" && <button type="button" className={senhasAbertas ? "ativo" : ""} onClick={async () => { if (!await prepararTroca()) return; setFormulario(null); setSecaoEventos(null); setMapaAberto(false); setMensagensAbertas(false); setSenhasAbertas(true); }}>Registro de senhas</button>}
+          {usuario.cargo === "geral" && <>
+            <span className="grupo-menu-painel">Administração</span>
+            <button type="button" className={senhasAbertas ? "ativo" : ""} onClick={async () => { if (!await prepararTroca()) return; setFormulario(null); setSecaoEventos(null); setMapaAberto(false); setMensagensAbertas(false); setSenhasAbertas(true); }}>Registro de senhas</button>
+            <button type="button" className={historicoAberto ? "ativo" : ""} onClick={async () => { if (!await prepararTroca()) return; setFormulario(null); setSecaoEventos(null); setMapaAberto(false); setMensagensAbertas(false); setHistoricoAberto(true); }}>Histórico de acessos</button>
+          </>}
         </nav>
         {/* saída do painel */}
         <a className="sair-painel" href="/api/logout">Sair do painel</a>
@@ -306,7 +313,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
       {/* conteúdo da seção escolhida */}
       <div className="conteudo-painel">
         {/* painel do mapa ou das mensagens */}
-        {senhasAbertas ? <PainelSenhas aoMudarEstadoSujo={setPainelFilhoSujo} /> : somenteConsulta ? <PainelConsulta key={recursoAtual} recurso={recursoAtual} publicos={cargo.publicos} /> : secaoEventos === "eventos-internos" ? (
+        {historicoAberto ? <PainelHistoricoAcessos /> : senhasAbertas ? <PainelSenhas aoMudarEstadoSujo={setPainelFilhoSujo} /> : somenteConsulta ? <PainelConsulta key={recursoAtual} recurso={recursoAtual} publicos={cargo.publicos} /> : secaoEventos === "eventos-internos" ? (
           <PainelEventosInternos cargo={usuario.cargo} aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : secaoEventos === "interclasses" ? (
           <PainelInterclasses aoMudarEstadoSujo={setPainelFilhoSujo} />

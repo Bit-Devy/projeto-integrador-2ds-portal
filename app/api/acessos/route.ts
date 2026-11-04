@@ -77,7 +77,7 @@ async function alterar(request: Request) {
     const acao = request.method === "POST" ? "criou" : request.method === "PUT" ? "trocou a senha" : "revogou";
     await banco.prepare("INSERT INTO auditoria_acessos (autor_id, autor_nome, acao, cargo, acesso_id) VALUES (?, ?, ?, ?, ?)").bind(usuario.acessoId, usuario.nome, acao, cargo, id).run();
     const respostaFinal = NextResponse.json({ id, ...(senhaNova ? { senha: senhaNova } : {}), sair: request.method === "DELETE" && id === usuario.acessoId }, { status: request.method === "POST" ? 201 : 200, headers: { "cache-control": "private, no-store" } });
-    if (id === usuario.acessoId && request.method === "PUT") respostaFinal.cookies.set(NOME_COOKIE_SESSAO, await criarTokenSessao({ id, versao }), { httpOnly: true, sameSite: "lax", secure: new URL(request.url).protocol === "https:", path: "/", maxAge: 28800 });
+    if (id === usuario.acessoId && request.method === "PUT") respostaFinal.cookies.set(NOME_COOKIE_SESSAO, await criarTokenSessao({ id, versao }, usuario.entradaId), { httpOnly: true, sameSite: "lax", secure: new URL(request.url).protocol === "https:", path: "/", maxAge: 28800 });
     if (id === usuario.acessoId && request.method === "DELETE") respostaFinal.cookies.set(NOME_COOKIE_SESSAO, "", { path: "/", maxAge: 0 });
     return guardarNavegador(respostaFinal, request, navegador);
   } catch (erro) {

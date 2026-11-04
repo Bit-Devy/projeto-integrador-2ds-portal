@@ -6,7 +6,6 @@ import { useState } from "react";
 import { useLimiteNavegador } from "../lib/useLimiteNavegador";
 // importa o aviso de espera
 import AvisoLimite from "./AvisoLimite";
-import CheckboxComAjuda from "./CheckboxComAjuda";
 
 // mantém o login desativado durante o bloqueio deste navegador
 export default function FormularioLogin({ retorno, erro, geralInicial = false }: { retorno: string; erro?: string; geralInicial?: boolean }) {
@@ -30,7 +29,7 @@ export default function FormularioLogin({ retorno, erro, geralInicial = false }:
         <span>Senha de acesso</span>
         <input type="password" name="senha" autoComplete="current-password" required disabled={desativado && !enviando} />
       </label>
-      <label className="entrada-acesso-geral"><CheckboxComAjuda name="geral" value="1" checked={geral} onChange={(evento) => setGeral(evento.target.checked)} explicacao="Marque para usar uma senha da administração geral e abrir o painel completo, incluindo o registro de senhas. Desmarcado, a senha identifica seu cargo e libera apenas suas áreas." aria-label="Acesso geral" disabled={desativado && !enviando} /><span>Acesso geral</span></label>
+      <label className="entrada-acesso-geral"><input type="checkbox" name="geral" value="1" checked={geral} onChange={(evento) => setGeral(evento.target.checked)} aria-label="Acesso geral" disabled={desativado && !enviando} /><span>Acesso geral</span></label>
       <button type="submit" disabled={desativado}>{enviando ? "Entrando..." : carregando ? "Aguarde..." : "Entrar"}</button>
     </form>
   </>;

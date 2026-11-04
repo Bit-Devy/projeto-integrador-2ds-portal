@@ -3,6 +3,8 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 // importa o servidor das páginas
 import handler from "vinext/server/app-router-entry";
+// registra as alterações concluídas por cada entrada no painel
+import { prepararHistoricoAcao, concluirHistoricoAcao } from "../app/lib/historico-painel";
 // importa o ambiente de cada pedido
 import { ambienteDaRequisicao, type AmbientePortal } from "./ambiente";
 
@@ -53,7 +55,16 @@ const worker = {
     }
 
     // entrega os outros pedidos ao servidor das páginas
-    return ambienteDaRequisicao.run(env, () => handler.fetch(request, env, ctx));
+    return ambienteDaRequisicao.run(env, async () => {
+      // uma falha no histórico não repete uma alteração já salva no portal
+      let historico = null;
+      try { historico = await prepararHistoricoAcao(request); }
+      catch (erro) { console.error("Não foi possível preparar o histórico da ação.", erro); }
+      const resposta = await handler.fetch(request, env, ctx);
+      try { await concluirHistoricoAcao(historico, resposta); }
+      catch (erro) { console.error("Não foi possível registrar a ação concluída.", erro); }
+      return resposta;
+    });
   },
 };
 
