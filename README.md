@@ -28,6 +28,7 @@ Para executar a versão compilada, use `npm run build` e depois `npm run start`.
 - **Estatuto e documentos:** acesso à última versão das normas e aos arquivos publicados do grêmio
 - **Sugestões:** envio de ideias, demandas, propostas e relatos com protocolo, apenas em `/sugestoes`
 - **Contato:** atalhos para atendimento presencial, Instagram, canal do WhatsApp e sugestões; os três destinos externos são editáveis no painel
+- **Gerenciamento de cargos:** no submenu Administração, o acesso geral escolhe quais menus cada cargo pode consultar ou editar, sempre revisando e confirmando a própria senha. A restauração mostra os acessos padrão antes de confirmar. Administração, presidente e vice-presidente têm acessos protegidos; a seção Administração nunca é concedida a outros cargos
 - **Acessibilidade:** A+ amplia levemente os textos em um único nível; A restaura o tamanho normal
 - **Painel da gestão:** cadastro, edição e publicação de conteúdos, administração de mensagens, eventos, interclasses, reuniões, representantes, mapa e envio de arquivos
 

@@ -1,5 +1,9 @@
 // cria os acessos sem guardar as senhas em texto
 export const comandosEstruturaAcessos = [
+  `CREATE TABLE IF NOT EXISTS permissoes_cargos (
+    cargo TEXT PRIMARY KEY NOT NULL, editar_json TEXT NOT NULL, consultar_json TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
   `CREATE TABLE IF NOT EXISTS acessos_painel (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     cargo TEXT NOT NULL, vaga INTEGER NOT NULL, nome TEXT NOT NULL,

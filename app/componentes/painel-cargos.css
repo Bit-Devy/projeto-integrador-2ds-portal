@@ -1,0 +1,40 @@
+/* mantém os cargos próximos da aparência dos demais painéis */
+.painel-cargos { min-width: 0; }
+.cargos-aviso, .cargos-ajuda { margin: 1.2rem 0; padding: 1rem; border-left: .2rem solid #0089b7; background: #edf5f8; color: #405c6d; font-size: .88rem; line-height: 1.7; }
+.cargos-busca { display: grid; gap: .5rem; margin: 1.3rem 0 .8rem; color: #375467; font-size: .88rem; }
+.cargos-busca input, .cargos-menus select, .cargos-senha input { width: 100%; min-width: 0; padding: .75rem; border: 1px solid #b9cbd6; border-radius: 0; background: #fff; color: #263b49; font: inherit; }
+.cargos-total { color: #617481; font-size: .82rem; }
+.cargos-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; }
+.cargos-grade > article { display: flex; flex-direction: column; align-items: flex-start; padding: 1.3rem; border: 1px solid #d6e1e8; border-top: .25rem solid #007caf; background: #fff; }
+.cargos-grade > .cargo-protegido { background: #f1f6f8; border-top-color: #476777; }
+.cargos-estado { padding: .25rem .5rem; background: #e7f1f6; color: #315d74; font-size: .72rem; font-weight: 700; }
+.cargos-grade h2, .cargos-editor h2 { margin: .8rem 0 .5rem; color: #005f87; font-size: 1.15rem; line-height: 1.5; overflow-wrap: anywhere; }
+.cargos-grade p, .cargos-editor p { font-size: .86rem; line-height: 1.7; }
+.cargos-grade details { width: 100%; margin: .5rem 0 1.1rem; font-size: .82rem; }
+.cargos-grade summary { color: #006d98; cursor: pointer; font-weight: 700; }
+.cargos-grade > article > button { margin-top: auto; }
+
+/* organiza as escolhas para cada menu sem apertar os campos no celular */
+.cargos-editor { padding: 1.4rem; border: 1px solid #d6e1e8; background: #fff; }
+.cargos-editor-topo { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.cargos-menus { display: grid; gap: .65rem; margin: 1rem 0; }
+.cargos-menus label { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9.5rem, 13rem); gap: 1rem; align-items: center; padding: .7rem .85rem; background: #f5f8fa; border: 1px solid #e0e8ed; font-size: .88rem; }
+.cargos-menus label > span { overflow-wrap: anywhere; }
+.cargos-acoes { display: flex; justify-content: space-between; gap: .8rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid #d6e1e8; }
+.painel-cargos button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* mantém a revisão e a confirmação de senha na janela do próprio site */
+.dialogo-cargos { max-height: 90dvh; overflow-y: auto; }
+.cargos-lista-acessos { margin: .8rem 0; padding: 0; list-style: none; }
+.cargos-lista-acessos li { display: flex; justify-content: space-between; gap: .85rem; padding: .65rem 0; border-bottom: 1px solid #dce6eb; font-size: .82rem; line-height: 1.5; }
+.cargos-lista-acessos li > span { overflow-wrap: anywhere; }
+.cargos-lista-acessos strong { flex-shrink: 0; color: #315d74; font-size: .78rem; }
+.cargos-senha { display: grid; gap: .5rem; margin: 1rem 0; font-size: .88rem; }
+.cargos-revisao { padding: .3rem 1rem; background: #f2f7fa; border: 1px solid #dce6eb; }
+@media (max-width: 40rem) {
+  .cargos-editor { padding: 1rem; }
+  .cargos-editor-topo { flex-direction: column; align-items: stretch; }
+  .cargos-menus label { grid-template-columns: minmax(0, 1fr); gap: .5rem; }
+  .cargos-acoes > button { width: 100%; }
+  .cargos-lista-acessos li { flex-direction: column; gap: .2rem; }
+}

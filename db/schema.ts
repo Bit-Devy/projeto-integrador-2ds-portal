@@ -677,6 +677,13 @@ export const auditoriaAcessos = sqliteTable("auditoria_acessos", {
   criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+// guarda apenas os acessos que a administração personalizou por cargo
+export const permissoesCargos = sqliteTable("permissoes_cargos", {
+  cargo: text("cargo").primaryKey().notNull(),
+  editarJson: text("editar_json").notNull(), consultarJson: text("consultar_json").notNull(),
+  atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 // guarda cada entrada sem depender de a senha continuar cadastrada
 export const entradasPainel = sqliteTable("entradas_painel", {
   id: integer("id").primaryKey({ autoIncrement: true }),

@@ -1,0 +1,22 @@
+/* mantém os filtros de consulta com o mesmo desenho dos cadastros */
+.consulta-filtros { display: flex; align-items: end; flex-wrap: wrap; gap: .8rem; margin: 1.25rem 0; padding: 1rem; border: 1px solid #d8e3e9; background: #f3f7f9; }
+.consulta-filtros label { display: grid; gap: .4rem; flex: 1 1 10rem; min-width: 0; font-size: .85rem; color: #405d70; }
+.consulta-filtros label:first-child { flex-grow: 2; }
+.consulta-filtros input, .consulta-filtros select { min-width: 0; width: 100%; min-height: 2.7rem; padding: .65rem .75rem; border: 1px solid #bfd0da; background: #fff; font: inherit; color: #284d64; }
+.consulta-filtros button { min-height: 2.7rem; }
+
+/* separa o resumo do registro do botão que abre sua leitura */
+.consulta-lista { display: grid; gap: .8rem; }
+.consulta-lista > article { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0; padding: 1.1rem; border: 1px solid #dbe4e9; background: #fff; }
+.consulta-lista article > div { min-width: 0; }
+.consulta-lista h2 { margin: .65rem 0 .4rem; font-size: 1.1rem; color: #164f70; overflow-wrap: anywhere; }
+.consulta-lista p { font-size: .85rem; color: #587082; overflow-wrap: anywhere; }
+.consulta-lista button { flex-shrink: 0; }
+.consulta-paginacao { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem; margin: 1.25rem 0; font-size: .85rem; }
+.consulta-subregistro { border: 1px solid #d5e1e7; padding: .75rem; margin-block: .5rem; background: #fff; }
+.detalhes-consulta { scroll-margin-top: 1rem; }
+@media (max-width: 40rem) {
+  .consulta-lista > article { align-items: stretch; flex-direction: column; }
+  .consulta-lista button { align-self: flex-start; }
+  .consulta-filtros > button { width: 100%; }
+}

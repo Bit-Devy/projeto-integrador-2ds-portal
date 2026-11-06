@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { segredoSessao, garantirAcessos, confirmarSenhaDoAcesso, type AcessoSalvo } from "./senhas-painel";
 import { obterCargo } from "./cargos";
 import { getD1 } from "../../db";
+import { obterPermissoesCargo } from "./permissoes-cargos";
+import type { PermissoesCargo } from "./cargos";
 
 // define o nome e a duração do cookie de sessão
 export const NOME_COOKIE_SESSAO = "gecep_sessao";
@@ -20,6 +22,7 @@ export type UsuarioPainel = {
   acessoId: number;
   versao: number;
   entradaId: number;
+  permissoes: PermissoesCargo;
 };
 
 // verifica se existe uma sessão válida
@@ -42,7 +45,7 @@ export async function obterUsuarioPeloToken(token: string): Promise<UsuarioPaine
     const acesso = await getD1().prepare("SELECT * FROM acessos_painel WHERE id = ? AND versao = ?").bind(Number(id), Number(versao)).first<AcessoSalvo>();
     if (!acesso || !obterCargo(acesso.cargo)) return null;
     if (!await getD1().prepare("SELECT id FROM entradas_painel WHERE id = ? AND acesso_id = ?").bind(Number(entrada), acesso.id).first()) return null;
-    return { nome: acesso.nome, cargo: acesso.cargo, acessoId: acesso.id, versao: acesso.versao, entradaId: Number(entrada) };
+    return { nome: acesso.nome, cargo: acesso.cargo, acessoId: acesso.id, versao: acesso.versao, entradaId: Number(entrada), permissoes: await obterPermissoesCargo(acesso.cargo) };
   } catch {
     // cookies incompletos ou adulterados são tratados como sessão ausente
     return null;

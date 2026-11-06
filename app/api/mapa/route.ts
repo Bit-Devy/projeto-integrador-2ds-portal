@@ -33,7 +33,10 @@ export async function GET(request: Request) {
     const exportar = parametros.get("exportar") === "1";
     // exige administrador para dados privados ou exportação
     if (todos || exportar) {
-      const { resposta } = await exigirAdministradorApi("mapa", request.method !== "GET");
+      const secao = parametros.get("secao");
+      if (secao && !["turmas", "locais"].includes(secao)) throw new ErroMapa("Escolha uma seção válida do mapa.");
+      let { resposta } = await exigirAdministradorApi(secao === "turmas" ? "turmas" : "mapa", false);
+      if (resposta?.status === 403 && !secao) ({ resposta } = await exigirAdministradorApi("turmas", false));
       if (resposta) return resposta;
     }
     // valida o turno recebido
@@ -139,7 +142,17 @@ async function autorizarEscrita(request: Request) {
   if (!origemValida(request)) {
     return Response.json({ erro: "Origem inválida." }, { status: 403 });
   }
-  const { resposta } = await exigirAdministradorApi("mapa", request.method !== "GET");
+  // separa a edição das turmas da edição das salas físicas
+  let corpo: Record<string, unknown> = {};
+  try { corpo = await request.clone().json(); } catch {}
+  const entidade = new URL(request.url).searchParams.get("entidade") || corpo?.entidade;
+  const recurso = ["turmas", "ensalamentos"].includes(String(entidade)) ? "turmas" : "mapa";
+  const { resposta } = await exigirAdministradorApi(recurso, true);
+  if (resposta) return resposta;
+  if (corpo?.acao === "importar" || entidade === "categorias") {
+    const adicional = await exigirAdministradorApi("turmas", true);
+    if (adicional.resposta) return adicional.resposta;
+  }
   return resposta;
 }
 
