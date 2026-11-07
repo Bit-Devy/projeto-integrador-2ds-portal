@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { Children, useMemo, useState } from "react";
 import type { CentralEventosPublica, DocumentoPublico, EventoPublico, InterclassePublico, JogoPublico, ReuniaoPublica, RespostaLista } from "../eventos/modelo-publico";
-import { classeSituacao, extrairItens, formatarData, formatarDataHora, rotuloSituacao, rotuloTurno, temTexto, textoParticipante, urlPublica } from "../eventos/modelo-publico";
+import { classeSituacao, extrairItens, formatarData, formatarDataHora, horarioDoEvento, rotuloSituacao, rotuloTurno, temTexto, textoParticipante, urlPublica } from "../eventos/modelo-publico";
 import { useConsultaPublica } from "../eventos/useConsultaPublica";
 import CabecalhoPagina from "./CabecalhoPagina";
 import { BlocoTexto, GaleriaPublica, ListaDefinicoes, ListaDocumentos, VoltarPara } from "./ElementosEventos";
 import { EstadoCarregando, EstadoErro, EstadoVazio, PaginacaoPublica } from "./EstadoConsultaPublica";
 
 function SeloSituacao({ situacao }: { situacao?: string }) {
-  const rotulo = situacao === "em_andamento" ? "Em andamento" : rotuloSituacao(situacao);
+  const rotulo = situacao === "em_andamento" ? "Acontecendo agora" : rotuloSituacao(situacao);
   return <span className={`selo-situacao situacao-${classeSituacao(situacao)}`}>{rotulo}</span>;
 }
 
@@ -34,7 +34,7 @@ export function CartaoEventoInterno({ evento }: { evento: EventoPublico }) {
         {temTexto(evento.descricaoCurta || evento.descricao) && <p>{evento.descricaoCurta || evento.descricao}</p>}
         <div className="resumo-dados-cartao">
           {dataDoEvento(evento) && <time dateTime={evento.dataInicial || evento.dataInicio}>{dataDoEvento(evento)}</time>}
-          {temTexto(evento.horarioInicial || evento.horario) && <span>{[evento.horarioInicial || evento.horario, evento.horarioFinal].filter(temTexto).join("–")}</span>}
+          {temTexto(horarioDoEvento(evento)) && <span>{horarioDoEvento(evento)}</span>}
           {temTexto(evento.local) && <span>{evento.local}</span>}
         </div>
         {destino && <b>Ver informações completas ›</b>}
@@ -224,7 +224,7 @@ export function DetalheEventoInterno({ slug }: { slug: string }) {
         <VoltarPara href="/eventos/internos">Voltar para eventos internos</VoltarPara>
         <div className="topo-detalhe-evento"><div><SeloSituacao situacao={evento.arquivado ? "arquivado" : evento.situacao} />{temTexto(evento.categoria) && <span className="categoria-publica">{evento.categoria}</span>}</div>{imagem && <img src={imagem} alt="" />}</div>
         <ListaDefinicoes itens={[
-          { rotulo: "Data", valor: dataDoEvento(evento) }, { rotulo: "Horário", valor: [evento.horarioInicial || evento.horario, evento.horarioFinal].filter(temTexto).join("–") }, { rotulo: "Local", valor: evento.local }, { rotulo: "Turno", valor: rotuloTurno(evento.turno) }, { rotulo: "Público destinado", valor: evento.publicoDestinado }, { rotulo: "Organização", valor: evento.organizacaoResponsavel || evento.organizacao },
+          { rotulo: "Data", valor: dataDoEvento(evento) }, { rotulo: "Horário", valor: horarioDoEvento(evento) }, { rotulo: "Local", valor: evento.local }, { rotulo: "Turno", valor: rotuloTurno(evento.turno) }, { rotulo: "Público destinado", valor: evento.publicoDestinado }, { rotulo: "Organização", valor: evento.organizacaoResponsavel || evento.organizacao },
         ]} />
         <BlocoTexto titulo="Sobre o evento" conteudo={evento.descricaoCompleta || evento.descricao} />
         <BlocoTexto titulo="Programação" conteudo={evento.programacao} />

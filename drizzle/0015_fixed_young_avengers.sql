@@ -1,0 +1,1 @@
+ALTER TABLE `eventos_internos` ADD `dia_todo` integer DEFAULT false NOT NULL;

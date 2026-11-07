@@ -235,7 +235,7 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
   }
 
   async function editar(item: Reuniao, abaInicial: AbaReuniao = "informacoes") {
-    if (!await confirmarSaida(mudou)) return;
+    if (!await confirmarSaida(mudou)) return false;
     setCarregando(true);
     setErro("");
     try {
@@ -252,6 +252,7 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
       setMudou(false);
       setSelecionadas(new Set());
       window.scrollTo({ top: 0, behavior: "smooth" });
+      return true;
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : "Não foi possível abrir a reunião.");
     } finally {
@@ -496,31 +497,31 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
     setSelecionadas((atuais) => { const proximas = new Set(atuais); for (const item of presencasFiltradas) { if (todasSelecionadas) proximas.delete(item.id); else proximas.add(item.id); } return proximas; });
   }
 
-  function trocarAba(nome: AbaReuniao) {
+  // confirma antes de trocar a etapa e recarrega apenas o que foi descartado
+  async function trocarAba(nome: AbaReuniao) {
     if (nome === aba) return;
-    if (mudou) {
-      setErro("Salve ou cancele as mudanças desta etapa antes de abrir outra área da reunião.");
-      return;
-    }
+    if (mudou && detalhes && !await editar(detalhes, nome)) return;
+    setDocumento(null); setVotacao(null); setItemReuniao(null); setPresencaManual(null);
+    setMudou(false);
     setAba(nome);
   }
 
   async function definirDocumento(valor: DocumentoReuniao | null) {
     if (valor === null && documento && mudou && !await confirmarSaida(true)) return;
     setDocumento(valor);
-    setMudou(Boolean(valor));
+    setMudou(Boolean(valor && documento));
   }
 
   async function definirVotacao(valor: VotacaoReuniao | null) {
     if (valor === null && votacao && mudou && !await confirmarSaida(true)) return;
     setVotacao(valor);
-    setMudou(Boolean(valor));
+    setMudou(Boolean(valor && votacao));
   }
 
   async function definirItemReuniao(valor: ItemReuniao | null) {
     if (valor === null && itemReuniao && mudou && !await confirmarSaida(true)) return;
     setItemReuniao(valor);
-    setMudou(Boolean(valor));
+    setMudou(Boolean(valor && itemReuniao));
   }
 
   function abrirPresencaManual() {
@@ -543,7 +544,7 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
   }
 
   return (
-    <section className="pev-painel" aria-labelledby="titulo-painel-reunioes">
+    <section className="pev-painel" onChangeCapture={(evento) => { if (evento.target instanceof Element && evento.target.closest("form.pev-formulario")) setMudou(true); }} aria-labelledby="titulo-painel-reunioes">
       <CabecalhoPainel rotulo="GESTÃO E MEMÓRIA" titulo="Reuniões, atas e presenças" descricao="Organize reuniões de representantes ou internas, publique resumos e preserve listas históricas de presença." acao={formulario ? undefined : novo} nomeAcao="+ Nova reunião" />
       <MensagensPainel erro={erro} sucesso={sucesso} />
 

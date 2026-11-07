@@ -48,6 +48,7 @@ export type DocumentoAdministrativo = DocumentoPublico & {
 };
 
 export type EventoInternoPublico = {
+  diaTodo: boolean;
   id: number;
   slug: string;
   titulo: string;

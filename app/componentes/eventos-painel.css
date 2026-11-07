@@ -1,0 +1,6 @@
+/* deixa os horários guardados visíveis enquanto o evento ocupa o dia inteiro */
+.evento-dia-todo input:disabled {
+  background: #eef2f4;
+  color: #7a858b;
+  cursor: not-allowed;
+}

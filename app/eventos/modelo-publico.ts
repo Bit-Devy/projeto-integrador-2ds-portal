@@ -25,6 +25,7 @@ export type ImagemPublica = {
 };
 
 export type EventoPublico = {
+  diaTodo?: boolean;
   id?: number;
   slug?: string;
   titulo?: string;
@@ -347,6 +348,13 @@ export function normalizarBusca(valor: string): string {
     .toLocaleLowerCase("pt-BR")
     .replace(/\s+/g, "")
     .trim();
+}
+
+// mostra a duração do evento do mesmo jeito nos cartões e na página completa
+export function horarioDoEvento(evento: Pick<EventoPublico, "diaTodo" | "horarioInicial" | "horarioFinal" | "horario">): string {
+  if (evento.diaTodo) return "Dia todo";
+  if (evento.horarioInicial || evento.horarioFinal) return [evento.horarioInicial, evento.horarioFinal].filter(temTexto).join("–");
+  return evento.horario || "";
 }
 
 export function rotuloSituacao(valor?: string): string {

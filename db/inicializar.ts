@@ -206,6 +206,13 @@ async function prepararBanco() {
   }
 
   // aplica ajustes e a carga do mapa
+  // acrescenta a opção de dia inteiro sem modificar os horários já cadastrados
+  const colunasEventos = await d1.prepare("PRAGMA table_info(eventos_internos)").all<{ name: string }>();
+  if (!colunasEventos.results.some((coluna) => coluna.name === "dia_todo")) {
+    try { await d1.prepare("ALTER TABLE eventos_internos ADD COLUMN dia_todo INTEGER NOT NULL DEFAULT 0").run(); }
+    catch (erro) { if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro; }
+  }
+
   const colunasCampeonato = await d1.prepare("PRAGMA table_info(campeonatos)").all<{ name: string }>();
   if (!colunasCampeonato.results.some((coluna) => coluna.name === "premiacao")) {
     try {

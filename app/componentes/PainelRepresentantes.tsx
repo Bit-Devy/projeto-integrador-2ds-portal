@@ -237,7 +237,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
   }
 
   return (
-    <section className="pev-painel" aria-labelledby="titulo-painel-representantes">
+    <section className="pev-painel" onChangeCapture={() => { if (formulario) setMudou(true); }} aria-labelledby="titulo-painel-representantes">
       <CabecalhoPainel rotulo="COMUNIDADE ESCOLAR" titulo="Representantes" descricao="Gerencie mandatos e publicação sem expor dados pessoais. Registros arquivados permanecem ligados ao histórico de presença." acao={formulario ? undefined : () => novo()} nomeAcao="+ Cadastrar representante" />
       <MensagensPainel erro={erro} sucesso={sucesso} />
 

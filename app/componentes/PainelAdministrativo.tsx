@@ -69,11 +69,11 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
   const [tipo, setTipo] = useState<TipoConteudo>(primeiroTipo || "noticias");
   const [abaDocumentos, setAbaDocumentos] = useState<"arquivos" | "normas" | "publicacoes">(pode("arquivos") ? "arquivos" : pode("oficiais") ? "normas" : "publicacoes");
   // controla a seção de mensagens
-  const [mensagensAbertas, setMensagensAbertas] = useState(pode("mensagens"));
+  const [mensagensAbertas, setMensagensAbertas] = useState(!primeiroTipo && !primeiraSecao && !pode("mapa") && pode("mensagens"));
   // controla a seção do mapa
-  const [mapaAberto, setMapaAberto] = useState(!pode("mensagens") && !primeiroTipo && !primeiraSecao && pode("mapa"));
+  const [mapaAberto, setMapaAberto] = useState(!primeiroTipo && !primeiraSecao && pode("mapa"));
   // controla as áreas especializadas de eventos e representação
-  const [secaoEventos, setSecaoEventos] = useState<SecaoEventosPainel | null>(pode("mensagens") ? null : primeiraSecao || null);
+  const [secaoEventos, setSecaoEventos] = useState<SecaoEventosPainel | null>(primeiraSecao || null);
   // guarda os registros carregados
   const [itens, setItens] = useState<RegistroConteudo[]>([]);
   // controla o carregamento
@@ -353,7 +353,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
 
             {/* formulário ou lista de registros */}
             {tipo === "documentos" && abaDocumentos !== "publicacoes" ? <PainelDocumentos key={abaDocumentos} aba={abaDocumentos} aoMudarEstadoSujo={setPainelFilhoSujo} /> : formulario ? (
-              <form className={tipo === "noticias" ? "formulario-painel formulario-noticia" : "formulario-painel"} onSubmit={salvar}>
+              <form className={tipo === "noticias" ? "formulario-painel formulario-noticia" : "formulario-painel"} onChangeCapture={() => setConteudoSujo(true)} onSubmit={salvar}>
                 {/* título do formulário */}
                 <div className="titulo-formulario-painel"><div><small>{idEditando ? "EDITANDO" : "NOVO REGISTRO"}</small><h2>{idEditando ? "Atualizar" : "Adicionar"} {configuracao.singular}</h2></div><button type="button" onClick={fecharFormulario}>Fechar</button></div>
                 {/* campos configurados para a seção */}

@@ -5,7 +5,6 @@ import {
   atualizarEvento,
   criarDocumentoEvento,
   criarEvento,
-  duplicarEvento,
   listarEventos,
   obterDocumentoParaSincronizacao,
   obterCentralEventos,
@@ -44,10 +43,7 @@ export async function POST(request: Request) {
   try {
     const corpo = await lerObjeto(request);
     if (corpo.acao === "duplicar") {
-      const item = await duplicarEvento(corpo.id);
-      await guardarArea(request, "eventos", item, corpo);
-      await sincronizarArquivosDoEvento(item);
-      return Response.json({ item }, { status: 201 });
+      throw new ErroEventos("Eventos internos não podem ser duplicados.");
     }
     if (corpo.entidade === "documentos") {
       const dados = dadosDoCorpo(corpo);
@@ -78,10 +74,7 @@ export async function PUT(request: Request) {
       return Response.json({ item });
     }
     if (corpo.acao === "duplicar") {
-      const item = await duplicarEvento(corpo.id);
-      await guardarArea(request, "eventos", item, corpo);
-      await sincronizarArquivosDoEvento(item);
-      return Response.json({ item });
+      throw new ErroEventos("Eventos internos não podem ser duplicados.");
     }
     const anterior = await obterEvento(String(corpo.id ?? ""), true);
     const item = await atualizarEvento(corpo.id, dadosDoCorpo(corpo));

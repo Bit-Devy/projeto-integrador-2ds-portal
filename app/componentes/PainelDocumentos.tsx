@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import EscolherArquivo, { ListaBiblioteca } from "./BibliotecaArquivos";
 import type { DocumentoOficial } from "../arquivos/documentos-oficiais";
-import { enviarArquivoPainel, requisitarPainel, corpoJson, MensagensPainel } from "./painel-eventos-comum";
+import { enviarArquivoPainel, requisitarPainel, corpoJson, MensagensPainel, useAvisoMudancas } from "./painel-eventos-comum";
 
 // mantém os uploads privados e separa a troca dos dois documentos oficiais
 export default function PainelDocumentos({ aba, aoMudarEstadoSujo }: { aba: "arquivos" | "normas"; aoMudarEstadoSujo: (mudou: boolean) => void }) {
@@ -14,7 +14,7 @@ export default function PainelDocumentos({ aba, aoMudarEstadoSujo }: { aba: "arq
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
-  useEffect(() => { aoMudarEstadoSujo(Object.values(alterados).some(Boolean)); }, [alterados, aoMudarEstadoSujo]);
+  useAvisoMudancas(enviando || Object.values(alterados).some(Boolean), aoMudarEstadoSujo);
   useEffect(() => {
     const controle = new AbortController();
     fetch("/api/documentos-oficiais", { cache: "no-store", signal: controle.signal }).then(async (resposta) => {

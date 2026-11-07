@@ -3,7 +3,7 @@
 // mantém a revisão e a senha de confirmação apenas enquanto a janela está aberta
 import { useEffect, useRef, useState } from "react";
 import { cargosPainel, type CargoPainel } from "../lib/cargos";
-import { useAvisoMudancas, type AoMudarEstadoSujo } from "./painel-eventos-comum";
+import { useAvisoMudancas, confirmarSaida, type AoMudarEstadoSujo } from "./painel-eventos-comum";
 import { ajudaLogin, ajudaSenha, padraoLogin, padraoSenha } from "../lib/regras-acesso";
 
 type Acesso = { id: number; cargo: string; vaga: number; nome: string; login: string; loginAmbiente: number; atualizadoEm: string };
@@ -26,7 +26,8 @@ export default function PainelSenhas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo:
   const [sair, setSair] = useState(false);
   const [proprioAlterado, setProprioAlterado] = useState(false);
   const janela = useRef<HTMLDialogElement>(null);
-  useAvisoMudancas(Boolean(operacao && etapa !== "resultado"), aoMudarEstadoSujo);
+  const [mudou, setMudou] = useState(false);
+  useAvisoMudancas(Boolean(mudou && operacao && etapa !== "resultado"), aoMudarEstadoSujo);
   async function carregar() {
     const resposta = await fetch("/api/acessos", { cache: "no-store" });
     const dados = await resposta.json();
@@ -44,10 +45,13 @@ export default function PainelSenhas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo:
   }, []);
   useEffect(() => { if (operacao) janela.current?.showModal(); }, [operacao]);
   function abrir(tipo: Operacao["tipo"], cargo: CargoPainel, acesso?: Acesso) {
+    setMudou(false);
     setErro(""); setNome(acesso?.nome || ""); setLogin(acesso?.login || ""); setSenhaAtual(""); setNovaSenha(""); setSenhaGerada(""); setSair(false); setProprioAlterado(false); setEtapa("editar"); setOperacao({ tipo, cargo, acesso });
   }
-  function fechar() {
+  async function fechar() {
     if (ocupado) return;
+    if (etapa !== "resultado" && !await confirmarSaida(mudou)) return;
+    setMudou(false);
     janela.current?.close(); setOperacao(null); setSenhaAtual(""); setNovaSenha(""); setSenhaGerada("");
     if (sair) window.location.assign("/login");
     else if (proprioAlterado) window.location.assign("/painel");
@@ -81,7 +85,7 @@ export default function PainelSenhas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo:
     {operacao && <dialog ref={janela} className="dialogo-anonimato dialogo-senhas" aria-labelledby="titulo-revisao-senha" onCancel={(evento) => { evento.preventDefault(); fechar(); }}>
       <h2 id="titulo-revisao-senha">{etapa === "resultado" ? "Acesso atualizado" : etapa === "revisar" ? "Revisar alteração de acesso" : operacao.tipo === "DELETE" ? "Revogar acesso" : operacao.tipo === "PUT" ? "Trocar senha" : "Criar senha"}</h2>
       {erro && <p role="alert" className="erro-painel">{erro}</p>}
-      {etapa === "editar" ? <form onSubmit={(evento) => { evento.preventDefault(); setEtapa("revisar"); }}>
+      {etapa === "editar" ? <form onChangeCapture={() => setMudou(true)} onSubmit={(evento) => { evento.preventDefault(); setEtapa("revisar"); }}>
         <p><strong>{operacao.cargo.nome}</strong></p><p>{operacao.cargo.descricao}</p>
         {operacao.tipo !== "DELETE" && <><label>Identificação de quem vai usar<input value={nome} maxLength={100} required autoComplete="off" onChange={(evento) => setNome(evento.target.value)} placeholder="Ex.: nome do integrante" /></label><label>Login<input value={login} maxLength={60} required autoComplete="off" autoCapitalize="none" spellCheck={false} pattern={padraoLogin} title={ajudaLogin} readOnly={Boolean(operacao.acesso?.loginAmbiente)} onChange={(evento) => setLogin(evento.target.value)} /></label><small>{operacao.acesso?.loginAmbiente ? "Este login é definido por ADMIN_LOGIN no arquivo de configuração do servidor." : ajudaLogin}</small><label>Nova senha (opcional)<input type="password" value={novaSenha} minLength={12} maxLength={200} pattern={padraoSenha} title={ajudaSenha} autoComplete="new-password" onChange={(evento) => setNovaSenha(evento.target.value)} /></label><small>{ajudaSenha} Deixe vazia para gerar uma senha automaticamente. Ela será mostrada uma única vez.</small></>}
         {operacao.tipo === "DELETE" && <p>O acesso de {operacao.acesso?.nome} será revogado e suas sessões serão encerradas.</p>}

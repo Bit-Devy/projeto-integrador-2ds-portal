@@ -36,10 +36,11 @@ test("mensagens começam pelas novas e podem ser filtradas sem permitir exclusã
       sqlite.prepare("INSERT INTO mensagens (nome,turma,assunto,titulo,mensagem,status,criado_em,anonimo,tipo_contato,contato) VALUES (?,?,?,?,?,?,?,?,?,?)").run("Pessoa fictícia", "2DS", "Teste", `${status} ${indice}`, `Texto completo da mensagem ${status} ${indice}\ncom outra linha`, status, "2026-11-06 12:00:00", indice === 1 ? 1 : 0, "email", "ficticio@example.test");
     }
 
-    // o início do painel e da api prioriza as novas participações
+    // o painel abre pela primeira aba permitida e a api mantém o filtro de novas
     const html = await (await chamar("/painel")).text();
-    assert.match(html, /aria-pressed="true"[^>]*>Novas/);
-    assert.match(html, /Buscar por protocolo/);
+    assert.match(html, /<h1[^>]*>Notícias<\/h1>/);
+    assert.match(html, />Mensagens recebidas<\/button>/);
+    assert.doesNotMatch(html, /id="busca-protocolo"/);
     const inicio = await (await chamar("/api/mensagens")).json();
     assert.equal(inicio.total, 7);
     assert.equal(inicio.mensagens.length, 6);

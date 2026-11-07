@@ -202,6 +202,7 @@ export const cargasIniciais = sqliteTable("cargas_iniciais", {
 export const eventosInternos = sqliteTable(
   "eventos_internos",
   {
+    diaTodo: integer("dia_todo", { mode: "boolean" }).notNull().default(false),
     areaResponsavel: text("area_responsavel").notNull().default("geral"),
     id: integer("id").primaryKey({ autoIncrement: true }),
     slug: text("slug").notNull(),

@@ -1960,7 +1960,7 @@ async function testarArquivos(cookie) {
     });
   }
 
-  // uma chave compartilhada não pode ser privatizada pela cópia em rascunho
+  // duas publicações podem usar o mesmo arquivo sem liberar um rascunho
   const formularioCompartilhado = new FormData();
   formularioCompartilhado.append("arquivo", new File([bytes], "capa-compartilhada.png", { type: "image/png" }));
   formularioCompartilhado.append("visibilidade", "privada");
@@ -1988,23 +1988,23 @@ async function testarArquivos(cookie) {
     eventoOrigem = origem.item.id;
     assert.equal((await fetch(`${endereco}${compartilhado.url}`)).status, 200);
 
+    await requisicaoDominio(cookie, "/api/eventos", "POST", { acao: "duplicar", id: eventoOrigem }, 400);
     const copia = await requisicaoDominio(cookie, "/api/eventos", "POST", {
-      acao: "duplicar",
-      id: eventoOrigem,
+      dados: { titulo: `Rascunho com capa compartilhada ${sufixo}`, imagemCapaUrl: compartilhado.url, publicado: false },
     }, 201);
     eventoCopia = copia.item.id;
     assert.equal(copia.item.publicado, false);
     assert.equal(
       (await fetch(`${endereco}${compartilhado.url}`)).status,
       200,
-      "A cópia em rascunho não pode privatizar a capa da origem publicada.",
+      "Um rascunho não pode privatizar a capa de outro evento publicado.",
     );
 
     await requisicaoDominio(cookie, `/api/eventos?id=${eventoOrigem}`, "DELETE");
     assert.equal(
       (await fetch(`${endereco}${compartilhado.url}`)).status,
-      200,
-      "O arquivo de um evento arquivado e ainda publicado deve continuar acessível.",
+      401,
+      "O arquivo de um evento arquivado deve sair do acesso público.",
     );
 
     await requisicaoDominio(cookie, "/api/eventos", "PUT", {

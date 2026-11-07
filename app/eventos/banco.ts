@@ -152,30 +152,16 @@ export async function atualizarEvento(idRecebido: unknown, valor: unknown) {
   if (Object.hasOwn(recebido, "documentos") || Object.hasOwn(recebido, "imagens")) {
     await substituirLinksEvento(id, dados.documentos, dados.imagens, dados.publicado);
   }
-  if (booleano(recebido.arquivado, false)) await arquivarRegistro("eventos_internos", id);
+  if (booleano(recebido.arquivado, false)) await arquivarEvento(id);
   return obterEvento(id, true);
-}
-
-export async function duplicarEvento(idRecebido: unknown) {
-  const origem = await obterEvento(idPositivo(idRecebido, "evento"), true) as EventoInternoAdministrativo;
-  const documentos = origem.documentos.map((item) => item.arquivoUrl || item.linkExterno);
-  const imagens = origem.imagens.map((item) => item.arquivoUrl || item.linkExterno);
-  return criarEvento({
-    ...origem,
-    slug: `${origem.slug}-copia-${Date.now().toString(36)}`,
-    titulo: `${origem.titulo} — cópia`,
-    publicado: false,
-    ativo: true,
-    arquivado: false,
-    documentos,
-    imagens,
-  });
 }
 
 export async function arquivarEvento(idRecebido: unknown) {
   const id = idPositivo(idRecebido, "evento");
   await exigirExistente("eventos_internos", id, "Evento não encontrado.");
-  await arquivarRegistro("eventos_internos", id);
+  // retira o evento e seus anexos do acesso público sem apagar o histórico
+  await getD1().prepare(`UPDATE eventos_internos SET publicado = 0, ativo = 0,
+    arquivado_em = CURRENT_TIMESTAMP, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?`).bind(id).run();
   return { arquivado: true, id };
 }
 
@@ -368,7 +354,8 @@ function formatarEvento(linha: Linha, anexos: Array<DocumentoPublico | Documento
     descricaoCurta: string(linha.descricao_curta), descricao: string(linha.descricao), categoria: string(linha.categoria),
     imagemCapaUrl: string(linha.imagem_capa_url), dataInicial: string(linha.data_inicial), dataFinal: string(linha.data_final),
     horarioInicial: string(linha.horario_inicial), horarioFinal: string(linha.horario_final),
-    horario: combinarHorario(string(linha.horario_inicial), string(linha.horario_final)), local: string(linha.local),
+    diaTodo: bool(linha.dia_todo),
+    horario: bool(linha.dia_todo) ? "Dia todo" : combinarHorario(string(linha.horario_inicial), string(linha.horario_final)), local: string(linha.local),
     turno: string(linha.turno), publicoDestinado: string(linha.publico_destinado), organizacao: string(linha.organizacao),
     programacao: string(linha.programacao), orientacoes: string(linha.orientacoes), linkExterno: string(linha.link_externo),
     observacoesPublicas: string(linha.observacoes_publicas), situacao: linha.situacao as EventoInternoPublico["situacao"],
@@ -415,19 +402,19 @@ const sqlInserirEvento = `INSERT INTO eventos_internos (
   slug, titulo, subtitulo, descricao_curta, descricao, categoria, imagem_capa_url,
   data_inicial, data_final, horario_inicial, horario_final, local, turno, publico_destinado,
   organizacao, programacao, orientacoes, link_externo, observacoes_publicas, observacoes_internas,
-  situacao, publicado, ativo
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  situacao, publicado, ativo, dia_todo
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 const sqlAtualizarEvento = `UPDATE eventos_internos SET
   slug = ?, titulo = ?, subtitulo = ?, descricao_curta = ?, descricao = ?, categoria = ?, imagem_capa_url = ?,
   data_inicial = ?, data_final = ?, horario_inicial = ?, horario_final = ?, local = ?, turno = ?, publico_destinado = ?,
   organizacao = ?, programacao = ?, orientacoes = ?, link_externo = ?, observacoes_publicas = ?, observacoes_internas = ?,
-  situacao = ?, publicado = ?, ativo = ?, atualizado_em = CURRENT_TIMESTAMP`;
+  situacao = ?, publicado = ?, ativo = ?, dia_todo = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
 function valoresEvento(dados: ReturnType<typeof validarEventoInterno>) {
   return [dados.slug, dados.titulo, dados.subtitulo, dados.descricaoCurta, dados.descricao, dados.categoria,
     dados.imagemCapaUrl, dados.dataInicial, dados.dataFinal, dados.horarioInicial, dados.horarioFinal, dados.local,
     dados.turno, dados.publicoDestinado, dados.organizacao, dados.programacao, dados.orientacoes, dados.linkExterno,
-    dados.observacoesPublicas, dados.observacoesInternas, dados.situacao, binario(dados.publicado), binario(dados.ativo)];
+    dados.observacoesPublicas, dados.observacoesInternas, dados.situacao, binario(dados.publicado), binario(dados.ativo), binario(dados.diaTodo)];
 }
 
 const sqlInserirDocumentoEvento = `INSERT INTO documentos_eventos (

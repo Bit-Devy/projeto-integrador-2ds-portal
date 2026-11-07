@@ -9,8 +9,10 @@ import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 
 // permite reutilizar arquivos já enviados ao painel
 import EscolherArquivo from "./BibliotecaArquivos";
+import { confirmarNoPainel } from "./confirmacao-painel";
+import "./eventos-painel.css";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CabecalhoPainel,
   Campo,
@@ -48,6 +50,7 @@ type EventoInterno = {
   dataFinal: string;
   horarioInicial: string;
   horarioFinal: string;
+  diaTodo: boolean;
   local: string;
   turno: string;
   publicoDestinado: string;
@@ -69,7 +72,7 @@ type FormularioEvento = Omit<EventoInterno, "id" | "atualizadoEm">;
 
 const formularioVazio: FormularioEvento = {
   areaResponsavel: "geral", titulo: "", subtitulo: "", slug: "", descricaoCurta: "", descricao: "", categoria: "",
-  imagemCapaUrl: "", dataInicial: "", dataFinal: "", horarioInicial: "", horarioFinal: "", local: "", turno: "",
+  imagemCapaUrl: "", dataInicial: "", dataFinal: "", horarioInicial: "", horarioFinal: "", diaTodo: false, local: "", turno: "",
   publicoDestinado: "", organizacao: "", programacao: "", orientacoes: "", linkExterno: "",
   documentos: [], imagens: [], observacoesPublicas: "", observacoesInternas: "", situacao: "proximo", publicado: false, arquivado: false,
 };
@@ -93,6 +96,12 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
   const [filtroSituacao, setFiltroSituacao] = useState("");
   const [filtroPublicacao, setFiltroPublicacao] = useState("");
   const [filtroAno, setFiltroAno] = useState("");
+  const [eventoSituacao, setEventoSituacao] = useState<EventoInterno | null>(null);
+  const [situacaoNova, setSituacaoNova] = useState("");
+  const janelaSituacao = useRef<HTMLDialogElement>(null);
+
+  // abre o atalho sem substituir o formulário completo do evento
+  useEffect(() => { if (eventoSituacao) janelaSituacao.current?.showModal(); }, [eventoSituacao]);
 
   useAvisoMudancas(mudou, aoMudarEstadoSujo);
 
@@ -152,19 +161,6 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function duplicar(item: EventoInterno) {
-    if (!await confirmarSaida(mudou)) return;
-    const { id: _id, atualizadoEm: _atualizadoEm, ...dados } = item;
-    void _id;
-    void _atualizadoEm;
-    setFormulario({ ...dados, titulo: `${item.titulo} — cópia`, slug: "", publicado: false, arquivado: false });
-    setIdEditando(null);
-    setMudou(true);
-    setErro("");
-    setSucesso("Cópia preparada. Revise as datas e salve como rascunho.");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
   async function fechar() {
     if (!await confirmarSaida(mudou)) return;
     setFormulario(null);
@@ -208,16 +204,27 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
       await requisitarPainel("/api/eventos", { method: "PUT", ...corpoJson({ id: item.id, dados: alteracoes }) });
       setSucesso(mensagem);
       await carregar();
+      return true;
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : "Não foi possível atualizar o evento.");
+      return false;
     } finally {
       setSalvando(false);
     }
   }
 
   async function arquivar(item: EventoInterno) {
-    if (!window.confirm(`Arquivar “${item.titulo}”? Ele deixará de aparecer nas listas públicas atuais, mas seu histórico será preservado.`)) return;
-    await alterarEstado(item, { arquivado: true }, "Evento arquivado. A publicação foi preservada para a consulta histórica.");
+    if (!await confirmarNoPainel("Arquivar evento?", `“${item.titulo}” e seus anexos deixarão de estar disponíveis no portal. O cadastro será preservado no painel.`, "Arquivar evento", "Cancelar")) return;
+    await alterarEstado(item, { arquivado: true }, "Evento arquivado e retirado do acesso público.");
+  }
+
+  function abrirSituacao(item: EventoInterno) { setErro(""); setSituacaoNova(item.situacao); setEventoSituacao(item); }
+  function fecharSituacao() { if (!salvando) { janelaSituacao.current?.close(); setEventoSituacao(null); } }
+  async function salvarSituacao(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (eventoSituacao && await alterarEstado(eventoSituacao, { situacao: situacaoNova }, "Situação do evento atualizada no portal.")) {
+      janelaSituacao.current?.close(); setEventoSituacao(null);
+    }
   }
 
   async function enviar(campo: "imagemCapaUrl" | "documentos" | "imagens", arquivo?: File) {
@@ -239,7 +246,7 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
   }
 
   return (
-    <section className="pev-painel" aria-labelledby="titulo-painel-eventos-internos">
+    <section className="pev-painel" onChangeCapture={() => { if (formulario) setMudou(true); }} aria-labelledby="titulo-painel-eventos-internos">
       <CabecalhoPainel rotulo="AGENDA DO PORTAL" titulo="Eventos internos" descricao="Cadastre atividades do colégio e do GECEP, acompanhe a publicação e preserve o arquivo histórico." acao={formulario ? undefined : novo} nomeAcao="+ Novo evento" />
       <MensagensPainel erro={erro} sucesso={sucesso} />
 
@@ -260,11 +267,12 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
             <Campo rotulo="Descrição completa" largo><textarea rows={7} value={formulario.descricao} onChange={(e) => mudar("descricao", e.target.value)} /></Campo>
           </div></fieldset>
 
-          <fieldset className="pev-bloco"><legend>Data, local e público</legend><div className="pev-grade-campos pev-grade-campos--tres">
+          <fieldset className={`pev-bloco${formulario.diaTodo ? " evento-dia-todo" : ""}`}><legend>Data, local e público</legend><div className="pev-grade-campos pev-grade-campos--tres">
             <Campo rotulo="Data inicial"><input type="date" value={formulario.dataInicial} onChange={(e) => mudar("dataInicial", e.target.value)} required /></Campo>
             <Campo rotulo="Data final"><input type="date" value={formulario.dataFinal} min={formulario.dataInicial || undefined} onChange={(e) => mudar("dataFinal", e.target.value)} /></Campo>
-            <Campo rotulo="Horário inicial"><input type="time" value={formulario.horarioInicial} onChange={(e) => mudar("horarioInicial", e.target.value)} /></Campo>
-            <Campo rotulo="Horário final"><input type="time" value={formulario.horarioFinal} onChange={(e) => mudar("horarioFinal", e.target.value)} /></Campo>
+            <div className="pev-campo pev-campo--largo"><label><CheckboxComAjuda checked={formulario.diaTodo} onChange={(evento) => mudar("diaTodo", evento.target.checked)} explicacao="Marcado: mostra Dia todo no portal e deixa os horários específicos sem uso. Desmarcado: volta a usar os horários preenchidos, que permanecem guardados." aria-label="Evento durante o dia todo" /><span>Evento durante o dia todo</span></label></div>
+            <Campo rotulo="Horário inicial"><input type="time" value={formulario.horarioInicial} disabled={formulario.diaTodo} onChange={(e) => mudar("horarioInicial", e.target.value)} /></Campo>
+            <Campo rotulo="Horário final"><input type="time" value={formulario.horarioFinal} disabled={formulario.diaTodo} onChange={(e) => mudar("horarioFinal", e.target.value)} /></Campo>
             <Campo rotulo="Local"><input value={formulario.local} onChange={(e) => mudar("local", e.target.value)} /></Campo>
             <Campo rotulo="Turno"><select value={formulario.turno} onChange={(e) => mudar("turno", e.target.value)}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{valor ? nome : "Não se aplica"}</option>)}</select></Campo>
             <Campo rotulo="Situação"><select value={formulario.situacao} onChange={(e) => mudar("situacao", e.target.value)}>{situacoesEvento.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo>
@@ -318,11 +326,11 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
           {!carregando && !filtrados.length && <EstadoVazio titulo={itens.length ? "Nenhum evento encontrado" : "Nenhum evento cadastrado"} texto={itens.length ? "Altere os filtros ou a busca para ver outros registros." : "Use “Novo evento” para criar o primeiro registro, sem inventar informações."} />}
           <div className="pev-lista">
             {filtrados.map((item) => <article className="pev-cartao" key={item.id}>
-              <div className="pev-cartao__estados"><span className={classeStatus(item.arquivado ? "arquivado" : item.publicado ? "publicado" : "rascunho")}>{item.arquivado ? "Arquivado" : item.publicado ? "Publicado" : "Rascunho"}</span><span className={classeStatus(item.situacao)}>{statusLegivel(item.situacao)}</span></div>
-              <div className="pev-cartao__conteudo"><h2>{item.titulo || "Evento sem título"}</h2><p>{[dataLegivel(item.dataInicial), item.horarioInicial, item.local].filter(Boolean).join(" · ")}</p>{item.descricaoCurta && <small>{item.descricaoCurta}</small>}</div>
+              <div className="pev-cartao__estados"><span className={classeStatus(item.arquivado ? "arquivado" : item.publicado ? "publicado" : "rascunho")}>{item.arquivado ? "Arquivado" : item.publicado ? "Publicado" : "Rascunho"}</span><span className={classeStatus(item.situacao)}>{situacoesEvento.find(([chave]) => chave === item.situacao)?.[1] || statusLegivel(item.situacao)}</span></div>
+              <div className="pev-cartao__conteudo"><h2>{item.titulo || "Evento sem título"}</h2><p>{[dataLegivel(item.dataInicial), item.diaTodo ? "Dia todo" : item.horarioInicial, item.local].filter(Boolean).join(" · ")}</p>{item.descricaoCurta && <small>{item.descricaoCurta}</small>}</div>
               <div className="pev-cartao__acoes">
                 <button type="button" className="pev-botao" onClick={() => editar(item)}>Editar</button>
-                <button type="button" className="pev-botao" onClick={() => duplicar(item)}>Duplicar</button>
+                <button type="button" className="pev-botao" disabled={salvando} onClick={() => abrirSituacao(item)}>Alterar situação</button>
                 {!item.arquivado && <button type="button" className="pev-botao" disabled={salvando} onClick={() => void alterarEstado(item, { publicado: !item.publicado }, item.publicado ? "Evento movido para rascunho." : "Evento publicado com sucesso.")}>{item.publicado ? "Tornar rascunho" : "Publicar"}</button>}
                 {!item.arquivado && <button type="button" className="pev-botao pev-botao--perigoso" disabled={salvando} onClick={() => void arquivar(item)}>Arquivar</button>}
               </div>
@@ -330,6 +338,13 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
           </div>
         </>
       )}
+      {eventoSituacao && <dialog ref={janelaSituacao} className="dialogo-anonimato" aria-labelledby="titulo-situacao-evento" onCancel={(evento) => { evento.preventDefault(); fecharSituacao(); }}>
+        <h2 id="titulo-situacao-evento">Alterar situação do evento</h2><p>{eventoSituacao.titulo}</p>
+        <form onSubmit={salvarSituacao}><Campo rotulo="Nova situação"><select value={situacaoNova} disabled={salvando} onChange={(evento) => setSituacaoNova(evento.target.value)}>{situacoesEvento.map(([valor, nome]) => <option value={valor} key={valor}>{nome}</option>)}</select></Campo>
+          <p>A situação aparece no portal quando o evento está publicado. Os demais dados continuam disponíveis em Editar.</p>{erro && <p role="alert">{erro}</p>}
+          <div className="acoes-dialogo-anonimato"><button type="button" className="botao-secundario" disabled={salvando} onClick={fecharSituacao}>Cancelar</button><button type="submit" className="botao-primario" disabled={salvando || situacaoNova === eventoSituacao.situacao}>{salvando ? "Salvando…" : "Salvar situação"}</button></div>
+        </form>
+      </dialog>}
     </section>
   );
 }
@@ -355,7 +370,7 @@ function normalizarEvento(registro: Record<string, unknown>): EventoInterno {
     descricao: obterTexto(registro, "descricao", "descricaoCompleta"), categoria: obterTexto(registro, "categoria"),
     imagemCapaUrl: obterTexto(registro, "imagemCapaUrl", "imagemUrl", "imagem"), dataInicial: obterTexto(registro, "dataInicial", "data"),
     dataFinal: obterTexto(registro, "dataFinal"), horarioInicial: obterTexto(registro, "horarioInicial", "horario"),
-    horarioFinal: obterTexto(registro, "horarioFinal"), local: obterTexto(registro, "local"),
+    horarioFinal: obterTexto(registro, "horarioFinal"), diaTodo: obterBooleano(registro, "diaTodo"), local: obterTexto(registro, "local"),
     turno: obterTexto(registro, "turno"), publicoDestinado: obterTexto(registro, "publicoDestinado", "publico"),
     organizacao: obterTexto(registro, "organizacao", "organizacaoResponsavel"), programacao: obterTexto(registro, "programacao"),
     orientacoes: obterTexto(registro, "orientacoes"), linkExterno: obterTexto(registro, "linkExterno", "link"),

@@ -73,8 +73,9 @@ export function validarEventoInterno(valor: unknown) {
   validarPeriodo(dataInicial, dataFinal, "A data final não pode ser anterior à data inicial.");
   const horarioInicial = horario(dados.horarioInicial ?? dados.horario, "horário inicial");
   const horarioFinal = horario(dados.horarioFinal, "horário final");
-  // Sem data final, o término pertence ao mesmo dia do início.
-  if (dataInicial && horarioInicial && horarioFinal
+  const diaTodo = booleano(dados.diaTodo, false);
+  // mantém os horários guardados e usa o dia inteiro quando a opção está marcada
+  if (!diaTodo && dataInicial && horarioInicial && horarioFinal
     && `${dataFinal || dataInicial}T${horarioFinal}` < `${dataInicial}T${horarioInicial}`) {
     throw new ErroEventos("O término do evento não pode ser anterior ao início.");
   }
@@ -92,6 +93,7 @@ export function validarEventoInterno(valor: unknown) {
     dataFinal,
     horarioInicial,
     horarioFinal,
+    diaTodo,
     local: texto(dados.local, 240),
     turno,
     publicoDestinado: texto(dados.publicoDestinado ?? dados.publico, 240),
