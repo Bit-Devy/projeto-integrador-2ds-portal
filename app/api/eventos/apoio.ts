@@ -8,7 +8,7 @@ import { garantirBanco } from "../../../db/inicializar";
 import { possuiReferenciaPublica } from "../../arquivos/publicacao";
 import { obterAmbiente } from "../../../worker/ambiente";
 import { exigirAdministradorApi, origemValida } from "../../lib/autorizacao";
-import { ErroEventos, objetoRecebido } from "../../eventos/validacao";
+import { ErroEventos, objetoRecebido, validarDocumento } from "../../eventos/validacao";
 
 // prepara as tabelas e protege consultas que incluem rascunhos e dados internos
 export async function prepararLeitura(request: Request) {
@@ -84,7 +84,27 @@ export function responderErroEventos(erro: unknown, contexto: string) {
   return Response.json({ erro: "Não foi possível concluir a operação." }, { status: 500 });
 }
 
-// mantém a proteção do objeto R2 coerente com o controle de publicação do documento
+// confere os anexos antes de salvar uma reunião com vários documentos
+export async function conferirArquivosAnexados(documentos: unknown) {
+  if (!Array.isArray(documentos)) return;
+  if (documentos.length > 30) throw new ErroEventos("Adicione no máximo 30 documentos por salvamento.");
+  const normalizados = documentos.map(validarDocumento);
+  const usuario = await obterUsuarioPainel();
+  // confere também os nomes alternativos dos campos antes de usar um arquivo privado
+  if (usuario) {
+    try { await validarArquivosDoCargo(normalizados, usuario); }
+    catch (erro) { if (erro instanceof ErroJsonInvalido) throw new ErroEventos(erro.message, 403); throw erro; }
+  }
+  for (const documento of normalizados) {
+    const alvo = extrairArquivoInterno(documento);
+    if (!alvo) continue;
+    const bucket = obterAmbiente().BUCKET;
+    if (!bucket) throw new ErroEventos("O armazenamento de arquivos não está configurado.", 503);
+    if (!await bucket.get(alvo.chave)) throw new ErroEventos("Um dos arquivos anexados não foi encontrado. Escolha o arquivo na biblioteca ou envie novamente.");
+  }
+}
+
+// atualiza a visibilidade depois de conferir os vínculos salvos
 export async function sincronizarVisibilidadeArquivo(dados: Record<string, unknown>) {
   const alvo = extrairArquivoInterno(dados);
   if (!alvo) return;

@@ -5,6 +5,9 @@
 import { membros } from "../dados";
 // importa a busca de conteúdo público
 import { useConteudoPublico } from "../conteudo/useConteudoPublico";
+// mostra a vaga e o turno que acompanham cada integrante publicado
+import { turnosEquipe, vagasDoCargo } from "../lib/equipe";
+import type { MembroGecep } from "../conteudo/tipos";
 
 // mostra os integrantes do grêmio
 export default function EquipeGecep() {
@@ -30,6 +33,7 @@ export default function EquipeGecep() {
           <small>{integrante.diretoria}</small>
           <h3>{integrante.nome}</h3>
           <strong>{integrante.cargo}</strong>
+          {detalheEquipe(integrante) && <small>{detalheEquipe(integrante)}</small>}
           {integrante.turma && <b>{integrante.turma}</b>}
           <p>{integrante.biografia}</p>
           {integrante.contato && <a href={integrante.contato}>Contato ›</a>}
@@ -39,6 +43,14 @@ export default function EquipeGecep() {
       {carregando && <p className="somente-leitor">Atualizando integrantes...</p>}
     </div>
   );
+}
+
+// mantém visíveis as vagas duplas e os turnos da equipe
+function detalheEquipe(integrante: MembroGecep) {
+  const vagas = vagasDoCargo(integrante.cargoChave || "");
+  const vaga = vagas.length > 1 ? vagas.find((item) => item.chave === integrante.vaga)?.nome : "";
+  const turno = integrante.turno && !integrante.cargoChave?.startsWith("conselho-fiscal-") ? turnosEquipe.find((item) => item.chave === integrante.turno)?.nome : "";
+  return [vaga, turno].filter(Boolean).join(" · ");
 }
 
 // cria as iniciais do nome

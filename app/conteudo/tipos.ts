@@ -19,6 +19,9 @@ export type RegistroBase = {
 export type MembroGecep = RegistroBase & {
   nome: string;
   cargo: string;
+  cargoChave?: string;
+  vaga?: string;
+  turno?: string;
   diretoria: string;
   turma: string;
   biografia: string;

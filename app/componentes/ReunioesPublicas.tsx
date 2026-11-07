@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Children, useMemo, useState } from "react";
 import type { DetalheReuniao, ItemReuniaoPublico, ListaPaginada, PresencaPublica, ReuniaoPublica, VotacaoPublica } from "../eventos/tipos";
+import type { MembroGecepPresente } from "../eventos/membros-gecep";
 import { classeSituacao, formatarData, formatarDataHora, normalizarBusca, rotuloSituacao, temTexto } from "../eventos/modelo-publico";
 import { useConsultaPublica } from "../eventos/useConsultaPublica";
 import CabecalhoPagina from "./CabecalhoPagina";
@@ -119,6 +120,12 @@ function Votacoes({ votacoes }: { votacoes: VotacaoPublica[] }) {
 
 type FiltrosPresenca = { busca: string; nivel: string; turno: string; serie: string; turma: string; situacao: string };
 
+// mostra os nomes guardados na ata sem consultar a equipe atual
+function MembrosGecepPresentes({ membros }: { membros: MembroGecepPresente[] }) {
+  if (!membros?.length) return null;
+  return <section className="bloco-conteudo-evento"><h2>Membros do GECEP presentes</h2><p>Integrantes e cargos preservados no registro desta reunião.</p><div className="itens-reuniao">{membros.map((membro) => <article key={`${membro.membroId}-${membro.cargoChave}-${membro.vaga}`}><h3>{membro.nome}</h3><dl><div><dt>Cargo</dt><dd>{membro.cargo}</dd></div>{membro.vagaNome && <div><dt>Vaga</dt><dd>{membro.vagaNome}</dd></div>}{membro.turno && <div><dt>Turno</dt><dd>{rotuloTurno(membro.turno)}</dd></div>}</dl></article>)}</div></section>;
+}
+
 function ListaPresencas({ presencas }: { presencas: PresencaPublica[] }) {
   const [filtros, setFiltros] = useState<FiltrosPresenca>({ busca: "", nivel: "", turno: "", serie: "", turma: "", situacao: "" });
   const resultados = useMemo(() => presencas.filter((presenca) => {
@@ -161,7 +168,7 @@ export function DetalheReuniaoPublica({ slug, guiaInicial }: { slug: string; gui
         <div className="destaques-campeonato"><span className={`selo-situacao situacao-${classeSituacao(reuniao.situacao)}`}>{rotuloSituacao(reuniao.situacao)}</span><span><small>Tipo</small><strong>{rotuloTipo(reuniao.tipo)}</strong></span></div>
         <nav className="guias-evento" aria-label="Seções da reunião"><Link href={`/eventos/reunioes/${encodeURIComponent(slug)}?guia=resumo`} aria-current={guia === "resumo" ? "page" : undefined}>Resumo</Link><Link href={`/eventos/reunioes/${encodeURIComponent(slug)}?guia=presencas`} aria-current={guia === "presencas" ? "page" : undefined}>Presenças</Link><Link href={`/eventos/reunioes/${encodeURIComponent(slug)}?guia=ata-documentos`} aria-current={guia === "ata-documentos" ? "page" : undefined}>Ata e documentos</Link></nav>
         {guia === "resumo" && <div className="conteudo-guia"><ListaDefinicoes itens={[{ rotulo: "Tipo", valor: rotuloTipo(reuniao.tipo) }, { rotulo: "Data", valor: formatarData(reuniao.data) }, { rotulo: "Horário", valor: reuniao.horario }, { rotulo: "Local", valor: reuniao.local }, { rotulo: "Turno", valor: rotuloTurno(reuniao.turno) }, { rotulo: "Níveis de ensino", valor: reuniao.niveisEnsino.map(rotuloNivel).join(", ") }, { rotulo: "Responsáveis", valor: reuniao.responsaveis }, { rotulo: "Quantidade de participantes", valor: reuniao.quantidadeParticipantes }]} /><BlocoTexto titulo="Pauta" conteudo={reuniao.pauta} /><BlocoTexto titulo="Assuntos discutidos" conteudo={reuniao.discussoes} /><BlocoTexto titulo="Resumo" conteudo={reuniao.resumo} /><BlocoTexto titulo="Decisões tomadas" conteudo={reuniao.decisoes} /><BlocoTexto titulo="Propostas apresentadas" conteudo={reuniao.propostas} /><BlocoTexto titulo="Encaminhamentos" conteudo={reuniao.encaminhamentos} /><ItensReuniao itens={dados.itens} /><Votacoes votacoes={dados.votacoes} /><BlocoTexto titulo="Observações" conteudo={reuniao.observacoesPublicas} /></div>}
-        {guia === "presencas" && <div className="conteudo-guia"><ListaPresencas presencas={dados.presencas as PresencaPublica[]} /></div>}
+        {guia === "presencas" && <div className="conteudo-guia"><MembrosGecepPresentes membros={reuniao.membrosGecepPresentes} /><ListaPresencas presencas={dados.presencas as PresencaPublica[]} /></div>}
         {guia === "ata-documentos" && <div className="conteudo-guia">{haAtaOuDocumento ? <><BlocoTexto titulo="Ata" conteudo={reuniao.ata} /><BlocoTexto titulo="Transcrição" conteudo={reuniao.transcricao} /><ListaDocumentos documentos={dados.documentos} titulo="Documentos e anexos" /></> : <EstadoVazio titulo="Ata e documentos ainda não publicados" texto="Esta reunião não possui ata, transcrição ou documento público no momento." />}</div>}
         {temTexto(reuniao.atualizadoEm) && <p className="ultima-atualizacao">Última atualização: <time dateTime={reuniao.atualizadoEm}>{formatarDataHora(reuniao.atualizadoEm)}</time></p>}
       </article>

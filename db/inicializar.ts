@@ -198,6 +198,13 @@ async function prepararBanco() {
     }
   }
 
+  // guarda os membros presentes sem alterar os campos antigos das reuniões
+  const colunasReunioes = await d1.prepare("PRAGMA table_info(reunioes)").all<{ name: string }>();
+  if (!colunasReunioes.results.some((coluna) => coluna.name === "membros_gecep_json")) {
+    try { await d1.prepare("ALTER TABLE reunioes ADD COLUMN membros_gecep_json TEXT NOT NULL DEFAULT '[]'").run(); }
+    catch (erro) { if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro; }
+  }
+
   // aplica ajustes e a carga do mapa
   const colunasCampeonato = await d1.prepare("PRAGMA table_info(campeonatos)").all<{ name: string }>();
   if (!colunasCampeonato.results.some((coluna) => coluna.name === "premiacao")) {

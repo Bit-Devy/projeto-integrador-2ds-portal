@@ -1,0 +1,1 @@
+ALTER TABLE `reunioes` ADD `membros_gecep_json` text DEFAULT '[]' NOT NULL;

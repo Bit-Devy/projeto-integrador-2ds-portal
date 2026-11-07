@@ -1,0 +1,18 @@
+/* organiza os cargos e as pessoas presentes sem apertar a tela pequena */
+.membros-presentes > p { color: #536974; font-size: .875rem; line-height: 1.65; margin: 0 0 1rem; }
+.membros-presentes__escolha { display: flex; align-items: end; gap: .8rem; flex-wrap: wrap; }
+.membros-presentes__escolha label { display: grid; gap: .5rem; flex: 1 1 18rem; font-size: .875rem; color: #203e4e; }
+.membros-presentes__escolha select { width: 100%; padding: .75rem; border: 1px solid #c7d5dc; border-radius: .2rem; background: #fff; font: inherit; }
+.membros-presentes .membros-presentes__vazio { margin: 1rem 0 0; }
+.membros-presentes__lista { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .6rem; }
+.membros-presentes__lista li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid #d7e3e8; padding: .8rem 1rem; background: #f7fafc; }
+.membros-presentes__lista strong, .membros-presentes__ocupantes strong { display: block; font-size: .9375rem; color: #123e57; }
+.membros-presentes__lista small, .membros-presentes__ocupantes small { display: block; color: #536974; font-size: .8125rem; line-height: 1.6; margin-top: .2rem; }
+.dialogo-membros-presentes { width: min(40rem, calc(100% - 2rem)); }
+.membros-presentes__ocupantes { display: grid; gap: .75rem; margin-block: 1.25rem; }
+.membros-presentes__ocupantes > label { display: flex; gap: .85rem; align-items: center; padding: 1rem; border: 1px solid #d7e3e8; background: #f7fafc; cursor: pointer; }
+.reuniao-anexos__lista { display: grid; gap: .75rem; margin-block: 1rem; }
+.reuniao-anexos__item { border: 1px solid #d7e3e8; padding: 1rem; background: #f7fafc; display: grid; gap: .75rem; }
+.reuniao-anexos__item > label { display: flex; gap: .6rem; align-items: center; font-size: .875rem; }
+.reuniao-anexos__item .pev-campo input { background: #fff; }
+@media (max-width: 40rem) { .membros-presentes__escolha { align-items: stretch; } .membros-presentes__escolha > button { width: 100%; } .membros-presentes__lista li { align-items: start; } }

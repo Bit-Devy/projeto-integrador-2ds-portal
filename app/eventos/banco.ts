@@ -3,6 +3,7 @@ import { condicaoTurmaPublicada } from "../mapa/turmas-publicadas";
 // importa a regra que confere as datas do mandato
 import { condicaoMandatoVigente } from "./mandato";
 import { getD1 } from "../../db";
+import { lerMembrosGecep, prepararMembrosGecep } from "./membros-gecep";
 import { combinarHorario, normalizarTextoBusca, normalizarTurma } from "./normalizacao";
 import { planejarChaveMataMata, quantidadeParesProximos, validarLigacaoPartida } from "./chave";
 import { anoEscolarTurma } from "./interclasse-utilitarios";
@@ -1640,10 +1641,22 @@ export async function obterReuniao(identificador: string | number, todos = false
 
 export async function criarReuniao(valor: unknown) {
   const dados = validarReuniao(valor);
+  const recebido = objetoRecebido(valor);
+  const membros = await prepararMembrosGecep(recebido.membrosGecepPresentes, [], dados.publicado);
+  const documentos = documentosNovosReuniao(recebido.documentosNovos);
   if (!dados.slug) throw new ErroEventos("Não foi possível criar o endereço da reunião.");
   let linha: Linha | null = null;
   try {
-    linha = await getD1().prepare(`${sqlInserirReuniao} RETURNING *`).bind(...valoresReuniao(dados)).first<Linha>();
+    // salva a reunião e os anexos juntos para não deixar uma publicação incompleta
+    const d1 = getD1();
+    const resultados = await d1.batch([
+      d1.prepare(`${sqlInserirReuniao} RETURNING *`).bind(...valoresReuniao(dados), JSON.stringify(membros)),
+      ...documentos.map((documento) => d1.prepare(`INSERT INTO documentos_reuniao
+        (reuniao_id, titulo, tipo, descricao, arquivo_chave, arquivo_url, link_externo, data, ordem, publicado, ativo)
+        SELECT id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM reunioes WHERE slug = ?`)
+        .bind(...valoresDocumento(documento), dados.slug)),
+    ]);
+    linha = resultados[0].results[0] as Linha || null;
   } catch (erro) {
     converterErroUnico(erro, "Já existe uma reunião com esse endereço.");
   }
@@ -1656,8 +1669,17 @@ export async function atualizarReuniao(idRecebido: unknown, valor: unknown) {
   const existente = (await obterReuniao(id, true)).item as ReuniaoAdministrativa;
   const recebido = valor as Record<string, unknown>;
   const dados = validarReuniao({ ...existente, ...recebido });
+  const membros = await prepararMembrosGecep(recebido.membrosGecepPresentes, existente.membrosGecepPresentes, dados.publicado);
+  const documentos = documentosNovosReuniao(recebido.documentosNovos);
   try {
-    await getD1().prepare(`${sqlAtualizarReuniao} WHERE id = ?`).bind(...valoresReuniao(dados), id).run();
+    const d1 = getD1();
+    await d1.batch([
+      d1.prepare(`${sqlAtualizarReuniao} WHERE id = ?`).bind(...valoresReuniao(dados), JSON.stringify(membros), id),
+      ...documentos.map((documento) => d1.prepare(`INSERT INTO documentos_reuniao
+        (reuniao_id, titulo, tipo, descricao, arquivo_chave, arquivo_url, link_externo, data, ordem, publicado, ativo)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .bind(id, ...valoresDocumento(documento))),
+    ]);
   } catch (erro) {
     converterErroUnico(erro, "Já existe uma reunião com esse endereço.");
   }
@@ -1686,23 +1708,11 @@ export async function excluirRascunhoReuniao(idRecebido: unknown) {
   return { excluido: true, id };
 }
 
-export async function duplicarReuniao(idRecebido: unknown) {
-  const detalhe = await obterReuniao(idPositivo(idRecebido, "reunião"), true);
-  const origem = detalhe.item as ReuniaoAdministrativa;
-  const nova = await criarReuniao({
-    ...origem, slug: `${origem.slug}-copia-${Date.now().toString(36)}`, titulo: `${origem.titulo} — cópia`,
-    situacao: "agendada", publicado: false, ativo: true, arquivado: false,
-  }) as ReuniaoAdministrativa;
-  for (const item of detalhe.itens) await criarItemReuniao(nova.id, { ...item, publicado: false, ativo: true });
-  for (const documento of detalhe.documentos) await criarDocumentoReuniao(nova.id, { ...documento, publicado: false, ativo: true });
-  for (const votacao of detalhe.votacoes) {
-    await criarVotacaoReuniao(nova.id, {
-      ...votacao, abstencoes: 0, resultado: "", decisaoFinal: "", publicado: false, interno: true,
-      opcoes: votacao.opcoes.map((opcao) => ({ ...opcao, id: undefined, quantidadeVotos: 0 })),
-    });
-  }
-  // presenças são deliberadamente omitidas para não reescrever o histórico
-  return obterReuniao(nova.id, true);
+// confere todos os anexos antes de salvar qualquer parte da reunião
+function documentosNovosReuniao(valor: unknown) {
+  if (valor === undefined) return [];
+  if (!Array.isArray(valor) || valor.length > 30) throw new ErroEventos("Adicione no máximo 30 documentos por salvamento.");
+  return valor.map(validarDocumento);
 }
 
 export async function criarItemReuniao(reuniaoIdRecebido: unknown, valor: unknown) {
@@ -2381,6 +2391,7 @@ function formatarReuniao(linha: Linha, todos: boolean): ReuniaoPublica | Reuniao
     discussoes: string(linha.discussoes), resumo: string(linha.resumo), decisoes: string(linha.decisoes),
     propostas: string(linha.propostas), encaminhamentos: string(linha.encaminhamentos), ata: string(linha.ata),
     transcricao: string(linha.transcricao), observacoesPublicas: string(linha.observacoes_publicas),
+    membrosGecepPresentes: lerMembrosGecep(linha.membros_gecep_json),
     quantidadeParticipantes: todos || publicaQuantidade ? numero(linha.quantidade_presentes) : null,
     situacao: linha.situacao as ReuniaoPublica["situacao"], arquivado: Boolean(linha.arquivado_em), atualizadoEm: string(linha.atualizado_em),
   };
@@ -2449,13 +2460,13 @@ function formatarPresenca(linha: Linha, todos: boolean): PresencaPublica | Prese
 const sqlInserirReuniao = `INSERT INTO reunioes (
   slug, titulo, tipo, data, horario_inicial, horario_final, local, turno, niveis_ensino, descricao_curta, responsaveis,
   pauta, pauta_interna, discussoes, resumo, decisoes, propostas, encaminhamentos, ata, transcricao,
-  observacoes_publicas, observacoes_internas, quantidade_participantes_publicada, situacao, publicado, ativo
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  observacoes_publicas, observacoes_internas, quantidade_participantes_publicada, situacao, publicado, ativo, membros_gecep_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 const sqlAtualizarReuniao = `UPDATE reunioes SET
   slug = ?, titulo = ?, tipo = ?, data = ?, horario_inicial = ?, horario_final = ?, local = ?, turno = ?, niveis_ensino = ?,
   descricao_curta = ?, responsaveis = ?, pauta = ?, pauta_interna = ?, discussoes = ?, resumo = ?, decisoes = ?, propostas = ?,
   encaminhamentos = ?, ata = ?, transcricao = ?, observacoes_publicas = ?, observacoes_internas = ?,
-  quantidade_participantes_publicada = ?, situacao = ?, publicado = ?, ativo = ?, atualizado_em = CURRENT_TIMESTAMP`;
+  quantidade_participantes_publicada = ?, situacao = ?, publicado = ?, ativo = ?, membros_gecep_json = ?, atualizado_em = CURRENT_TIMESTAMP`;
 function valoresReuniao(dados: ReturnType<typeof validarReuniao>) {
   return [dados.slug, dados.titulo, dados.tipo, dados.data, dados.horarioInicial, dados.horarioFinal, dados.local, dados.turno,
     dados.niveisEnsino.join("\n"), dados.descricaoCurta, dados.responsaveis, dados.pauta, dados.pautaInterna, dados.discussoes,

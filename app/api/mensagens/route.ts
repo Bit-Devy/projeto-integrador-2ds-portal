@@ -38,12 +38,13 @@ export async function GET(request: Request) {
     // prepara o banco e lê os filtros
     await garantirBanco();
     const parametrosUrl = new URL(request.url).searchParams;
-    const arquivadas = parametrosUrl.get("arquivadas") === "1";
+    const filtro = parametrosUrl.get("status") || (parametrosUrl.get("arquivadas") === "1" ? "arquivada" : "nova");
+    if (filtro !== "todas" && !estados.includes(filtro)) return Response.json({ erro: "Escolha um filtro de mensagens válido." }, { status: 400 });
     const busca = normalizarBusca(parametrosUrl.get("busca"));
     const paginaSolicitada = inteiroPositivo(parametrosUrl.get("pagina"));
-    // cria a condição de mensagens arquivadas ou ativas
-    const condicoes = [arquivadas ? "status = 'arquivada'" : "status <> 'arquivada'"];
-    const parametros: string[] = [];
+    // abre pelas novas e permite consultar cada etapa ou todas juntas
+    const condicoes = [filtro === "todas" ? "1 = 1" : "status = ?"];
+    const parametros: string[] = filtro === "todas" ? [] : [filtro];
 
     // adiciona a busca por protocolo
     if (busca) {
@@ -171,24 +172,14 @@ export async function PUT(request: Request) {
   }
 }
 
-// exclui uma mensagem
+// preserva as mensagens mesmo quando a exclusão é pedida diretamente
 export async function DELETE(request: Request) {
   // exige uma chamada válida de administrador
   if (!origemValida(request)) return Response.json({ erro: "Origem inválida." }, { status: 403 });
   const { resposta } = await exigirAdministradorApi("mensagens", request.method !== "GET");
   if (resposta) return resposta;
 
-  try {
-    // prepara o banco e valida o identificador
-    await garantirBanco();
-    const id = Number(new URL(request.url).searchParams.get("id"));
-    if (!Number.isInteger(id)) return Response.json({ erro: "Mensagem inválida." }, { status: 400 });
-    // remove a mensagem pelo identificador
-    await getD1().prepare("DELETE FROM mensagens WHERE id = ?").bind(id).run();
-    return Response.json({ removido: true });
-  } catch (erro) {
-    return respostaErro(erro);
-  }
+  return Response.json({ erro: "As mensagens não podem ser apagadas. Arquive a mensagem para mantê-la no histórico." }, { status: 405, headers: { Allow: "GET, POST, PUT" } });
 }
 
 // transforma um valor em texto curto

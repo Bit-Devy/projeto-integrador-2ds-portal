@@ -18,6 +18,8 @@ import { areaPermitida, escolherArea, erroArea } from "../../lib/areas-registros
 import { obterUsuarioPainel } from "../../lib/sessao";
 import { validarSenhaAdministrativa } from "../../lib/sessao";
 import { consumirTentativa, identificarNavegador, guardarNavegador, limparTentativasLogin } from "../../lib/limites";
+// mantém as vagas publicadas da equipe ligadas aos cargos do estatuto
+import { condicaoVagaLivre, prepararMembroEquipe } from "../../conteudo/equipe";
 
 // lista os tipos aceitos pela api
 const tiposPermitidos: TipoConteudo[] = [
@@ -32,7 +34,7 @@ const tiposPermitidos: TipoConteudo[] = [
 
 // lista os campos obrigatórios de cada tipo
 const camposObrigatorios: Record<TipoConteudo, string[]> = {
-  membros: ["nome", "cargo", "diretoria"],
+  membros: ["nome", "diretoria"],
   eventos: ["titulo", "data", "horario", "local", "categoria", "descricao"],
   noticias: ["titulo", "data", "categoria", "resumo"],
   projetos: ["titulo", "categoria", "estado", "texto"],
@@ -114,15 +116,17 @@ export async function POST(request: Request) {
     corpo.dados.areaResponsavel = escolherArea(usuario, corpo.dados.areaResponsavel);
     await validarArquivosDoCargo(corpo.dados, usuario);
     if (corpo.tipo === "noticias") prepararNoticia(corpo.dados, corpo.publicado);
+    if (corpo.tipo === "membros") await prepararMembroEquipe(corpo.dados, corpo.publicado);
     if (corpo.publicado) await validarBotoes(corpo.tipo, corpo.dados);
     if (corpo.tipo === "documentos" && corpo.dados.documentoOficial) throw new ErroJsonInvalido("Use a aba Estatuto e Regimento para alterar os PDFs oficiais.");
     const titulo = obterTitulo(corpo.tipo, corpo.dados);
     // salva o conteúdo e devolve a linha criada
     const resultado = await getD1()
-      .prepare("INSERT INTO conteudos (tipo, titulo, dados_json, publicado) VALUES (?, ?, ?, ?) RETURNING *")
-      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0)
+      .prepare(`INSERT INTO conteudos (tipo, titulo, dados_json, publicado) SELECT ?, ?, ?, ? WHERE ${condicaoVagaLivre} RETURNING *`)
+      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, corpo.tipo, corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), -1, JSON.stringify(corpo.dados), JSON.stringify(corpo.dados))
       .first<LinhaConteudo>();
 
+    if (!resultado) throw new ErroJsonInvalido("A vaga mudou durante o salvamento. Recarregue a Equipe e confira quem está publicado.");
     return Response.json({ item: resultado ? formatarLinha(resultado) : null }, { status: 201 });
   } catch (erro) {
     return respostaErro(erro);
@@ -153,6 +157,7 @@ export async function PUT(request: Request) {
     await validarArquivosDoCargo(corpo.dados, usuario);
     if (anterior && anterior.tipo !== corpo.tipo) throw new ErroJsonInvalido("Não é possível mudar o tipo deste registro.");
     if (corpo.tipo === "noticias") prepararNoticia(corpo.dados, corpo.publicado, anterior || undefined);
+    if (corpo.tipo === "membros") await prepararMembroEquipe(corpo.dados, corpo.publicado, id);
     await protegerDocumentoOficial(id);
     if (corpo.publicado) await validarBotoes(corpo.tipo, corpo.dados);
     if (corpo.tipo === "documentos" && corpo.dados.documentoOficial) throw new ErroJsonInvalido("Use a aba Estatuto e Regimento para alterar os PDFs oficiais.");
@@ -163,12 +168,12 @@ export async function PUT(request: Request) {
         SET tipo = ?, titulo = ?, dados_json = CASE WHEN tipo = 'noticias' THEN
           json_set(?, '$.jaPublicada', json(CASE WHEN publicado = 1 OR json_extract(dados_json, '$.jaPublicada') = 1 OR ? = 1 THEN 'true' ELSE 'false' END)) ELSE ? END,
           publicado = ?, atualizado_em = CURRENT_TIMESTAMP
-        WHERE id = ? RETURNING *`)
-      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, id)
+        WHERE id = ? AND ${condicaoVagaLivre} RETURNING *`)
+      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, id, corpo.tipo, corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), id, JSON.stringify(corpo.dados), JSON.stringify(corpo.dados))
       .first<LinhaConteudo>();
 
     // informa quando o registro não existe
-    if (!resultado) return Response.json({ erro: "Registro não encontrado." }, { status: 404 });
+    if (!resultado) return Response.json({ erro: anterior ? "A vaga mudou durante o salvamento. Recarregue a Equipe e confira quem está publicado." : "Registro não encontrado." }, { status: anterior ? 409 : 404 });
     return Response.json({ item: formatarLinha(resultado) });
   } catch (erro) {
     return respostaErro(erro);

@@ -1,0 +1,85 @@
+/* acomoda as cinco etapas sem apertar a busca */
+.mensagens-painel .ferramentas-mensagens {
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+.mensagens-painel .filtros-mensagens { flex-wrap: wrap; }
+.mensagens-painel .busca-mensagens { max-width: 640px; width: 100%; }
+
+/* transforma a leitura do cartão em um botão discreto e amplo */
+.lista-mensagens-painel .abrir-mensagem {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: calc(100% + 40px);
+  margin: -20px -20px 0;
+  padding: 20px;
+  border: 0;
+  color: #526970;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+}
+.lista-mensagens-painel .abrir-mensagem:hover { background: #f3f8fa; }
+.lista-mensagens-painel .abrir-mensagem:focus-visible { outline: 2px solid var(--azul); outline-offset: -3px; }
+.abrir-mensagem .topo-mensagem { width: 100%; flex-wrap: wrap; }
+.abrir-mensagem .titulo-mensagem { margin: 15px 0 8px; color: #304952; font-size: 1.0625rem; font-weight: 700; overflow-wrap: anywhere; }
+.abrir-mensagem .resumo-mensagem {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  margin-bottom: 15px;
+  color: #65757b;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.abrir-mensagem small { margin-top: auto; color: #738187; }
+.abrir-mensagem .convite-mensagem { margin-top: 12px; color: var(--azul); font-size: 0.75rem; font-weight: 700; }
+.lista-mensagens-painel .acoes-mensagem { align-items: center; }
+.lista-mensagens-painel .acoes-mensagem button { color: #49616a; border-color: #b9cbd2; }
+
+/* amplia a mensagem no próprio site sem perder o foco do teclado */
+.dialogo-mensagem {
+  margin: auto;
+  width: min(900px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 40px);
+  padding: 0;
+  border: 1px solid #cbdbe2;
+  border-top: 5px solid var(--azul);
+  color: #405860;
+  background: #fff;
+  box-shadow: 0 18px 65px #102b3a40;
+}
+.dialogo-mensagem::backdrop { background: #102b3ab5; }
+.dialogo-mensagem > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 26px 30px 20px; border-bottom: 1px solid #dce6ea; }
+.dialogo-mensagem h2 { margin: 10px 0; color: #304952; font-size: 1.6rem; overflow-wrap: anywhere; }
+.dialogo-mensagem header p { margin: 0; color: #738187; font-size: 0.8125rem; }
+.dialogo-mensagem .fechar-mensagem { flex-shrink: 0; width: 36px; height: 36px; border: 1px solid #cbdbe2; background: #fff; color: #49616a; font-size: 1.5rem; cursor: pointer; }
+.dados-mensagem { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; margin: 0; padding: 24px 30px; background: #f2f7f9; }
+.dados-mensagem dt { margin-bottom: 6px; color: #6a7c83; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; }
+.dados-mensagem dd { margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
+.texto-mensagem-ampliado { min-height: 160px; padding: 30px; color: #405860; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.aviso-identidade-mensagem { margin: 0 30px 24px; padding: 14px; background: #f2f7f9; color: #637780; font-size: 0.8125rem; line-height: 1.6; }
+.dialogo-mensagem > .erro-painel { margin-inline: 30px; }
+.dialogo-mensagem footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; padding: 20px 30px; border-top: 1px solid #dce6ea; }
+.dialogo-mensagem footer label { display: grid; gap: 8px; color: #627780; font-size: 0.75rem; }
+.dialogo-mensagem footer select { min-width: 160px; padding: 10px; border: 1px solid #b9cbd2; background: white; color: #405860; font: inherit; }
+.dialogo-mensagem footer > div { display: flex; gap: 10px; margin-left: auto; }
+.dialogo-mensagem footer button { padding: 11px 15px; border: 1px solid #b9cbd2; background: #fff; color: #49616a; cursor: pointer; font: inherit; font-size: 0.8125rem; }
+.dialogo-mensagem footer .botao-primario { border-color: var(--azul); background: var(--azul); color: white; }
+.dialogo-mensagem button:focus-visible, .dialogo-mensagem select:focus-visible { outline: 2px solid var(--azul); outline-offset: 3px; }
+.dialogo-mensagem button:disabled, .dialogo-mensagem select:disabled { opacity: 0.55; cursor: wait; }
+
+/* mantém o popup confortável para leitura no celular */
+@media (max-width: 600px) {
+  .dialogo-mensagem { width: calc(100% - 20px); max-height: calc(100dvh - 20px); }
+  .dialogo-mensagem > header, .dados-mensagem, .texto-mensagem-ampliado, .dialogo-mensagem footer { padding: 20px; }
+  .dialogo-mensagem h2 { font-size: 1.25rem; }
+  .dados-mensagem { grid-template-columns: 1fr; }
+  .dialogo-mensagem footer { align-items: stretch; flex-direction: column; }
+  .dialogo-mensagem footer > div { flex-wrap: wrap; margin-left: 0; }
+  .dialogo-mensagem footer button { flex: 1; }
+  .aviso-identidade-mensagem { margin-inline: 20px; }
+}

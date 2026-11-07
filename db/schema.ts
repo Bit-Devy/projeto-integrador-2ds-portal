@@ -502,6 +502,7 @@ export const representantes = sqliteTable(
 export const reunioes = sqliteTable(
   "reunioes",
   {
+    membrosGecepJson: text("membros_gecep_json").notNull().default("[]"),
     areaResponsavel: text("area_responsavel").notNull().default("geral"),
     id: integer("id").primaryKey({ autoIncrement: true }),
     slug: text("slug").notNull(),

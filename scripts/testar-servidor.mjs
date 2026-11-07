@@ -77,7 +77,7 @@ try {
   // verifica o painel após a entrada
   const painelComLogin = await fetch(`${endereco}/painel`, { headers: { cookie } });
   assert.equal(painelComLogin.status, 200);
-  assert.match(await painelComLogin.text(), /PAINEL DE CONTEÚDO/);
+  assert.match(await painelComLogin.text(), /Mensagens recebidas/);
 
   // executa os testes das áreas privadas
   await testarJsonInvalido(cookie);
@@ -135,8 +135,8 @@ async function testarLimitesNavegador(cookieAdministrador, senha) {
     const recarregada = await fetch(`${endereco}/api/limites?acao=mensagens`, { headers: { cookie: navegador } });
     assert.equal((await recarregada.json()).limite.bloqueado, true);
   } finally {
-    // remove somente as mensagens criadas nesta verificação
-    for (const id of ids) await fetch(`${endereco}/api/mensagens?id=${id}`, { method: "DELETE", headers: { cookie: cookieAdministrador } });
+    // arquiva as mensagens de teste sem permitir apagar o histórico
+    for (const id of ids) await requisicaoDominio(cookieAdministrador, "/api/mensagens", "PUT", { id, status: "arquivada" });
   }
 
   // verifica o primeiro bloqueio e impede até uma senha correta durante a espera
@@ -1782,7 +1782,7 @@ async function testarMensagens(cookie) {
     });
     assert.equal(respostaExtra.status, 201);
     const extra = await respostaExtra.json();
-    // separa o número usado para excluir a mensagem
+    // separa o número usado para arquivar a mensagem
     idsMensagensExtras.push(Number(extra.protocolo.split("-").at(-1)));
   }
 
@@ -1829,27 +1829,17 @@ async function testarMensagens(cookie) {
   assert.equal(resultadoArquivadas.total, 1);
   assert.equal(resultadoArquivadas.mensagens[0]?.status, "arquivada");
 
-  // exclui a mensagem com contato
+  // mesmo a administração não consegue apagar uma mensagem
   const respostaExclusao = await fetch(`${endereco}/api/mensagens?id=${mensagem.id}`, {
-    method: "DELETE",
-    headers: { cookie },
+    method: "DELETE", headers: { cookie },
   });
-  assert.equal(respostaExclusao.status, 200);
+  assert.equal(respostaExclusao.status, 405);
+  const preservada = await requisicaoDominio(cookie, `/api/mensagens?status=todas&busca=${encodeURIComponent(mensagem.protocolo)}`);
+  assert.equal(preservada.mensagens[0]?.id, mensagem.id);
 
-  // exclui a mensagem sem contato
-  const respostaExclusaoSemContato = await fetch(`${endereco}/api/mensagens?id=${mensagemSemContato.id}`, {
-    method: "DELETE",
-    headers: { cookie },
-  });
-  assert.equal(respostaExclusaoSemContato.status, 200);
-
-  // exclui as mensagens usadas na paginação
-  for (const id of idsMensagensExtras) {
-    const respostaExclusaoExtra = await fetch(`${endereco}/api/mensagens?id=${id}`, {
-      method: "DELETE",
-      headers: { cookie },
-    });
-    assert.equal(respostaExclusaoExtra.status, 200);
+  // guarda os demais envios de teste no arquivo
+  for (const id of [mensagemSemContato.id, ...idsMensagensExtras]) {
+    await requisicaoDominio(cookie, "/api/mensagens", "PUT", { id, status: "arquivada" });
   }
 }
 

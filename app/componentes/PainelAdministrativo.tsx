@@ -11,7 +11,7 @@ import { configuracaoPainel, tiposConteudoPainel, type CampoPainel } from "../co
 // importa a ordenação dos registros
 import { ordenarRegistrosMaisRecentes } from "../conteudo/ordenacao";
 // importa os tipos dos conteúdos e mensagens
-import type { MensagemParticipacao, RegistroConteudo, TipoConteudo, NoticiaGecep } from "../conteudo/tipos";
+import type { RegistroConteudo, TipoConteudo, NoticiaGecep } from "../conteudo/tipos";
 // importa o painel do mapa
 import PainelMapaColegio from "./PainelMapaColegio";
 // importa o cadastro de turmas e seus vínculos com as salas
@@ -28,12 +28,16 @@ import PainelSenhas from "./PainelSenhas";
 import PainelCargos from "./PainelCargos";
 import PainelHistoricoAcessos from "./PainelHistoricoAcessos";
 import PainelConsulta from "./PainelConsulta";
+import PainelMensagens from "./PainelMensagens";
 import { areaRestrita, areasPainel, cargoComPermissoes, podeAcessar, recursoConteudo, type RecursoPainel } from "../lib/cargos";
 import type { UsuarioPainel } from "../lib/sessao";
 import { confirmarEncerramentoDestaque } from "./encerrar-destaque";
 import { useSaidaPainel } from "./useSaidaPainel";
 import EscolherArquivo from "./BibliotecaArquivos";
 import SeletorPagina from "./SeletorPagina";
+// liga a composição da equipe às vagas do estatuto
+import CamposCargoEquipe from "./CamposCargoEquipe";
+import { obterCargoEquipe } from "../lib/equipe";
 import {
   confirmarSaida,
   useAvisoMudancas,
@@ -65,11 +69,11 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
   const [tipo, setTipo] = useState<TipoConteudo>(primeiroTipo || "noticias");
   const [abaDocumentos, setAbaDocumentos] = useState<"arquivos" | "normas" | "publicacoes">(pode("arquivos") ? "arquivos" : pode("oficiais") ? "normas" : "publicacoes");
   // controla a seção de mensagens
-  const [mensagensAbertas, setMensagensAbertas] = useState(!primeiroTipo && !primeiraSecao && !pode("mapa") && pode("mensagens"));
+  const [mensagensAbertas, setMensagensAbertas] = useState(pode("mensagens"));
   // controla a seção do mapa
-  const [mapaAberto, setMapaAberto] = useState(!primeiroTipo && !primeiraSecao && pode("mapa"));
+  const [mapaAberto, setMapaAberto] = useState(!pode("mensagens") && !primeiroTipo && !primeiraSecao && pode("mapa"));
   // controla as áreas especializadas de eventos e representação
-  const [secaoEventos, setSecaoEventos] = useState<SecaoEventosPainel | null>(primeiraSecao || null);
+  const [secaoEventos, setSecaoEventos] = useState<SecaoEventosPainel | null>(pode("mensagens") ? null : primeiraSecao || null);
   // guarda os registros carregados
   const [itens, setItens] = useState<RegistroConteudo[]>([]);
   // controla o carregamento
@@ -182,7 +186,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     const valores = Object.fromEntries(
       configuracao.campos.map((campo) => [campo.chave, campo.tipo === "checkbox" ? false : campo.tipo === "number" ? 0 : campo.opcoes?.[0]?.valor ?? ""]),
     );
-    setFormulario({ ...valores, areaResponsavel: areaRestrita(usuario.cargo) || "geral" });
+    setFormulario({ ...valores, ...(tipo === "membros" ? { cargoChave: "", vaga: "", turno: "" } : {}), areaResponsavel: areaRestrita(usuario.cargo) || "geral" });
     setPublicado(true);
     setNoticiaJaPublicada(false);
     setNoticiaOriginal(null);
@@ -196,7 +200,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     const dados = item.dados as unknown as Record<string, ValorCampo>;
     // completa campos que ainda não possuem valor
     setFormulario(Object.fromEntries(configuracao.campos.map((campo) => [campo.chave, dados[campo.chave] ?? (campo.tipo === "checkbox" ? false : campo.tipo === "number" ? 0 : "")])));
-    setFormulario((atual) => atual ? { ...atual, areaResponsavel: String(dados.areaResponsavel || "geral") } : atual);
+    setFormulario((atual) => atual ? { ...atual, ...(tipo === "membros" ? { cargoChave: obterCargoEquipe(dados)?.chave || "", vaga: String(dados.vaga || ""), turno: String(dados.turno || "") } : {}), areaResponsavel: String(dados.areaResponsavel || "geral") } : atual);
     setPublicado(item.publicado);
     setNoticiaOriginal(item.tipo === "noticias" ? item.dados as NoticiaGecep : null);
     setNoticiaJaPublicada(item.publicado || Boolean((item.dados as { jaPublicada?: boolean }).jaPublicada));
@@ -321,7 +325,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
       <div className="conteudo-painel">
         {/* painel do mapa ou das mensagens */}
         {!cargosAbertos && !historicoAberto && !senhasAbertas && !secaoEventos && !mapaAberto && !mensagensAbertas && tipo === "documentos" && <div className="abas-documentos" role="group" aria-label="Áreas de documentos">{([["arquivos", "Arquivos"], ["normas", "Estatuto e Regimento"], ["publicacoes", "Publicações"]] as const).filter(([aba]) => pode(aba === "arquivos" ? "arquivos" : aba === "normas" ? "oficiais" : "documentos")).map(([aba, nome]) => <button type="button" key={aba} aria-pressed={abaDocumentos === aba} onClick={async () => { if (!await prepararTroca()) return; setFormulario(null); setAbaDocumentos(aba); }}>{nome}</button>)}</div>}
-        {cargosAbertos ? <PainelCargos aoMudarEstadoSujo={setPainelFilhoSujo} /> : historicoAberto ? <PainelHistoricoAcessos /> : senhasAbertas ? <PainelSenhas aoMudarEstadoSujo={setPainelFilhoSujo} /> : !pode(recursoAtual) ? <section className="consulta-painel"><h1>Nenhum menu disponível</h1><p>Solicite à administração a liberação dos menus necessários para seu cargo.</p></section> : somenteConsulta ? <PainelConsulta key={recursoAtual} recurso={recursoAtual} publicos={cargo.publicos} /> : secaoEventos === "eventos-internos" ? (
+        {cargosAbertos ? <PainelCargos aoMudarEstadoSujo={setPainelFilhoSujo} /> : historicoAberto ? <PainelHistoricoAcessos /> : senhasAbertas ? <PainelSenhas aoMudarEstadoSujo={setPainelFilhoSujo} /> : !pode(recursoAtual) ? <section className="consulta-painel"><h1>Nenhum menu disponível</h1><p>Solicite à administração a liberação dos menus necessários para seu cargo.</p></section> : mensagensAbertas ? <PainelMensagens somenteConsulta={somenteConsulta} /> : somenteConsulta ? <PainelConsulta key={recursoAtual} recurso={recursoAtual} publicos={cargo.publicos} /> : secaoEventos === "eventos-internos" ? (
           <PainelEventosInternos cargo={usuario.cargo} aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : secaoEventos === "interclasses" ? (
           <PainelInterclasses aoMudarEstadoSujo={setPainelFilhoSujo} />
@@ -333,8 +337,6 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
           <PainelTurmas aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : mapaAberto ? (
           <PainelMapaColegio aoMudarEstadoSujo={setPainelFilhoSujo} />
-        ) : mensagensAbertas ? (
-          <PainelMensagens />
         ) : (
           <>
             {/* título e botão de novo registro */}
@@ -358,7 +360,8 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
                 <div className="grade-campos-painel">
                   {["noticias", "projetos", "documentos"].includes(tipo) && <label className="campo-largo"><span>Área responsável</span>{areaRestrita(usuario.cargo) ? <input value={areasPainel.find((area) => area.chave === areaRestrita(usuario.cargo))?.nome || ""} readOnly /> : <select value={String(formulario.areaResponsavel || "geral")} onChange={(evento) => void mudarFormulario("areaResponsavel", evento.target.value)}>{areasPainel.map((area) => <option key={area.chave} value={area.chave}>{area.nome}</option>)}</select>}<small>A área define quem pode editar esta publicação. Use Colégio e comunidade escolar para assuntos do CEP que afetam os estudantes. Comunicação e acesso geral acompanham todas as áreas.</small></label>}
 
-                  {configuracao.campos.filter((campo) => !campo.dependeDe || Boolean(formulario[campo.dependeDe])).map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} key={campo.chave} />)}
+                  {tipo === "membros" && <CamposCargoEquipe dados={formulario} mudar={mudarFormulario} />}
+                  {configuracao.campos.filter((campo) => (tipo !== "membros" || campo.chave !== "cargo") && (!campo.dependeDe || Boolean(formulario[campo.dependeDe]))).map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} key={campo.chave} />)}
                   {tipo !== "noticias" && <label className="campo-publicado"><CheckboxComAjuda checked={publicado} onChange={(evento) => { setPublicado(evento.target.checked); setConteudoSujo(true); }} explicacao={descricaoCheckbox("publicado")} aria-label={"Publicar este registro no portal"} /><span>Publicar este registro no portal</span></label>}
                 </div>
                 {tipo === "noticias" && <p className="ajuda-busca">Salvar registro publica a notícia no portal. Salvar em rascunho mantém uma notícia nova apenas no painel.</p>}
@@ -399,178 +402,6 @@ function CampoFormulario({ campo, valor, mudar, enviarArquivo }: { campo: CampoP
   return <label className={campo.chave === "destaqueAte" ? "campo-largo" : undefined}><span>{campo.rotulo}</span><input type={campo.tipo} value={String(valor ?? "")} step={campo.tipo === "number" ? "0.01" : undefined} onChange={(evento) => mudar(campo.tipo === "number" ? Number(evento.target.value) : evento.target.value)} required={campo.obrigatorio} />{campo.dica && <small>{campo.dica}</small>}</label>;
 }
 
-
-// mostra e organiza as mensagens recebidas
-function PainelMensagens() {
-  // guarda as mensagens e os estados da lista
-  const [mensagens, setMensagens] = useState<MensagemParticipacao[]>([]);
-  const [erro, setErro] = useState("");
-  const [carregando, setCarregando] = useState(true);
-  const [visao, setVisao] = useState<"recebidas" | "arquivadas">("recebidas");
-  const [busca, setBusca] = useState("");
-  const [buscaAplicada, setBuscaAplicada] = useState("");
-  const [pagina, setPagina] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [totalPaginas, setTotalPaginas] = useState(1);
-  const [atualizacao, setAtualizacao] = useState(0);
-
-  // carrega as mensagens da página atual
-  useEffect(() => {
-    // permite cancelar a consulta
-    const controlador = new AbortController();
-    let ativo = true;
-    // monta os filtros da consulta
-    const parametros = new URLSearchParams({ pagina: String(pagina) });
-    if (visao === "arquivadas") parametros.set("arquivadas", "1");
-    if (buscaAplicada) parametros.set("busca", buscaAplicada);
-
-    // consulta as mensagens no servidor
-    fetch(`/api/mensagens?${parametros}`, { signal: controlador.signal }).then(async (resposta) => {
-      // lê a página recebida
-      const dados = await resposta.json() as { mensagens?: MensagemParticipacao[]; pagina?: number; total?: number; totalPaginas?: number; erro?: string };
-      if (!resposta.ok) throw new Error(dados.erro || "Não foi possível carregar as mensagens.");
-      if (!ativo) return;
-      setMensagens(dados.mensagens ?? []);
-      setPagina(dados.pagina ?? 1);
-      setTotal(dados.total ?? 0);
-      setTotalPaginas(dados.totalPaginas ?? 1);
-    }).catch((falha) => {
-      if (ativo && (!(falha instanceof Error) || falha.name !== "AbortError")) {
-        setErro(falha instanceof Error ? falha.message : "Erro inesperado.");
-      }
-    }).finally(() => ativo && setCarregando(false));
-    return () => {
-      ativo = false;
-      controlador.abort();
-    };
-  }, [atualizacao, buscaAplicada, pagina, visao]);
-
-  // pesquisa pelo protocolo digitado
-  function pesquisar(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    const novaBusca = busca.trim();
-    setCarregando(true);
-    setErro("");
-    setPagina(1);
-    if (novaBusca === buscaAplicada) setAtualizacao((valor) => valor + 1);
-    else setBuscaAplicada(novaBusca);
-  }
-
-  // limpa a pesquisa atual
-  function limparBusca() {
-    setCarregando(true);
-    setErro("");
-    setBusca("");
-    setBuscaAplicada("");
-    setPagina(1);
-  }
-
-  // troca entre mensagens recebidas e arquivadas
-  function trocarVisao(novaVisao: "recebidas" | "arquivadas") {
-    if (novaVisao === visao) return;
-    setCarregando(true);
-    setErro("");
-    setVisao(novaVisao);
-    setPagina(1);
-  }
-
-  // abre outra página de mensagens
-  function irParaPagina(novaPagina: number) {
-    if (novaPagina === pagina) return;
-    setCarregando(true);
-    setErro("");
-    setPagina(novaPagina);
-  }
-
-  // atualiza o status de uma mensagem
-  async function mudarStatus(id: number, status: string) {
-    setErro("");
-    const resposta = await fetch("/api/mensagens", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, status }) });
-    if (resposta.ok) {
-      setCarregando(true);
-      setAtualizacao((valor) => valor + 1);
-    }
-    else setErro("Não foi possível atualizar a mensagem.");
-  }
-
-  // exclui uma mensagem após confirmação
-  async function excluirMensagem(id: number) {
-    if (!window.confirm("Excluir esta mensagem permanentemente?")) return;
-    setErro("");
-    const resposta = await fetch(`/api/mensagens?id=${id}`, { method: "DELETE" });
-    if (resposta.ok) {
-      setCarregando(true);
-      setAtualizacao((valor) => valor + 1);
-    }
-    else setErro("Não foi possível excluir a mensagem.");
-  }
-
-  // escolhe os números mostrados na paginação
-  const paginas = paginasVisiveis(pagina, totalPaginas);
-
-  return (
-    <section className="mensagens-painel">
-      {/* título e total de mensagens */}
-      <div className="cabecalho-mensagens"><div><span className="rotulo-secao">PARTICIPAÇÃO</span><h2>Mensagens recebidas</h2><p>Consulte, organize e localize as participações enviadas pelo portal.</p></div><strong aria-label={`${total} mensagens encontradas`}>{total}</strong></div>
-
-      {/* filtros e busca das mensagens */}
-      <div className="ferramentas-mensagens">
-        <div className="filtros-mensagens" aria-label="Exibir mensagens">
-          <button type="button" className={visao === "recebidas" ? "ativo" : ""} onClick={() => trocarVisao("recebidas")}>Caixa de entrada</button>
-          <button type="button" className={visao === "arquivadas" ? "ativo" : ""} onClick={() => trocarVisao("arquivadas")}>Arquivadas</button>
-        </div>
-        <form className="busca-mensagens" onSubmit={pesquisar}>
-          <label htmlFor="busca-protocolo">Buscar por protocolo</label>
-          <div>
-            <input id="busca-protocolo" type="search" value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Ex.: GECEP-2026-00042" maxLength={40} />
-            {(busca || buscaAplicada) && <button type="button" className="limpar-busca" onClick={limparBusca}>Limpar</button>}
-            <button type="submit">Pesquisar</button>
-          </div>
-        </form>
-      </div>
-
-      {/* estados de erro, carregamento e lista vazia */}
-      {erro && <p className="erro-painel" role="alert">{erro}</p>}
-      {carregando && !mensagens.length && <div className="vazio-painel"><strong>Carregando mensagens...</strong></div>}
-      {!carregando && !erro && !mensagens.length && <div className="vazio-painel"><strong>{buscaAplicada ? "Nenhuma mensagem encontrada" : visao === "arquivadas" ? "Nenhuma mensagem arquivada" : "Nenhuma mensagem recebida"}</strong><p>{buscaAplicada ? "Confira o protocolo informado e tente novamente." : visao === "arquivadas" ? "As mensagens arquivadas aparecerão aqui." : "Novos envios aparecerão aqui."}</p></div>}
-      {/* cartões das mensagens */}
-      <div className="lista-mensagens-painel">
-        {mensagens.map((mensagem) => (
-          <article key={mensagem.id}>
-            <div className="topo-mensagem"><span>{mensagem.protocolo}</span><time>{formatarData(mensagem.criadoEm)}</time></div>
-            <span className="assunto-mensagem">{mensagem.assunto}</span>
-            <h3>{mensagem.titulo}</h3>
-            <p>{mensagem.mensagem}</p>
-            <small>{mensagem.anonimo ? "Identidade preservada" : `${mensagem.nome} · ${mensagem.turma}`}</small>
-            {mensagem.contato && <small className="contato-mensagem">Contato: {nomeTipoContato(mensagem.tipoContato)} · {mensagem.contato}</small>}
-            <div><select aria-label={`Status da mensagem ${mensagem.protocolo}`} value={mensagem.status} onChange={(evento) => mudarStatus(mensagem.id, evento.target.value)}><option value="nova">Nova</option><option value="em_analise">Em análise</option><option value="respondida">Respondida</option><option value="arquivada">Arquivada</option></select><button type="button" onClick={() => excluirMensagem(mensagem.id)}>Excluir</button></div>
-          </article>
-        ))}
-      </div>
-
-      {/* botões de paginação */}
-      {totalPaginas > 1 && (
-        <nav className="paginacao-mensagens" aria-label="Páginas de mensagens">
-          <button type="button" onClick={() => irParaPagina(Math.max(1, pagina - 1))} disabled={pagina === 1 || carregando}>Anterior</button>
-          {paginas.map((numero) => <button type="button" className={pagina === numero ? "ativo" : ""} aria-current={pagina === numero ? "page" : undefined} onClick={() => irParaPagina(numero)} disabled={carregando} key={numero}>{numero}</button>)}
-          <button type="button" onClick={() => irParaPagina(Math.min(totalPaginas, pagina + 1))} disabled={pagina === totalPaginas || carregando}>Próxima</button>
-        </nav>
-      )}
-    </section>
-  );
-}
-
-// escolhe até cinco páginas próximas
-function paginasVisiveis(paginaAtual: number, totalPaginas: number) {
-  const quantidade = Math.min(5, totalPaginas);
-  const inicio = Math.max(1, Math.min(paginaAtual - 2, totalPaginas - quantidade + 1));
-  return Array.from({ length: quantidade }, (_, indice) => inicio + indice);
-}
-
-// mostra o nome do tipo de contato
-function nomeTipoContato(tipo: string) {
-  return ({ whatsapp: "WhatsApp", telefone: "Telefone", email: "E-mail", instagram: "Instagram", outro: "Outro" } as Record<string, string>)[tipo] ?? "Outro";
-}
 
 // transforma a data para leitura
 function formatarData(data?: string) {

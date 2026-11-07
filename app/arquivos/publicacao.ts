@@ -29,7 +29,7 @@ export function consultaReferenciaPublica(chave: string, recebido = `/api/arquiv
           AND (d.arquivo_chave = a.chave OR d.arquivo_url IN (a.endereco, a.recebido))
     ) OR EXISTS (
       SELECT d.id FROM documentos_reuniao d INNER JOIN reunioes r ON r.id = d.reuniao_id
-        WHERE r.publicado = 1 AND (r.ativo = 1 OR r.arquivado_em IS NOT NULL) AND d.publicado = 1 AND d.ativo = 1
+        WHERE r.publicado = 1 AND r.ativo = 1 AND r.arquivado_em IS NULL AND d.publicado = 1 AND d.ativo = 1
           AND (d.arquivo_chave = a.chave OR d.arquivo_url IN (a.endereco, a.recebido))
     ) LIMIT 1`).bind(chave, endereco, recebido);
 }

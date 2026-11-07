@@ -295,6 +295,7 @@ export type PresencaAdministrativa = PresencaPublica & {
 };
 
 export type ReuniaoPublica = {
+  membrosGecepPresentes: import("./membros-gecep").MembroGecepPresente[];
   id: number;
   slug: string;
   titulo: string;

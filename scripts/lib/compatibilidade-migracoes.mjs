@@ -12,6 +12,7 @@ const migracoesDaPrevia = [
   "0011_panoramic_arachne.sql",
   "0012_dear_captain_britain.sql",
   "0013_pretty_hammerhead.sql",
+  "0014_simple_timeslip.sql",
 ];
 const identificador = (valor) => `"${valor.replaceAll('"', '""')}"`;
 const normalizarSql = (sql) => sql.match(/'(?:''|[^'])*'|[^']+/g).map((trecho) => trecho.startsWith("'")
