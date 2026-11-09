@@ -1,22 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
-import { register } from "node:module";
+import "../scripts/registrar-typescript-testes.mjs";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { conferirEstrutura, lerEstrutura, planejarCompatibilidade } from "../scripts/lib/compatibilidade-migracoes.mjs";
 
-register(`data:text/javascript,${encodeURIComponent(`
-  export async function resolve(specifier, context, nextResolve) {
-    if (specifier === ".") return nextResolve("./index.ts", context);
-    try { return await nextResolve(specifier, context); } catch (erro) {
-      if (!specifier.startsWith("./") && !specifier.startsWith("../")) throw erro;
-      for (const sufixo of [".ts", "/index.ts"]) {
-        try { return await nextResolve(specifier + sufixo, context); } catch {}
-      }
-      throw erro;
-    }
-  }
-`)}`, import.meta.url);
 const { ambienteDaRequisicao } = await import("../worker/ambiente.ts");
 const migracoes = await Promise.all((await readdir("drizzle")).filter((nome) => nome.endsWith(".sql")).sort()
   .map(async (nome) => ({ nome, sql: await readFile(`drizzle/${nome}`, "utf8") })));

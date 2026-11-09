@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 // importa a leitura de arquivos e pastas
 import { readFile, readdir, stat } from "node:fs/promises";
 // importa o registro de carregadores
-import { register } from "node:module";
+import "../scripts/registrar-typescript-testes.mjs";
 // importa a montagem de caminhos
 import path from "node:path";
 // importa a criação dos testes
@@ -13,23 +13,6 @@ import { pathToFileURL } from "node:url";
 
 // guarda a pasta principal do projeto
 const raiz = process.cwd();
-
-// resolve arquivos sem extensão durante os testes
-const carregadorTypeScript = `
-  export async function resolve(specifier, context, nextResolve) {
-    try {
-      return await nextResolve(specifier, context);
-    } catch (erro) {
-      const relativo = specifier.startsWith("./") || specifier.startsWith("../");
-      if (erro?.code === "ERR_MODULE_NOT_FOUND" && relativo) {
-        return nextResolve(specifier + ".ts", context);
-      }
-      throw erro;
-    }
-  }
-`;
-// registra o carregador temporário
-register(`data:text/javascript,${encodeURIComponent(carregadorTypeScript)}`, import.meta.url);
 
 // verifica a limpeza dos textos usados na busca
 test("normaliza variações de turma, sala, acentos e espaços", async () => {

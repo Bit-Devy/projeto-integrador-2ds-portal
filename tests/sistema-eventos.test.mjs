@@ -3,29 +3,13 @@ import assert from "node:assert/strict";
 // importa a leitura de arquivos e pastas
 import { readFile, readdir, stat } from "node:fs/promises";
 // registra um resolvedor para os imports TypeScript locais sem extensão
-import { register } from "node:module";
+import "../scripts/registrar-typescript-testes.mjs";
 // importa a criação dos testes
 import test from "node:test";
 // monta caminhos locais
 import path from "node:path";
 
 const raiz = process.cwd();
-
-// os módulos do domínio usam imports relativos sem extensão, como o restante do projeto
-const resolvedorTypeScript = `
-  export async function resolve(specifier, context, nextResolve) {
-    try {
-      return await nextResolve(specifier, context);
-    } catch (erro) {
-      const relativo = specifier.startsWith("./") || specifier.startsWith("../");
-      if (erro?.code === "ERR_MODULE_NOT_FOUND" && relativo) {
-        return nextResolve(specifier + ".ts", context);
-      }
-      throw erro;
-    }
-  }
-`;
-register(`data:text/javascript,${encodeURIComponent(resolvedorTypeScript)}`, import.meta.url);
 
 test("valida o intervalo completo do evento, incluindo a passagem da meia-noite", async () => {
   const { validarEventoInterno } = await importarDominio("validacao");

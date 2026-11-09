@@ -1,23 +1,9 @@
 // importa as verificações os arquivos e o banco usado pelos testes
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
-import { register } from "node:module";
+import "../scripts/registrar-typescript-testes.mjs";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-
-// encontra os arquivos do projeto que usam caminhos sem extensão
-register(`data:text/javascript,${encodeURIComponent(`
-  export async function resolve(specifier, context, nextResolve) {
-    if (specifier === ".") return nextResolve("./index.ts", context);
-    try { return await nextResolve(specifier, context); } catch (erro) {
-      if (!specifier.startsWith("./") && !specifier.startsWith("../")) throw erro;
-      for (const sufixo of [".ts", "/index.ts"]) {
-        try { return await nextResolve(specifier + sufixo, context); } catch {}
-      }
-      throw erro;
-    }
-  }
-`)}`, import.meta.url);
 
 // carrega as regras reais que serão executadas com um banco temporário
 const { ambienteDaRequisicao } = await import("../worker/ambiente.ts");
