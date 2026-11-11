@@ -7,6 +7,8 @@ import Link from "next/link";
 import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 // importa dados da rota e navegação
 import { usePathname, useRouter } from "next/navigation";
+// recebe do servidor quais páginas podem aparecer na navegação
+import type { ModulosPortal } from "../servicos/tipos";
 
 // define um item do menu
 type ItemMenu = {
@@ -38,7 +40,7 @@ const itensMenu: ItemMenu[] = [
       { nome: "Assembleias", destino: "/crt#assembleias" },
     ],
   },
-  { nome: "Projetos", destino: "/projetos" },
+  { nome: "Calendário", destino: "/calendario" },
   {
     nome: "Eventos",
     destino: "/eventos",
@@ -47,6 +49,7 @@ const itensMenu: ItemMenu[] = [
       { nome: "Eventos internos", destino: "/eventos/internos" },
       { nome: "Interclasses", destino: "/eventos/interclasses" },
       { nome: "Reuniões e atas", destino: "/eventos/reunioes" },
+      { nome: "Projetos", destino: "/projetos" },
     ],
   },
   { nome: "Transparência", destino: "/transparencia" },
@@ -66,6 +69,7 @@ const itensMenu: ItemMenu[] = [
     subitens: [
       { nome: "Mapa do Colégio", destino: "/mapa-do-colegio" },
       { nome: "Representantes", destino: "/representantes" },
+      { nome: "Cantina", destino: "/cantina" },
     ],
   },
 ];
@@ -77,7 +81,17 @@ function idDoSubmenu(nome: string) {
 }
 
 // monta a estrutura comum do portal
-export default function EstruturaPortal({ children }: { children: ReactNode }) {
+export default function EstruturaPortal({ children, modulosIniciais }: { children: ReactNode; modulosIniciais: ModulosPortal }) {
+  const [modulos, setModulos] = useState(modulosIniciais);
+  const menuVisivel = itensMenu.filter((item) => item.destino !== "/calendario" || modulos.calendario).map((item) => item.nome === "Mais" ? { ...item, subitens: item.subitens?.filter((subitem) => subitem.destino !== "/cantina" || modulos.cantina) } : item);
+  if (modulos.estagios) menuVisivel.splice(menuVisivel.length - 1, 0, { nome: "Central de Estágios", destino: "/estagios" });
+  // reflete as chaves salvas no painel sem precisar sair da sessão
+  useEffect(() => {
+    const controle = new AbortController();
+    const atualizar = () => { fetch("/api/modulos", { signal: controle.signal, cache: "no-store" }).then(async (resposta) => { if (resposta.ok) setModulos((await resposta.json()).modulos); }).catch(() => {}); };
+    window.addEventListener("gecep-modulos-atualizados", atualizar);
+    return () => { controle.abort(); window.removeEventListener("gecep-modulos-atualizados", atualizar); };
+  }, []);
   // lê a página atual
   const caminhoAtual = usePathname();
   // prepara a navegação entre páginas
@@ -230,7 +244,7 @@ export default function EstruturaPortal({ children }: { children: ReactNode }) {
       >
         <ul className="limite lista-menu">
           {/* links e submenus da navegação */}
-          {itensMenu.map((item) => {
+          {menuVisivel.map((item) => {
             /* reúne todos os caminhos ligados ao item */
             const destinosRelacionados = [
               item.destino,

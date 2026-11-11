@@ -26,14 +26,14 @@ test("as vagas da equipe seguem o estatuto e usam somente cargos disponíveis no
 test("a gravação impede duas publicações na mesma vaga mesmo sem uma consulta anterior", () => {
   const sqlite = new DatabaseSync(":memory:");
   try {
-    sqlite.exec("CREATE TABLE conteudos (id INTEGER PRIMARY KEY, tipo TEXT, titulo TEXT, dados_json TEXT, publicado INTEGER)");
+    sqlite.exec("CREATE TABLE conteudos (id INTEGER PRIMARY KEY, tipo TEXT, titulo TEXT, dados_json TEXT, publicado INTEGER, criado_em TEXT DEFAULT '2026-01-01')");
     const inserir = sqlite.prepare(`INSERT INTO conteudos (tipo, titulo, dados_json, publicado) SELECT ?, ?, ?, ? WHERE ${condicaoVagaLivre}`);
-    const dados = JSON.stringify({ cargoChave: "social", vaga: "diretor-1" });
-    assert.equal(inserir.run("membros", "Primeira pessoa", dados, 1, "membros", 1, dados, -1, dados, dados).changes, 1);
-    assert.equal(inserir.run("membros", "Segunda pessoa", dados, 1, "membros", 1, dados, -1, dados, dados).changes, 0);
-    assert.equal(inserir.run("membros", "Rascunho", dados, 0, "membros", 0, dados, -1, dados, dados).changes, 1);
+    const dados = JSON.stringify({ ano: 2026, cargoChave: "social", vaga: "diretor-1" });
+    assert.equal(inserir.run("membros", "Primeira pessoa", dados, 1, "membros", 1, dados, -1, dados, dados, dados).changes, 1);
+    assert.equal(inserir.run("membros", "Segunda pessoa", dados, 1, "membros", 1, dados, -1, dados, dados, dados).changes, 0);
+    assert.equal(inserir.run("membros", "Rascunho", dados, 0, "membros", 0, dados, -1, dados, dados, dados).changes, 1);
     sqlite.exec("UPDATE conteudos SET publicado = 0 WHERE id = 1");
-    assert.equal(inserir.run("membros", "Substituição", dados, 1, "membros", 1, dados, -1, dados, dados).changes, 1);
+    assert.equal(inserir.run("membros", "Substituição", dados, 1, "membros", 1, dados, -1, dados, dados, dados).changes, 1);
   } finally { sqlite.close(); }
 });
 

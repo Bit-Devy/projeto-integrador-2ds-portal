@@ -1,3 +1,5 @@
+import { anoDoPortal } from "../conteudo/periodos";
+
 // confere as turmas publicadas usando a mesma regra do mapa
 import { condicaoTurmaPublicada } from "../mapa/turmas-publicadas";
 // importa a regra que confere as datas do mandato
@@ -73,13 +75,13 @@ export async function listarEventos(parametros: URLSearchParams, todos = false):
   const situacao = situacaoRecebida === "acontecendo_agora" ? "em_andamento" : situacaoRecebida;
   if (!todos) {
     filtros.sql.push("e.publicado = 1", "e.ativo = 1", "e.arquivado_em IS NULL");
-    if (situacao === "arquivado") filtros.sql.push("1 = 0");
+    if (situacao === "arquivado") filtros.sql.push(`substr(e.data_inicial, 1, 4) < '${anoDoPortal()}'`);
   }
   if (situacao && situacao !== "arquivado") adicionarIgual(filtros, "e.situacao", situacao);
-  if (situacao === "arquivado" && todos) filtros.sql.push("e.arquivado_em IS NOT NULL");
+  if (situacao === "arquivado" && todos) filtros.sql.push(`(e.arquivado_em IS NOT NULL OR substr(e.data_inicial, 1, 4) <> '${anoDoPortal()}')`);
   adicionarIgualSePresente(filtros, "e.categoria", parametros.get("categoria"), 100);
   adicionarIgualSePresente(filtros, "e.turno", parametros.get("turno"), 20);
-  adicionarIgualSePresente(filtros, "substr(e.data_inicial, 1, 4)", parametros.get("ano"), 4);
+  adicionarIgualSePresente(filtros, "substr(e.data_inicial, 1, 4)", parametros.has("ano") ? (parametros.get("ano") === "todos" ? "" : parametros.get("ano")) : todos ? "" : String(anoDoPortal()), 4);
   adicionarIgualSePresente(filtros, "substr(e.data_inicial, 6, 2)", normalizarMes(parametros.get("mes")), 2);
   const publico = textoFiltro(parametros.get("publico"), 120);
   if (publico) adicionarLike(filtros, "e.publico_destinado", publico);
@@ -253,8 +255,9 @@ export async function listarRepresentantes(parametros: URLSearchParams, todos = 
   if (turma) adicionarLike(filtros, "r.turma_normalizada", turma);
   adicionarIgualSePresente(filtros, "r.turno", parametros.get("turno"), 20);
   adicionarIgualSePresente(filtros, "r.nivel_ensino", parametros.get("nivel") ?? parametros.get("nivelEnsino"), 120);
-  adicionarIgualSePresente(filtros, "r.serie", parametros.get("serie") ?? parametros.get("ano"), 80);
+  adicionarIgualSePresente(filtros, "r.serie", parametros.get("serie"), 80);
   adicionarIgualSePresente(filtros, "r.funcao", parametros.get("funcao"), 40);
+  if (parametros.get("ano")) adicionarIgualSePresente(filtros, "CAST(r.ano AS TEXT)", parametros.get("ano"), 4);
   if (parametros.get("arquivado") === "1") filtros.sql.push("r.arquivado_em IS NOT NULL");
   const where = clausulaWhere(filtros);
   const ordem = ordemRepresentantes(parametros.get("ordenar"), parametros.get("direcao"));
@@ -293,7 +296,10 @@ export async function atualizarRepresentante(idRecebido: unknown, valor: unknown
   const existente = await obterRepresentante(id, true) as RepresentanteAdministrativo;
   const recebido = valor as Record<string, unknown>;
   const reativando = Boolean(existente.arquivadoEm) && booleano(recebido.ativo, existente.ativo);
-  const dados = await validarTurmaDoRepresentante(validarRepresentante({ ...existente, ...recebido, ...(reativando ? { publicado: false } : {}) }));
+  const validado = validarRepresentante({ ...existente, ...recebido, ...(reativando ? { publicado: false } : {}) });
+  if (reativando && existente.ano !== anoDoPortal()) throw new ErroEventos("Um representante de outro ano não pode ser reativado. Cadastre o mandato na turma do ano atual.");
+  const historico = !validado.ativo && !validado.publicado && !existente.ativo && validado.turmaAtividadeId === existente.turmaAtividadeId;
+  const dados = historico ? { ...validado, ano: existente.ano } : await validarTurmaDoRepresentante(validado);
   const d1 = getD1();
   const comandos: D1PreparedStatement[] = [
     d1.prepare(`${sqlAtualizarRepresentante} WHERE id = ?`).bind(...valoresRepresentante(dados), id),
@@ -382,7 +388,7 @@ function formatarDocumento(linha: Linha, todos: boolean): DocumentoPublico | Doc
 
 function formatarRepresentante(linha: Linha, todos: boolean) {
   const publico: RepresentantePublico = {
-    id: numero(linha.id), nome: string(linha.nome), nomeExibicao: string(linha.nome_exibicao),
+    ano: numero(linha.ano), id: numero(linha.id), nome: string(linha.nome), nomeExibicao: string(linha.nome_exibicao),
     nivelEnsino: string(linha.nivel_ensino), serie: string(linha.serie), turma: string(linha.turma),
     turno: linha.turno as RepresentantePublico["turno"], funcao: linha.funcao as RepresentantePublico["funcao"],
     inicioMandato: string(linha.inicio_mandato), fimMandato: string(linha.fim_mandato), ordem: numero(linha.ordem),
@@ -432,16 +438,16 @@ function valoresDocumento(dados: ReturnType<typeof validarDocumento>) {
 }
 
 const sqlInserirRepresentante = `INSERT INTO representantes (
-  turma_atividade_id, nome, nome_exibicao, nome_normalizado, nivel_ensino, serie, turma, turma_normalizada,
+  ano, turma_atividade_id, nome, nome_exibicao, nome_normalizado, nivel_ensino, serie, turma, turma_normalizada,
   turno, funcao, inicio_mandato, fim_mandato, ordem, observacao_publica, observacao_interna, ativo, publicado
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 const sqlAtualizarRepresentante = `UPDATE representantes SET
-  turma_atividade_id = ?, nome = ?, nome_exibicao = ?, nome_normalizado = ?, nivel_ensino = ?, serie = ?, turma = ?, turma_normalizada = ?,
+  ano = ?, turma_atividade_id = ?, nome = ?, nome_exibicao = ?, nome_normalizado = ?, nivel_ensino = ?, serie = ?, turma = ?, turma_normalizada = ?,
   turno = ?, funcao = ?, inicio_mandato = ?, fim_mandato = ?, ordem = ?, observacao_publica = ?, observacao_interna = ?,
   ativo = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
 function valoresRepresentante(dados: ReturnType<typeof validarRepresentante>) {
-  return [dados.turmaAtividadeId, dados.nome, dados.nomeExibicao, dados.nomeNormalizado, dados.nivelEnsino,
+  return [dados.ano, dados.turmaAtividadeId, dados.nome, dados.nomeExibicao, dados.nomeNormalizado, dados.nivelEnsino,
     dados.serie, dados.turma, dados.turmaNormalizada, dados.turno, dados.funcao, dados.inicioMandato,
     dados.fimMandato, dados.ordem, dados.observacaoPublica, dados.observacaoInterna, binario(dados.ativo), binario(dados.publicado)];
 }
@@ -452,7 +458,7 @@ async function validarTurmaDoRepresentante(dados: ReturnType<typeof validarRepre
     AND ${dados.turmaAtividadeId ? "t.id = ?" : "t.nome_normalizado = ? AND t.turno = ?"}`)
     .bind(...(dados.turmaAtividadeId ? [dados.turmaAtividadeId] : [normalizarTextoBusca(dados.turma), dados.turno])).first<Linha>();
   if (!turma) throw new ErroEventos("Escolha uma turma ativa, publicada e válida no cadastro de Salas.");
-  return { ...dados, turmaAtividadeId: numero(turma.id), turma: string(turma.nome), turmaNormalizada: normalizarTurma(string(turma.nome)),
+  return { ...dados, ano: numero(turma.ano), turmaAtividadeId: numero(turma.id), turma: string(turma.nome), turmaNormalizada: normalizarTurma(string(turma.nome)),
     turno: turma.turno as typeof dados.turno, nivelEnsino: string(turma.nivel_ensino) || "medio", serie: string(turma.serie) || "Não informado" };
 }
 
@@ -574,11 +580,11 @@ export async function listarCampeonatos(parametros: URLSearchParams, todos = fal
   const situacao = situacaoRecebida === "acontecendo_agora" ? "em_andamento" : situacaoRecebida;
   if (!todos) {
     filtros.sql.push("c.publicado = 1", "c.ativo = 1", "c.arquivado_em IS NULL");
-    if (situacao === "arquivado") filtros.sql.push("1 = 0");
+    if (situacao === "arquivado") filtros.sql.push(`c.ano < '${anoDoPortal()}'`);
   }
-  if (situacao === "arquivado") filtros.sql.push("c.arquivado_em IS NOT NULL");
-  else if (situacao) adicionarIgual(filtros, "c.situacao", situacao === "agendado" ? "proximo" : situacao);
-  adicionarIgualSePresente(filtros, "CAST(c.ano AS TEXT)", parametros.get("ano"), 4);
+  if (situacao === "arquivado" && todos) filtros.sql.push(`(c.arquivado_em IS NOT NULL OR c.ano <> ${anoDoPortal()})`);
+  else if (situacao && situacao !== "arquivado") adicionarIgual(filtros, "c.situacao", situacao === "agendado" ? "proximo" : situacao);
+  adicionarIgualSePresente(filtros, "CAST(c.ano AS TEXT)", parametros.has("ano") ? (parametros.get("ano") === "todos" ? "" : parametros.get("ano")) : todos ? "" : String(anoDoPortal()), 4);
   adicionarIgualSePresente(filtros, "c.modalidade", parametros.get("modalidade"), 100);
   adicionarIgualSePresente(filtros, "c.categoria", parametros.get("categoria"), 100);
   adicionarIgualSePresente(filtros, "c.turno", parametros.get("turno"), 20);
@@ -1564,11 +1570,11 @@ export async function listarReunioes(parametros: URLSearchParams, todos = false)
   const situacao = textoFiltro(parametros.get("situacao"), 40);
   if (!todos) {
     filtros.sql.push("r.publicado = 1", "r.ativo = 1", "r.arquivado_em IS NULL");
-    if (situacao === "arquivado") filtros.sql.push("1 = 0");
+    if (situacao === "arquivado") filtros.sql.push(`substr(r.data, 1, 4) < '${anoDoPortal()}'`);
   }
-  if (situacao === "arquivado") filtros.sql.push("r.arquivado_em IS NOT NULL");
-  else if (situacao) adicionarIgual(filtros, "r.situacao", situacao);
-  adicionarIgualSePresente(filtros, "substr(r.data, 1, 4)", parametros.get("ano"), 4);
+  if (situacao === "arquivado" && todos) filtros.sql.push(`(r.arquivado_em IS NOT NULL OR substr(r.data, 1, 4) <> '${anoDoPortal()}')`);
+  else if (situacao && situacao !== "arquivado") adicionarIgual(filtros, "r.situacao", situacao);
+  adicionarIgualSePresente(filtros, "substr(r.data, 1, 4)", parametros.has("ano") ? (parametros.get("ano") === "todos" ? "" : parametros.get("ano")) : todos ? "" : String(anoDoPortal()), 4);
   adicionarIgualSePresente(filtros, "substr(r.data, 6, 2)", normalizarMes(parametros.get("mes")), 2);
   adicionarIgualSePresente(filtros, "r.tipo", parametros.get("tipo"), 40);
   adicionarIgualSePresente(filtros, "r.turno", parametros.get("turno"), 20);
@@ -1901,7 +1907,7 @@ export async function obterCentralEventos(): Promise<CentralEventos> {
     FROM partidas p INNER JOIN fases_campeonato f ON f.id = p.fase_id
     INNER JOIN campeonatos c ON c.id = p.campeonato_id
     WHERE p.publicado = 1 AND p.ativo = 1 AND f.publicado = 1 AND f.ativo = 1
-      AND c.publicado = 1 AND c.ativo = 1 AND c.chave_publicada = 1
+      AND c.publicado = 1 AND c.ativo = 1 AND c.chave_publicada = 1 AND c.ano = ${anoDoPortal()}
       AND p.situacao IN ('agendada', 'data_a_definir', 'adiada')
     ORDER BY CASE WHEN p.data = '' THEN 1 ELSE 0 END, p.data, p.horario, p.id LIMIT 8`).all<Linha>();
   return {

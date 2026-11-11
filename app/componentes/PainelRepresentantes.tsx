@@ -31,7 +31,12 @@ import {
   type Identificador,
 } from "./painel-eventos-comum";
 
+import { anoDoPortal } from "../conteudo/periodos";
+import ArquivoAnual from "./ArquivoAnual";
+import { confirmarNoPainel } from "./confirmacao-painel";
+
 type Representante = {
+  ano: number;
   turmaAtividadeId: number | null;
   id: Identificador;
   nome: string;
@@ -55,7 +60,7 @@ type FormularioRepresentante = Omit<Representante, "id" | "atualizadoEm">;
 type Visao = "todos" | "duplicacoes" | "sem-representante";
 
 const formularioVazio: FormularioRepresentante = {
-  turmaAtividadeId: null,
+  ano: anoDoPortal(), turmaAtividadeId: null,
   nome: "", nomeExibicao: "", nivelEnsino: "medio", serie: "", turma: "", turno: "manha",
   funcao: "titular", inicioMandato: "", fimMandato: "", ativo: true, publicado: false, ordem: 0,
   observacaoPublica: "", observacaoInterna: "",
@@ -67,6 +72,7 @@ const funcoes = [
 ] as const;
 
 export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?: AoMudarEstadoSujo } = {}) {
+  const [arquivoAberto, setArquivoAberto] = useState(false);
   const [itens, setItens] = useState<Representante[]>([]);
   const [turmasPublicadas, setTurmasPublicadas] = useState<TurmaAtividadeMapaPublica[]>([]);
   const [formulario, setFormulario] = useState<FormularioRepresentante | null>(null);
@@ -121,7 +127,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
     return itens.filter((item) => {
       const chave = `${normalizarBusca(item.nome)}|${normalizarBusca(item.turma)}|${item.funcao}`;
       const texto = normalizarBusca(`${item.nome} ${item.nomeExibicao} ${item.turma} ${item.serie}`);
-      return (visao !== "duplicacoes" || chavesDuplicadas.has(chave))
+      return (item.ano === anoDoPortal() || filtroEstado === "arquivados") && (visao !== "duplicacoes" || chavesDuplicadas.has(chave))
         && (!termo || texto.includes(termo))
         && (!filtroTurno || item.turno === filtroTurno)
         && (!filtroNivel || item.nivelEnsino === filtroNivel)
@@ -195,7 +201,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
   }
 
   async function arquivar(item: Representante) {
-    if (!window.confirm(`Arquivar o registro de “${item.nome}” em ${item.turma}? Reuniões antigas manterão o retrato histórico dessa pessoa.`)) return;
+    if (!await confirmarNoPainel("Arquivar representante?", `Arquivar o registro de “${item.nome}” em ${item.turma}? Reuniões antigas manterão o retrato histórico dessa pessoa.`, "Arquivar", "Cancelar")) return;
     setSalvando(true);
     setErro("");
     setSucesso("");
@@ -226,8 +232,8 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
 
   function exportarCsv() {
     const celula = (valor: string | number | boolean) => `"${String(valor).replaceAll('"', '""')}"`;
-    const linhas = [["Nome", "Nome de exibição", "Nível", "Ano ou série", "Turma", "Turno", "Função", "Início", "Fim", "Ativo", "Publicado"].map(celula).join(",")];
-    for (const item of itens) linhas.push([item.nome, item.nomeExibicao, item.nivelEnsino, item.serie, item.turma, item.turno, item.funcao, item.inicioMandato, item.fimMandato, item.ativo, item.publicado].map(celula).join(","));
+    const linhas = [["Ano escolar", "Nome", "Nome de exibição", "Nível", "Ano ou série", "Turma", "Turno", "Função", "Início", "Fim", "Ativo", "Publicado"].map(celula).join(",")];
+    for (const item of itens) linhas.push([item.ano, item.nome, item.nomeExibicao, item.nivelEnsino, item.serie, item.turma, item.turno, item.funcao, item.inicioMandato, item.fimMandato, item.ativo, item.publicado].map(celula).join(","));
     const url = URL.createObjectURL(new Blob([`\uFEFF${linhas.join("\n")}`], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
@@ -240,6 +246,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
     <section className="pev-painel" onChangeCapture={() => { if (formulario) setMudou(true); }} aria-labelledby="titulo-painel-representantes">
       <CabecalhoPainel rotulo="COMUNIDADE ESCOLAR" titulo="Representantes" descricao="Gerencie mandatos e publicação sem expor dados pessoais. Registros arquivados permanecem ligados ao histórico de presença." acao={formulario ? undefined : () => novo()} nomeAcao="+ Cadastrar representante" />
       <MensagensPainel erro={erro} sucesso={sucesso} />
+      {arquivoAberto && <ArquivoAnual titulo="Representantes arquivados" itens={itens.filter((item) => !item.ativo || item.ano !== anoDoPortal()).map((item) => ({ id: item.id, ano: item.ano, titulo: item.nomeExibicao || item.nome, descricao: `${item.turma} · ${item.serie} · ${nomeTurno(item.turno)} · ${item.funcao}`, observacao: item.observacaoPublica }))} fechar={() => setArquivoAberto(false)} />}
 
       {formulario ? (
         <form className="pev-formulario" onSubmit={salvar}>
@@ -282,7 +289,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
             <label><span>Estado</span><select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}><option value="ativos">Ativos</option><option value="todos">Todos</option><option value="rascunhos">Rascunhos</option><option value="arquivados">Arquivados</option></select></label>
           </div>}
           {visao === "sem-representante" ? <ListaTurmasSemRepresentante turmas={semRepresentante} carregando={carregando} cadastrar={novo} /> : <>
-            <div className="pev-barra-resultados"><span>{filtrados.length} registro(s)</span><button type="button" className="pev-botao" onClick={exportarCsv} disabled={!itens.length}>Exportar CSV</button></div>
+            <div className="pev-barra-resultados"><span>{filtrados.length} registro(s)</span><button type="button" className="pev-botao" onClick={exportarCsv} disabled={!itens.length}>Exportar CSV</button><button type="button" className="pev-botao" onClick={() => setArquivoAberto(true)}>Arquivados</button></div>
             {carregando && <EstadoVazio titulo="Carregando representantes…" texto="Aguarde enquanto consultamos os mandatos." />}
             {!carregando && !filtrados.length && <EstadoVazio titulo={visao === "duplicacoes" ? "Nenhuma duplicação encontrada" : "Nenhum representante encontrado"} texto={itens.length ? "Altere os filtros ou a busca para ver outros registros." : "Cadastre o primeiro mandato pelo botão acima."} />}
             <div className="pev-lista">{filtrados.map((item) => {
@@ -308,6 +315,7 @@ function compararTurmas(a: string, b: string) { return a.localeCompare(b, "pt-BR
 
 function normalizarRepresentante(registro: Record<string, unknown>): Representante {
   return {
+    ano: obterNumero(registro, "ano") || anoDoPortal(),
     turmaAtividadeId: Number(registro.turmaAtividadeId) || null,
     id: (registro.id as Identificador) ?? crypto.randomUUID(), nome: obterTexto(registro, "nome"),
     nomeExibicao: obterTexto(registro, "nomeExibicao", "nomeExibicaoPublica"), nivelEnsino: obterTexto(registro, "nivelEnsino", "nivel") || "outro",
@@ -322,5 +330,5 @@ function normalizarRepresentante(registro: Record<string, unknown>): Representan
 
 // copia os dados da turma escolhida para o mandato
 function dadosDaTurma(turma: TurmaAtividadeMapaPublica) {
-  return { turmaAtividadeId: turma.id, turma: turma.nome, nivelEnsino: turma.nivelEnsino, serie: turma.serie || "Não informado", turno: turma.turno };
+  return { ano: turma.ano, turmaAtividadeId: turma.id, turma: turma.nome, nivelEnsino: turma.nivelEnsino, serie: turma.serie || "Não informado", turno: turma.turno };
 }

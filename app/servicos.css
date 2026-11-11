@@ -1,0 +1,162 @@
+/* organiza os serviços com as cores e as linhas do portal */
+.servicos-portal { padding-block: 30px 64px; overflow-wrap: anywhere; }
+.servico-bloco { margin-top: 30px; scroll-margin-top: 24px; min-width: 0; }
+.servico-bloco h2, .servicos-painel h2 { color: var(--azul-escuro); font-size: 1.5rem; margin: 8px 0 14px; }
+.servico-bloco p, .servicos-painel p { line-height: 1.65; }
+.topo-servico { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
+.atalhos-servicos { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 12px; }
+.atalhos-servicos > a, .atalhos-servicos > button { border: 1px solid #dce5eb; border-left: 4px solid var(--azul); background: #f6f9fb; color: var(--azul-escuro); padding: 20px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; gap: 15px; cursor: pointer; text-align: left; font-size: 1rem; }
+.atalhos-servicos > :hover, .atalhos-servicos > [aria-pressed="true"] { color: white; background: var(--azul-escuro); border-color: var(--azul-escuro); }
+.ano-servico { position: relative; color: #687880; font-size: .8rem; flex-shrink: 0; }
+.ano-servico summary { cursor: pointer; padding: 8px 0; }
+.ano-servico label { position: absolute; right: 0; z-index: 2; width: 170px; padding: 14px; background: white; border: 1px solid #dce5eb; box-shadow: 0 4px 12px #083e5912; }
+.ano-servico select { display: block; width: 100%; margin-top: 8px; padding: 8px; }
+.abas-servicos { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 20px; }
+.abas-servicos button { color: #4c606c; background: #f2f5f7; border: 1px solid #dce5eb; padding: 12px 18px; cursor: pointer; }
+.abas-servicos button[aria-pressed="true"] { color: white; background: var(--azul-escuro); border-color: var(--azul-escuro); }
+
+/* mantém o calendário legível e mostra a seleção sem depender só da cor */
+.calendario-com-detalhes { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, 1fr); gap: 26px; margin-block: 24px; }
+.calendario-com-detalhes > * { min-width: 0; }
+.mes-escolar { border: 1px solid #dce5eb; background: white; }
+.mes-escolar-topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--azul-escuro); padding: 13px; }
+.mes-escolar-topo h2 { color: white; font-size: 1.2rem; font-weight: bold; text-transform: capitalize; margin: 0; text-align: center; }
+.mes-escolar-topo button { color: white; background: transparent; border: 1px solid #ffffff66; width: 38px; height: 38px; font-size: 1.5rem; cursor: pointer; flex-shrink: 0; }
+.semana-escolar, .grade-mes-escolar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.semana-escolar { padding-block: 12px; color: #687880; background: #f5f7f9; font-size: .75rem; font-weight: bold; text-align: center; }
+.grade-mes-escolar { gap: 1px; background: #e2e8ec; padding: 1px; }
+.grade-mes-escolar > span { background: #fafbfc; }
+.grade-mes-escolar button { min-height: 74px; border: 2px solid transparent; padding: 9px 5px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 5px; cursor: pointer; color: #344955; position: relative; }
+.grade-mes-escolar button > span { font-size: 1rem; }
+.grade-mes-escolar button small { font-size: .65rem; min-height: 13px; }
+.grade-mes-escolar button[aria-pressed="true"] { border-color: var(--azul-escuro); box-shadow: inset 0 0 0 1px white; font-weight: bold; }
+.grade-mes-escolar button.dia-hoje > span { text-decoration: underline; text-underline-offset: 4px; font-weight: bold; }
+.grade-mes-escolar button:focus-visible, .servicos-portal button:focus-visible, .servicos-painel button:focus-visible { outline: 3px solid #e3a400; outline-offset: 2px; z-index: 1; }
+.tipo-dia-letivo { background: #e7f3fb; }
+.tipo-dia-feriado { background: #fbe7e4; }
+.tipo-dia-recesso { background: #fff4d5; }
+.tipo-dia-planejamento { background: #e8f0dc; }
+.tipo-dia-conselho { background: #eae6f3; }
+.tipo-dia-ferias { background: #e0f1f1; }
+.tipo-dia-sem_aula { background: #fafbfc; }
+.ponto-agenda { min-width: 19px; height: 19px; padding: 2px 4px; font-size: .65rem; border-radius: 50%; background: var(--azul-escuro); color: white; }
+.legenda-escolar { display: flex; flex-wrap: wrap; gap: 10px 16px; padding-block: 16px; color: #687880; font-size: .75rem; }
+.legenda-escolar span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda-escolar i { display: block; width: 13px; height: 13px; border: 1px solid #bccbd2; }
+.detalhes-dia { background: #f5f8fa; border-top: 4px solid var(--azul); padding: 23px; }
+.detalhes-dia h3 { color: var(--azul-escuro); margin: 12px 0; font-size: 1.25rem; }
+.compromisso-dia { border-top: 1px solid #d6e1e7; padding-block: 18px; }
+.compromisso-dia h4 { font-size: 1.05rem; margin: 7px 0; }
+.compromisso-dia small, .agenda-mes small { color: #687880; }
+.compromisso-dia a { color: var(--azul-escuro); font-weight: bold; display: inline-block; margin-top: 12px; }
+.agenda-mes { border-top: 1px solid #dce5eb; padding-top: 16px; }
+.agenda-mes h3 { color: var(--azul-escuro); font-size: 1.2rem; }
+.agenda-mes article { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 22px 0; border-bottom: 1px solid #e0e8ec; }
+.agenda-mes h4 { font-size: 1.05rem; margin: 8px 0; }
+.agenda-mes article .botao-secundario { flex-shrink: 0; }
+
+/* mantém os formulários discretos e os resultados próximos dos campos */
+.form-servico { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; margin-block: 20px; }
+.form-servico label, .editor-dias label { display: flex; flex-direction: column; gap: 8px; color: #465d6b; font-weight: bold; min-width: 0; flex: 1 1 160px; }
+.form-servico input, .form-servico select, .editor-dias input, .editor-dias select { border: 1px solid #c7d5dd; background: white; border-radius: 2px; min-height: 44px; padding: 10px; width: 100%; font: inherit; color: #334b59; }
+.form-servico > button { min-height: 44px; }
+.botao-cinza-pequeno { border: 1px solid #d3dce2; color: #60717b; background: #f3f5f6; padding: 7px 11px; font-size: .75rem; border-radius: 2px; cursor: pointer; }
+.botao-cinza-pequeno:disabled { opacity: .5; cursor: default; }
+.ajuste-aulas { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: #64757e; padding-bottom: 4px; }
+.ajuste-aulas label { flex-basis: 110px; max-width: 140px; font-size: .8rem; }
+.calculadora-faltas { padding: 32px; background: #f6f9fb; border-top: 4px solid var(--azul); margin-top: 48px; }
+.resultado-faltas { padding: 20px; border-left: 4px solid var(--azul); background: #e9f4fb; color: #174e70; line-height: 1.7; margin-block: 20px; }
+.nota-servico { font-size: .8rem; color: #6b7c85; line-height: 1.7; margin-top: 20px; }
+.ultimo-letivo { padding-top: 18px; border-top: 1px solid #dce5eb; }
+
+/* distribui os dias da merenda e os cardápios dos setores */
+.semana-cantina { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-block: 24px; color: var(--azul-escuro); }
+.grade-merenda { display: grid; grid-template-columns: repeat(auto-fit, minmax(225px, 1fr)); gap: 18px; }
+.grade-merenda > article { border: 1px solid #dce5eb; }
+.grade-merenda > article > header { background: var(--azul-escuro); color: white; padding: 16px; display: flex; flex-direction: column; gap: 6px; text-transform: capitalize; }
+.grade-merenda > article > p { padding: 18px; color: #687880; }
+.produto-cantina { padding: 20px; overflow-wrap: anywhere; }
+.produto-cantina + .produto-cantina { border-top: 1px solid #e1e7eb; }
+.produto-cantina img { display: block; width: 100%; aspect-ratio: 16/10; object-fit: cover; margin-bottom: 16px; }
+.produto-cantina small { color: #6b7c85; }
+.produto-cantina h3 { color: var(--azul-escuro); font-size: 1.1rem; margin: 10px 0; }
+.produto-cantina p { white-space: pre-line; }
+.grade-produtos { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+.grade-produtos .produto-cantina { border: 1px solid #dce5eb; border-top: 3px solid var(--azul); }
+.preco-cantina { display: block; font-size: 1.25rem; color: var(--azul-escuro); margin-top: 15px; }
+
+/* destaca os dados das vagas e mantém o detalhe dentro do próprio portal */
+.grade-oportunidades { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 22px; margin-top: 24px; }
+.grade-oportunidades article { display: flex; flex-direction: column; align-items: start; padding: 24px; border: 1px solid #dce5eb; border-top: 4px solid var(--azul); }
+.tipo-oportunidade { color: var(--azul-escuro); font-weight: bold; display: flex; justify-content: space-between; gap: 18px; width: 100%; }
+.tipo-oportunidade span { color: #687880; font-size: .75rem; font-weight: normal; }
+.grade-oportunidades h3 { color: var(--azul-escuro); font-size: 1.2rem; line-height: 1.4; margin-block: 18px; }
+.grade-oportunidades small { color: #687880; margin-block: 10px 20px; }
+.grade-oportunidades button { margin-top: auto; }
+.dialogo-oportunidade { width: min(800px, calc(100vw - 32px)); max-width: 800px; overflow-wrap: anywhere; }
+.dados-oportunidade > div { border-top: 1px solid #dce5eb; padding-block: 14px; }
+.dados-oportunidade dt { font-weight: bold; color: var(--azul-escuro); margin-bottom: 6px; }
+.dados-oportunidade dd { margin: 0; white-space: pre-line; line-height: 1.6; }
+
+/* organiza as chaves e a marcação dos dias dentro do painel */
+.servicos-painel { min-width: 0; }
+.servicos-painel fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.servicos-painel legend { color: var(--azul-escuro); font-weight: bold; margin-bottom: 14px; }
+.servicos-painel .campo-publicado { display: flex; flex-direction: row; align-items: center; gap: 10px; margin-block: 16px; font-weight: normal; flex: none; }
+.servicos-painel .campo-publicado input { width: auto; min-height: auto; }
+.resumo-calendario-painel { display: flex; gap: 12px; justify-content: space-between; flex-wrap: wrap; padding: 18px; background: #eaf4fa; color: var(--azul-escuro); margin-block: 24px; }
+.editor-dias { padding: 20px; border: 1px solid #dce5eb; background: #f7f9fa; }
+.editor-dias label { margin-bottom: 16px; }
+.editor-dias .form-servico { margin-top: 0; }
+.editor-dias .form-servico label { flex-basis: 100%; }
+.lista-modulos { border-top: 1px solid #dce5eb; margin-top: 25px; }
+.lista-modulos > div { display: grid; grid-template-columns: minmax(0, 1fr) auto 70px; align-items: center; gap: 20px; padding: 22px 0; border-bottom: 1px solid #dce5eb; }
+.lista-modulos h2 { font-size: 1.15rem; margin: 0; }
+.lista-modulos p { color: #687880; margin: 8px 0 0; }
+.lista-modulos > .modulo-filho { padding-left: 24px; border-left: 3px solid #dce5eb; }
+.lista-modulos small { color: #687880; }
+.chave-modulo { border: 0; background: #adb9c1; border-radius: 20px; width: 50px; height: 28px; padding: 3px; cursor: pointer; }
+.chave-modulo span { display: block; width: 22px; height: 22px; border-radius: 50%; background: white; transition: transform .15s; }
+.chave-modulo[aria-checked="true"] { background: var(--azul); }
+.chave-modulo[aria-checked="true"] span { transform: translateX(22px); }
+.chave-modulo:disabled { cursor: default; opacity: .65; }
+.acoes-topo-servicos { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* preserva os botões de criação mesmo quando ficam dentro de um grupo de ações */
+.topo-painel .acoes-topo-servicos > .botao-primario { color: white; background: var(--azul); border: 1px solid var(--azul); padding: 13px 20px; font-weight: bold; cursor: pointer; }
+.topo-painel .acoes-topo-servicos > .botao-primario:hover { background: var(--azul-escuro); border-color: var(--azul-escuro); }
+.topo-painel .acoes-topo-servicos > .botao-secundario { color: var(--azul-escuro); background: white; border: 1px solid var(--azul); padding: 13px 20px; cursor: pointer; }
+.ferramentas-ano-painel, .acoes-arquivo-anual { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-block: 20px; }
+.arquivo-anual { width: min(900px, calc(100vw - 32px)); max-width: 900px; }
+.lista-arquivo-anual article { padding: 18px 0; border-top: 1px solid #dce5eb; }
+.lista-arquivo-anual article h3 { color: var(--azul-escuro); font-size: 1.05rem; margin: 8px 0; }
+.lista-arquivo-anual article small { color: #6b7c85; }
+.lista-arquivo-anual article p { white-space: pre-line; }
+.mes-escolar-topo button:disabled { opacity: .35; cursor: default; }
+.pev-etapas button:disabled { cursor: not-allowed; opacity: .45; }
+.seletor-destinos .form-servico { margin-top: 24px; }
+
+/* adapta as grades sem diminuir os campos de toque no celular */
+@media (max-width: 1000px) {
+  .servicos-painel .calendario-com-detalhes { grid-template-columns: minmax(0, 1fr); }
+  .servicos-painel .editor-dias .form-servico label { flex-basis: 160px; }
+}
+@media (max-width: 780px) {
+  .calendario-com-detalhes { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .servicos-portal { padding-top: 20px; }
+  .servico-bloco h2 { font-size: 1.3rem; }
+  .grade-mes-escolar button { min-height: 64px; padding: 7px 2px; }
+  .mes-escolar-topo h2 { font-size: 1.05rem; }
+  .semana-escolar { font-size: .65rem; }
+  .grade-mes-escolar button small { font-size: .55rem; }
+  .detalhes-dia { padding: 20px; }
+  .calculadora-faltas { padding: 22px 16px; }
+  .agenda-mes article { flex-direction: column; align-items: start; }
+  .form-servico label { flex-basis: 100%; }
+  .form-servico > button { width: 100%; }
+  .semana-cantina strong { order: -1; width: 100%; text-align: center; }
+  .lista-modulos > div { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+  .lista-modulos small { grid-column: 1 / -1; }
+  .lista-modulos > .modulo-filho { padding-left: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .chave-modulo span { transition: none; } }

@@ -1,3 +1,5 @@
+// usa o ano local do portal no cadastro escolar
+import { anoDoPortal } from "../conteudo/periodos";
 // importa as funções de normalização do mapa
 import {
   aliasesNormalizados,
@@ -57,6 +59,7 @@ export type LocalMapaValidado = {
 
 // define uma turma depois da validação
 export type TurmaMapaValidada = {
+  ano: number;
   nivelEnsino: string;
   nome: string;
   nomeNormalizado: string;
@@ -185,11 +188,16 @@ export function validarTurmaMapa(valor: unknown): TurmaMapaValidada {
   if (!tipo) throw new ErroMapa("Escolha o tipo da turma ou atividade.");
   // valida as datas de vigência
   const aliases = textoLongo(dados.aliases, 2000);
-  const inicioValidade = data(dados.inicioValidade, "início da validade");
-  const fimValidade = data(dados.fimValidade, "fim da validade");
-  validarPeriodo(inicioValidade, fimValidade);
+  const inicioAntigo = data(dados.inicioValidade, "início da validade");
+  const fimAntigo = data(dados.fimValidade, "fim da validade");
+  validarPeriodo(inicioAntigo, fimAntigo);
+  const ano = Number(dados.ano ?? (inicioAntigo ? inicioAntigo.slice(0, 4) : anoDoPortal()));
+  if (!Number.isInteger(ano) || ano < 1900 || ano > 2199) throw new ErroMapa("Informe um ano escolar válido.");
+  const inicioValidade = dados.ano === undefined ? inicioAntigo : `${ano}-01-01`;
+  const fimValidade = dados.ano === undefined ? fimAntigo : `${ano}-12-31`;
   // limita e organiza todos os campos da turma
   return {
+    ano,
     nivelEnsino: ["medio", "fundamental", "outro"].includes(String(dados.nivelEnsino)) ? String(dados.nivelEnsino) : "medio",
     nome,
     nomeNormalizado,
@@ -205,8 +213,8 @@ export function validarTurmaMapa(valor: unknown): TurmaMapaValidada {
     inicioValidade,
     fimValidade,
     ordem: inteiro(dados.ordem),
-    ativo: booleano(dados.ativo, true),
-    publicado: booleano(dados.publicado, false),
+    ativo: ano === anoDoPortal() && booleano(dados.ativo, true),
+    publicado: ano === anoDoPortal() && booleano(dados.publicado, false),
   };
 }
 

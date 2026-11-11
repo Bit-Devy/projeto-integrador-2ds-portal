@@ -33,6 +33,7 @@ export const canaisIniciais: CanalContato[] = [
 // pessoas de exemplo: troque pelos integrantes reais
 export const membrosIniciais: MembroGecep[] = [
   {
+    ano: 2026,
     nome: "Nome a inserir",
     cargo: "Presidência",
     diretoria: "Coordenação geral",
@@ -43,6 +44,7 @@ export const membrosIniciais: MembroGecep[] = [
     publicado: false,
   },
   {
+    ano: 2026,
     nome: "Nome a inserir",
     cargo: "Vice-presidência",
     diretoria: "Coordenação geral",
@@ -53,6 +55,7 @@ export const membrosIniciais: MembroGecep[] = [
     publicado: false,
   },
   {
+    ano: 2026,
     nome: "Nome a inserir",
     cargo: "Tesouraria",
     diretoria: "Finanças e transparência",
@@ -150,6 +153,7 @@ export const noticiasIniciais: NoticiaGecep[] = [
 // projetos reais mostrados na primeira execução
 export const projetosIniciais: ProjetoGecep[] = [
   {
+    ano: 2026,
     titulo: "BrincaCEP",
     categoria: "Solidariedade",
     texto: "Campanha de arrecadação de brinquedos para crianças em situação de vulnerabilidade social.",
@@ -158,6 +162,7 @@ export const projetosIniciais: ProjetoGecep[] = [
     publicado: true,
   },
   {
+    ano: 2026,
     titulo: "CEP Tour",
     categoria: "Acolhimento",
     texto: "Visita guiada para apresentar a estrutura do colégio e acolher estudantes que estão chegando.",
@@ -166,6 +171,7 @@ export const projetosIniciais: ProjetoGecep[] = [
     publicado: true,
   },
   {
+    ano: 2026,
     titulo: "Festa Junina",
     categoria: "Cultura e lazer",
     texto: "Atividade cultural para os três turnos, com música, dança, brincadeiras e integração estudantil.",
@@ -174,6 +180,7 @@ export const projetosIniciais: ProjetoGecep[] = [
     publicado: true,
   },
   {
+    ano: 2026,
     titulo: "CEP Sustentável",
     categoria: "Meio ambiente",
     texto: "Participação estudantil em ações de conscientização e acompanhamento de práticas sustentáveis no CEP.",

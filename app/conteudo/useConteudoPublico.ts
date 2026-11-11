@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 // importa a ordenação dos conteúdos
 import { ordenarConteudosMaisRecentes } from "./ordenacao";
 // importa os tipos de conteúdo
+import { tiposComAno } from "./ciclos";
 import type { DadosPorTipo, TipoConteudo } from "./tipos";
 
 // carrega conteúdos públicos mantendo dados iniciais como apoio
@@ -24,7 +25,7 @@ export function useConteudoPublico<T extends TipoConteudo>(
     const controle = new AbortController();
 
     // consulta os conteúdos públicos da api
-    fetch(`/api/conteudo?tipo=${tipo}`, { signal: controle.signal, cache: "no-store" })
+    fetch(`/api/conteudo?tipo=${tipo}${tiposComAno.includes(tipo) ? "&ano=todos" : ""}`, { signal: controle.signal, cache: "no-store" })
       .then(async (resposta) => {
         if (!resposta.ok) throw new Error("Conteúdo temporariamente indisponível.");
         // define o formato esperado da resposta

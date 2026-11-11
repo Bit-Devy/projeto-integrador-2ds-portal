@@ -3,6 +3,17 @@ import { sql } from "drizzle-orm";
 // importa os tipos de colunas tabelas e índices
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
+// guarda as chaves das páginas e os calendários de cada ano
+export const modulosPortal = sqliteTable("modulos_portal", {
+  chave: text("chave").primaryKey().notNull(), dadosJson: text("dados_json").notNull(),
+  atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+export const calendariosEscolares = sqliteTable("calendarios_escolares", {
+  ano: integer("ano").notNull(), modalidade: text("modalidade").notNull(), dadosJson: text("dados_json").notNull(),
+  publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
+  atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (tabela) => [primaryKey({ columns: [tabela.ano, tabela.modalidade] }), check("calendarios_modalidade_ck", sql`${tabela.modalidade} IN ('anual', 'semestral')`)]);
+
 // guarda as tentativas e os prazos de cada navegador
 export const limitesNavegador = sqliteTable("limites_navegador", {
   navegador: text("navegador").notNull(),
@@ -125,6 +136,7 @@ export const locaisColegio = sqliteTable(
 export const turmasAtividades = sqliteTable(
   "turmas_atividades",
   {
+    ano: integer("ano").notNull().default(2026),
     id: integer("id").primaryKey({ autoIncrement: true }),
     chaveImportacao: text("chave_importacao"),
     nivelEnsino: text("nivel_ensino").notNull().default("medio"),
@@ -468,6 +480,7 @@ export const atualizacoesCampeonato = sqliteTable(
 export const representantes = sqliteTable(
   "representantes",
   {
+    ano: integer("ano").notNull().default(2026),
     id: integer("id").primaryKey({ autoIncrement: true }),
     turmaAtividadeId: integer("turma_atividade_id").references(() => turmasAtividades.id, { onDelete: "restrict", onUpdate: "cascade" }),
     nome: text("nome").notNull(),

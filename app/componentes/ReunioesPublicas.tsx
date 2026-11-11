@@ -1,5 +1,7 @@
 "use client";
 
+import { anoDoPortal } from "../conteudo/periodos";
+
 import Link from "next/link";
 import { Children, useMemo, useState } from "react";
 import type { DetalheReuniao, ItemReuniaoPublico, ListaPaginada, PresencaPublica, ReuniaoPublica, VotacaoPublica } from "../eventos/tipos";
@@ -50,7 +52,7 @@ function SecaoReunioes({ titulo, descricao, destino, vazio, carregando, erro, re
 type FiltrosReuniao = { busca: string; ano: string; mes: string; tipo: string; situacao: string; turno: string; nivel: string };
 
 export function ListaReunioes({ filtrosIniciais = {} }: { filtrosIniciais?: Partial<FiltrosReuniao> }) {
-  const [filtros, setFiltros] = useState<FiltrosReuniao>({ busca: filtrosIniciais.busca || "", ano: filtrosIniciais.ano || "", mes: filtrosIniciais.mes || "", tipo: filtrosIniciais.tipo || "", situacao: filtrosIniciais.situacao || "", turno: filtrosIniciais.turno || "", nivel: filtrosIniciais.nivel || "" });
+  const [filtros, setFiltros] = useState<FiltrosReuniao>({ busca: filtrosIniciais.busca || "", ano: filtrosIniciais.ano || String(filtrosIniciais.situacao === "arquivado" ? anoDoPortal() - 1 : anoDoPortal()), mes: filtrosIniciais.mes || "", tipo: filtrosIniciais.tipo || "", situacao: filtrosIniciais.situacao || "", turno: filtrosIniciais.turno || "", nivel: filtrosIniciais.nivel || "" });
   const [pagina, setPagina] = useState(1);
   const [arquivoAberto, setArquivoAberto] = useState(() => Object.values(filtrosIniciais).some(Boolean));
   const ultimas = useConsultaPublica<ListaPaginada<ReuniaoPublica>>("/api/reunioes?situacao=encerrada&limite=3");
@@ -59,6 +61,7 @@ export function ListaReunioes({ filtrosIniciais = {} }: { filtrosIniciais?: Part
   const url = useMemo(() => {
     const parametros = new URLSearchParams({ pagina: String(pagina), limite: "24" });
     Object.entries(filtros).forEach(([chave, valor]) => { if (valor) parametros.set(chave, valor); });
+    if (!filtros.ano) parametros.set("ano", "todos");
     const consulta = parametros.toString();
     return `/api/reunioes${consulta ? `?${consulta}` : ""}`;
   }, [filtros, pagina]);
@@ -68,7 +71,7 @@ export function ListaReunioes({ filtrosIniciais = {} }: { filtrosIniciais?: Part
   const reunioesProximas = proximas.dados?.itens || [];
   const reunioesInternas = internas.dados?.itens || [];
   function alterar(campo: keyof FiltrosReuniao, valor: string) { setFiltros((atuais) => ({ ...atuais, [campo]: valor })); setPagina(1); }
-  function limpar() { setFiltros({ busca: "", ano: "", mes: "", tipo: "", situacao: "", turno: "", nivel: "" }); setPagina(1); }
+  function limpar() { setFiltros({ busca: "", ano: String(anoDoPortal()), mes: "", tipo: "", situacao: "", turno: "", nivel: "" }); setPagina(1); }
   return (
     <main id="conteudo">
       <CabecalhoPagina titulo="Reuniões e atas" resumo="Consulte reuniões publicadas, resumos, decisões, presenças históricas, atas e documentos." caminho="Eventos / Reuniões e atas" />

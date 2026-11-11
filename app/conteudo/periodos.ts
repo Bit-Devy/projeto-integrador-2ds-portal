@@ -3,6 +3,10 @@ export function anoDoPortal(data = new Date()) {
   return Number(new Intl.DateTimeFormat("pt-BR", { year: "numeric", timeZone: "America/Sao_Paulo" }).format(data));
 }
 
+// usa o dia do paraná também nas consultas feitas perto da virada do ano
+export function dataDoPortal(data = new Date()) { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(data); }
+export function dataSqlDoPortal(data = new Date()) { return `'${dataDoPortal(data)}'`; }
+
 // aceita todos os anos ou um ano válido informado no endereço
 export function anoInicial(valor?: string) {
   return valor === "todos" || /^(19|20|21)\d{2}$/.test(valor || "") ? valor! : String(anoDoPortal());

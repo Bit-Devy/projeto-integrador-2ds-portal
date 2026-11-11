@@ -2,6 +2,10 @@
 "use client";
 
 // importa a equipe de exemplo
+import { useState } from "react";
+import SeletorAno from "./SeletorAno";
+import { anoDoPortal } from "../conteudo/periodos";
+import { anoDoRegistro } from "../conteudo/ciclos";
 import { membros } from "../dados";
 // importa a busca de conteúdo público
 import { useConteudoPublico } from "../conteudo/useConteudoPublico";
@@ -12,20 +16,23 @@ import type { MembroGecep } from "../conteudo/tipos";
 // mostra os integrantes do grêmio
 export default function EquipeGecep() {
   // busca os integrantes publicados
-  const { dados: integrantes, carregando } = useConteudoPublico("membros", membros);
+  const { dados: dadosEquipe, carregando } = useConteudoPublico("membros", membros);
 
+  const [ano, setAno] = useState(String(anoDoPortal()));
+  const integrantes = dadosEquipe.filter((item) => ano === "todos" || anoDoRegistro(item as unknown as Record<string, unknown>, item.criadoEm) === Number(ano));
+  const seletorAno = <SeletorAno id="ano-equipe-publica" ano={ano} datas={dadosEquipe.map((item) => `${anoDoRegistro(item as unknown as Record<string, unknown>, item.criadoEm)}-01-01`)} alterar={setAno} />;
   // mostra o aviso quando não há integrantes
   if (!integrantes.length) {
     return (
-      <div className="estado-vazio-equipe">
+      <>{seletorAno}<div className="estado-vazio-equipe">
         <span aria-hidden="true">GE</span>
         <div><strong>Composição oficial ainda não publicada</strong><p>Os nomes, cargos, turmas e fotos poderão ser adicionados pelo painel da gestão.</p></div>
-      </div>
+      </div></>
     );
   }
 
   return (
-    <div className="grade-equipe">
+    <>{seletorAno}<div className="grade-equipe">
       {/* cartões dos integrantes */}
       {integrantes.map((integrante) => (
         <article className="cartao-integrante" key={`${integrante.nome}-${integrante.cargo}-${integrante.id ?? "pessoa"}`}>
@@ -41,7 +48,7 @@ export default function EquipeGecep() {
       ))}
       {/* aviso escondido durante a atualização */}
       {carregando && <p className="somente-leitor">Atualizando integrantes...</p>}
-    </div>
+    </div></>
   );
 }
 

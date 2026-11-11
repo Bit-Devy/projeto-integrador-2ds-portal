@@ -24,6 +24,10 @@ import PainelRepresentantes from "./PainelRepresentantes";
 // importa a biblioteca e os documentos usados em todo o portal
 import PainelDocumentos from "./PainelDocumentos";
 import NoticiasPainel from "./NoticiasPainel";
+// acrescenta as páginas modulares e a edição dos dias escolares
+import PainelCalendarioEscolar from "./PainelCalendarioEscolar";
+import PainelModulos from "./PainelModulos";
+import { confirmarNoPainel } from "./confirmacao-painel";
 import PainelSenhas from "./PainelSenhas";
 import PainelCargos from "./PainelCargos";
 import PainelHistoricoAcessos from "./PainelHistoricoAcessos";
@@ -35,6 +39,9 @@ import { confirmarEncerramentoDestaque } from "./encerrar-destaque";
 import { useSaidaPainel } from "./useSaidaPainel";
 import EscolherArquivo from "./BibliotecaArquivos";
 import SeletorPagina from "./SeletorPagina";
+import SeletorAno from "./SeletorAno";
+import { anoDoPortal } from "../conteudo/periodos";
+import { tiposComAno, anoDoRegistro } from "../conteudo/ciclos";
 // liga a composição da equipe às vagas do estatuto
 import CamposCargoEquipe from "./CamposCargoEquipe";
 import { obterCargoEquipe } from "../lib/equipe";
@@ -56,7 +63,8 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
   const [cargosAbertos, setCargosAbertos] = useState(false);
   const permiteConteudo = (item: TipoConteudo) => item === "documentos" ? ["documentos", "arquivos", "oficiais"].some((recurso) => pode(recurso as RecursoPainel)) : pode(recursoConteudo(item));
   const primeiroTipo = tiposConteudoPainel.find((item) => item !== "eventos" && permiteConteudo(item));
-  const primeiraSecao = !primeiroTipo ? ([["eventos", "eventos-internos"], ["interclasses", "interclasses"], ["reunioes", "reunioes"], ["representantes", "representantes"], ["turmas", "turmas"]] as const).find(([recurso]) => pode(recurso))?.[1] : undefined;
+  const [secaoServico, setSecaoServico] = useState<"calendario-escolar" | "paginas" | null>(!primeiroTipo && pode("paginas") ? "paginas" : null);
+  const primeiraSecao = !primeiroTipo && !pode("paginas") ? ([["eventos", "eventos-internos"], ["interclasses", "interclasses"], ["reunioes", "reunioes"], ["representantes", "representantes"], ["turmas", "turmas"]] as const).find(([recurso]) => pode(recurso))?.[1] : undefined;
   const [senhasAbertas, setSenhasAbertas] = useState(false);
   const [historicoAberto, setHistoricoAberto] = useState(false);
   // guarda a seção de conteúdo atual
@@ -69,12 +77,14 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
   const [tipo, setTipo] = useState<TipoConteudo>(primeiroTipo || "noticias");
   const [abaDocumentos, setAbaDocumentos] = useState<"arquivos" | "normas" | "publicacoes">(pode("arquivos") ? "arquivos" : pode("oficiais") ? "normas" : "publicacoes");
   // controla a seção de mensagens
-  const [mensagensAbertas, setMensagensAbertas] = useState(!primeiroTipo && !primeiraSecao && !pode("mapa") && pode("mensagens"));
+  const [mensagensAbertas, setMensagensAbertas] = useState(!primeiroTipo && !pode("paginas") && !primeiraSecao && !pode("mapa") && pode("mensagens"));
   // controla a seção do mapa
-  const [mapaAberto, setMapaAberto] = useState(!primeiroTipo && !primeiraSecao && pode("mapa"));
+  const [mapaAberto, setMapaAberto] = useState(!primeiroTipo && !pode("paginas") && !primeiraSecao && pode("mapa"));
   // controla as áreas especializadas de eventos e representação
   const [secaoEventos, setSecaoEventos] = useState<SecaoEventosPainel | null>(primeiraSecao || null);
   // guarda os registros carregados
+  const [anoConteudo, setAnoConteudo] = useState(String(anoDoPortal()));
+  const [apenasArquivo, setApenasArquivo] = useState(false);
   const [itens, setItens] = useState<RegistroConteudo[]>([]);
   // controla o carregamento
   const [carregando, setCarregando] = useState(true);
@@ -100,7 +110,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
 
   // carrega os registros da seção atual
   useEffect(() => {
-    if (tipo === "noticias" || cargosAbertos || senhasAbertas || historicoAberto || secaoEventos || mapaAberto || mensagensAbertas || !podeAcessar(usuario.cargo, recursoConteudo(tipo), true, usuario.permissoes)) return;
+    if (tipo === "noticias" || cargosAbertos || senhasAbertas || historicoAberto || secaoEventos || secaoServico || mapaAberto || mensagensAbertas || !podeAcessar(usuario.cargo, recursoConteudo(tipo), true, usuario.permissoes)) return;
     // evita atualizar a tela depois de sair
     let ativo = true;
     // consulta todos os registros do tipo
@@ -114,18 +124,18 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
       .catch((falha) => ativo && setErro(falha instanceof Error ? falha.message : "Erro inesperado."))
       .finally(() => ativo && setCarregando(false));
     return () => { ativo = false; };
-  }, [tipo, usuario.cargo, usuario.permissoes, cargosAbertos, senhasAbertas, historicoAberto, secaoEventos, mapaAberto, mensagensAbertas]);
+  }, [tipo, usuario.cargo, usuario.permissoes, cargosAbertos, senhasAbertas, historicoAberto, secaoEventos, secaoServico, mapaAberto, mensagensAbertas]);
 
   // troca a seção de conteúdo
   async function trocarTipo(novoTipo: TipoConteudo) {
-    if (!cargosAbertos && !senhasAbertas && !historicoAberto && !mensagensAbertas && !mapaAberto && !secaoEventos && tipo === novoTipo) return;
+    if (!cargosAbertos && !senhasAbertas && !historicoAberto && !mensagensAbertas && !mapaAberto && !secaoEventos && !secaoServico && tipo === novoTipo) return;
     if (!await prepararTroca()) return;
     setCarregando(true);
     setErro("");
     setMensagensAbertas(false);
     setMapaAberto(false);
     setSecaoEventos(null);
-    setTipo(novoTipo);
+    setTipo(novoTipo); setAnoConteudo(String(anoDoPortal())); setApenasArquivo(false);
     setFormulario(null);
     setIdEditando(null);
   }
@@ -174,7 +184,15 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     setCargosAbertos(false);
     setSenhasAbertas(false);
     setHistoricoAberto(false);
+    setSecaoServico(null);
     return true;
+  }
+
+  // confirma os editores abertos antes de mostrar os serviços especializados
+  async function abrirServico(secao: "calendario-escolar" | "paginas") {
+    if (secaoServico === secao || !await prepararTroca()) return;
+    setFormulario(null); setSecaoEventos(null); setMapaAberto(false); setMensagensAbertas(false); setErro(""); setSecaoServico(secao);
+    if (secao === "calendario-escolar") setTipo("agenda");
   }
 
   // confirma a saída antes de trocar de página ou voltar pelo navegador
@@ -184,7 +202,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
   function novoRegistro() {
     // cria o valor inicial de cada campo
     const valores = Object.fromEntries(
-      configuracao.campos.map((campo) => [campo.chave, campo.tipo === "checkbox" ? false : campo.tipo === "number" ? 0 : campo.opcoes?.[0]?.valor ?? ""]),
+      configuracao.campos.map((campo) => [campo.chave, campo.tipo === "checkbox" ? false : campo.chave === "ano" ? anoDoPortal() : campo.tipo === "number" ? 0 : campo.opcoes?.[0]?.valor ?? ""]),
     );
     setFormulario({ ...valores, ...(tipo === "membros" ? { cargoChave: "", vaga: "", turno: "" } : {}), areaResponsavel: areaRestrita(usuario.cargo) || "geral" });
     setPublicado(true);
@@ -244,7 +262,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
 
   // exclui um registro após confirmação
   async function excluir(item: RegistroConteudo) {
-    if (!window.confirm(`Excluir “${item.titulo}”? Esta ação não pode ser desfeita.`)) return;
+    if (!await confirmarNoPainel("Excluir registro?", `Excluir “${item.titulo}”? Esta ação não pode ser desfeita.`, "Excluir", "Cancelar")) return;
     const resposta = await fetch(`/api/conteudo?id=${item.id}`, { method: "DELETE" });
     if (resposta.ok) setItens((atuais) => atuais.filter((registro) => registro.id !== item.id));
     else setErro("Não foi possível excluir o registro.");
@@ -287,8 +305,9 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     setConteudoSujo(false);
   }
 
-  const recursoAtual: RecursoPainel = mapaAberto ? "mapa" : mensagensAbertas ? "mensagens" : secaoEventos === "eventos-internos" ? "eventos" : secaoEventos || (tipo === "documentos" ? abaDocumentos === "arquivos" ? "arquivos" : abaDocumentos === "normas" ? "oficiais" : "documentos" : recursoConteudo(tipo));
+  const recursoAtual: RecursoPainel = secaoServico === "paginas" ? "paginas" : secaoServico === "calendario-escolar" ? "calendario" : mapaAberto ? "mapa" : mensagensAbertas ? "mensagens" : secaoEventos === "eventos-internos" ? "eventos" : secaoEventos || (tipo === "documentos" ? abaDocumentos === "arquivos" ? "arquivos" : abaDocumentos === "normas" ? "oficiais" : "documentos" : recursoConteudo(tipo));
   const somenteConsulta = !pode(recursoAtual, true);
+  const itensDoPeriodo = itens.filter((item) => !tiposComAno.includes(tipo) || (anoConteudo === "todos" || anoDoRegistro(item.dados as unknown as Record<string, unknown>, item.criadoEm) === Number(anoConteudo)) && (!apenasArquivo || anoDoRegistro(item.dados as unknown as Record<string, unknown>, item.criadoEm) !== anoDoPortal()));
   return (
     <div className="painel-administrativo">
       {/* menu lateral do painel */}
@@ -299,7 +318,8 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
         <nav aria-label="Seções do painel">
           {/* Eventos legados continuam no backup e na migração, mas novas edições
               usam somente o painel relacional para não criar duas fontes. */}
-          {tiposConteudoPainel.filter((nomeTipo) => nomeTipo !== "eventos" && permiteConteudo(nomeTipo)).map((nomeTipo) => <button type="button" className={!cargosAbertos && !senhasAbertas && !historicoAberto && !mensagensAbertas && !mapaAberto && !secaoEventos && tipo === nomeTipo ? "ativo" : ""} onClick={() => trocarTipo(nomeTipo)} key={nomeTipo}>{configuracaoPainel[nomeTipo].nome}</button>)}
+          {tiposConteudoPainel.filter((nomeTipo) => nomeTipo !== "eventos" && permiteConteudo(nomeTipo)).map((nomeTipo) => <button type="button" className={!cargosAbertos && !senhasAbertas && !historicoAberto && !mensagensAbertas && !mapaAberto && !secaoEventos && secaoServico !== "paginas" && tipo === nomeTipo ? "ativo" : ""} onClick={() => trocarTipo(nomeTipo)} key={nomeTipo}>{configuracaoPainel[nomeTipo].nome}</button>)}
+          {pode("paginas") && <button type="button" className={secaoServico === "paginas" ? "ativo" : ""} onClick={() => void abrirServico("paginas")}>Páginas e módulos</button>}
           <span className="grupo-menu-painel">Eventos, reuniões e turmas</span>
           {pode("eventos") && <button type="button" className={secaoEventos === "eventos-internos" ? "ativo" : ""} onClick={() => abrirSecaoEventos("eventos-internos")}>Eventos internos</button>}
           {pode("interclasses") && <button type="button" className={secaoEventos === "interclasses" ? "ativo" : ""} onClick={() => abrirSecaoEventos("interclasses")}>Interclasses e campeonatos</button>}
@@ -323,9 +343,10 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
       <dialog ref={janelaCancelar} className="dialogo-anonimato" aria-labelledby="titulo-cancelar-noticia" onCancel={() => setCancelarNoticia(false)}><h2 id="titulo-cancelar-noticia">Descartar alterações?</h2><p>As alterações não salvas desta notícia serão perdidas.</p><div className="acoes-dialogo-anonimato"><button type="button" className="botao-secundario" onClick={() => { janelaCancelar.current?.close(); setCancelarNoticia(false); }}>Continuar editando</button><button type="button" className="botao-primario" onClick={() => { janelaCancelar.current?.close(); setCancelarNoticia(false); setFormulario(null); setIdEditando(null); setConteudoSujo(false); }}>Descartar alterações</button></div></dialog>
       {/* conteúdo da seção escolhida */}
       <div className="conteudo-painel">
+        {!cargosAbertos && !historicoAberto && !senhasAbertas && !secaoEventos && !mapaAberto && !mensagensAbertas && tipo === "agenda" && secaoServico !== "paginas" && <div className="abas-documentos" role="group" aria-label="Áreas do calendário"><button type="button" aria-pressed={!secaoServico} onClick={() => void trocarTipo("agenda")}>Agenda do GECEP</button><button type="button" aria-pressed={secaoServico === "calendario-escolar"} onClick={() => void abrirServico("calendario-escolar")}>Calendário escolar e faltas</button></div>}
         {/* painel do mapa ou das mensagens */}
         {!cargosAbertos && !historicoAberto && !senhasAbertas && !secaoEventos && !mapaAberto && !mensagensAbertas && tipo === "documentos" && <div className="abas-documentos" role="group" aria-label="Áreas de documentos">{([["arquivos", "Arquivos"], ["normas", "Estatuto e Regimento"], ["publicacoes", "Publicações"]] as const).filter(([aba]) => pode(aba === "arquivos" ? "arquivos" : aba === "normas" ? "oficiais" : "documentos")).map(([aba, nome]) => <button type="button" key={aba} aria-pressed={abaDocumentos === aba} onClick={async () => { if (!await prepararTroca()) return; setFormulario(null); setAbaDocumentos(aba); }}>{nome}</button>)}</div>}
-        {cargosAbertos ? <PainelCargos aoMudarEstadoSujo={setPainelFilhoSujo} /> : historicoAberto ? <PainelHistoricoAcessos /> : senhasAbertas ? <PainelSenhas aoMudarEstadoSujo={setPainelFilhoSujo} /> : !pode(recursoAtual) ? <section className="consulta-painel"><h1>Nenhum menu disponível</h1><p>Solicite à administração a liberação dos menus necessários para seu cargo.</p></section> : mensagensAbertas ? <PainelMensagens somenteConsulta={somenteConsulta} /> : somenteConsulta ? <PainelConsulta key={recursoAtual} recurso={recursoAtual} publicos={cargo.publicos} /> : secaoEventos === "eventos-internos" ? (
+        {cargosAbertos ? <PainelCargos aoMudarEstadoSujo={setPainelFilhoSujo} /> : historicoAberto ? <PainelHistoricoAcessos /> : senhasAbertas ? <PainelSenhas aoMudarEstadoSujo={setPainelFilhoSujo} /> : !pode(recursoAtual) ? <section className="consulta-painel"><h1>Nenhum menu disponível</h1><p>Solicite à administração a liberação dos menus necessários para seu cargo.</p></section> : secaoServico === "paginas" ? <PainelModulos aoMudarEstadoSujo={setPainelFilhoSujo} somenteConsulta={somenteConsulta} /> : secaoServico === "calendario-escolar" ? <PainelCalendarioEscolar aoMudarEstadoSujo={setPainelFilhoSujo} somenteConsulta={somenteConsulta} /> : mensagensAbertas ? <PainelMensagens somenteConsulta={somenteConsulta} /> : somenteConsulta ? <PainelConsulta key={recursoAtual} recurso={recursoAtual} publicos={cargo.publicos} /> : secaoEventos === "eventos-internos" ? (
           <PainelEventosInternos cargo={usuario.cargo} aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : secaoEventos === "interclasses" ? (
           <PainelInterclasses aoMudarEstadoSujo={setPainelFilhoSujo} />
@@ -342,11 +363,13 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
             {/* título e botão de novo registro */}
             <header className="topo-painel">
               <div><span className="rotulo-secao">PAINEL DE CONTEÚDO</span><h1>{configuracao.nome}</h1><p>{configuracao.descricao}</p></div>
-              {!formulario && (tipo !== "documentos" || abaDocumentos === "publicacoes") && <button type="button" onClick={novoRegistro}>+ Novo {configuracao.singular}</button>}
+              {!formulario && (tipo !== "documentos" || abaDocumentos === "publicacoes") && <div className="acoes-topo-servicos">{tipo === "noticias" && pode("calendario", true) && <button className="botao-secundario" type="button" onClick={() => void trocarTipo("agenda")}>Publicar no calendário</button>}<button className="botao-primario" type="button" onClick={novoRegistro}>+ Novo {configuracao.singular}</button></div>}
             </header>
 
             {/* aviso de erro */}
             {erro && <p className="erro-painel" role="alert">{erro}</p>}
+
+            {!formulario && tiposComAno.includes(tipo) && <div className="ferramentas-ano-painel"><button className="pev-botao" type="button" aria-pressed={!apenasArquivo} onClick={() => { setApenasArquivo(false); setAnoConteudo(String(anoDoPortal())); }}>Ano atual</button><button className="pev-botao" type="button" aria-pressed={apenasArquivo} onClick={() => { setApenasArquivo(true); setAnoConteudo("todos"); }}>Arquivados</button><SeletorAno id="ano-conteudo-painel" ano={anoConteudo} datas={itens.map((item) => `${anoDoRegistro(item.dados as unknown as Record<string, unknown>, item.criadoEm)}-01-01`)} alterar={setAnoConteudo} /></div>}
 
             {/* separa os arquivos privados das versões oficiais e das publicações */}
 
@@ -358,7 +381,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
                 <div className="titulo-formulario-painel"><div><small>{idEditando ? "EDITANDO" : "NOVO REGISTRO"}</small><h2>{idEditando ? "Atualizar" : "Adicionar"} {configuracao.singular}</h2></div><button type="button" onClick={fecharFormulario}>Fechar</button></div>
                 {/* campos configurados para a seção */}
                 <div className="grade-campos-painel">
-                  {["noticias", "projetos", "documentos"].includes(tipo) && <label className="campo-largo"><span>Área responsável</span>{areaRestrita(usuario.cargo) ? <input value={areasPainel.find((area) => area.chave === areaRestrita(usuario.cargo))?.nome || ""} readOnly /> : <select value={String(formulario.areaResponsavel || "geral")} onChange={(evento) => void mudarFormulario("areaResponsavel", evento.target.value)}>{areasPainel.map((area) => <option key={area.chave} value={area.chave}>{area.nome}</option>)}</select>}<small>A área define quem pode editar esta publicação. Use Colégio e comunidade escolar para assuntos do CEP que afetam os estudantes. Comunicação e acesso geral acompanham todas as áreas.</small></label>}
+                  {["noticias", "projetos", "documentos", "agenda", "cardapios", "oportunidades"].includes(tipo) && <label className="campo-largo"><span>Área responsável</span>{areaRestrita(usuario.cargo) ? <input value={areasPainel.find((area) => area.chave === areaRestrita(usuario.cargo))?.nome || ""} readOnly /> : <select value={String(formulario.areaResponsavel || "geral")} onChange={(evento) => void mudarFormulario("areaResponsavel", evento.target.value)}>{areasPainel.map((area) => <option key={area.chave} value={area.chave}>{area.nome}</option>)}</select>}<small>A área define quem pode editar esta publicação. Use Colégio e comunidade escolar para assuntos do CEP que afetam os estudantes. Comunicação e acesso geral acompanham todas as áreas.</small></label>}
 
                   {tipo === "membros" && <CamposCargoEquipe dados={formulario} mudar={mudarFormulario} />}
                   {configuracao.campos.filter((campo) => (tipo !== "membros" || campo.chave !== "cargo") && (!campo.dependeDe || Boolean(formulario[campo.dependeDe]))).map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} key={campo.chave} />)}
@@ -372,10 +395,10 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
               <div className="lista-painel">
                 {/* estados da lista */}
                 {carregando && <p>Carregando registros...</p>}
-                {!carregando && !itens.length && <div className="vazio-painel"><strong>Nenhum registro</strong><p>Use o botão acima para adicionar o primeiro item.</p></div>}
+                {!carregando && !itensDoPeriodo.length && <div className="vazio-painel"><strong>Nenhum registro</strong><p>Use o botão acima para adicionar o primeiro item.</p></div>}
                 {/* registros da seção */}
-                {itens.filter((item) => !(tipo === "documentos" && "documentoOficial" in item.dados)).map((item) => (
-                  <article key={item.id}><span className={item.publicado ? "estado-publicado" : "estado-rascunho"}>{item.publicado ? "Publicado" : "Rascunho"}</span><div><h2>{item.titulo}</h2><p>Atualizado em {formatarData(item.atualizadoEm)}</p></div><div className="acoes-item-painel"><button type="button" onClick={() => editarRegistro(item)}>Editar</button><button type="button" onClick={() => excluir(item)}>Excluir</button></div></article>
+                {itensDoPeriodo.filter((item) => !(tipo === "documentos" && "documentoOficial" in item.dados)).map((item) => (
+                  <article key={item.id}><span className={item.publicado ? "estado-publicado" : "estado-rascunho"}>{item.arquivadoAno ? `Arquivo · ${item.ano}` : item.publicado ? "Publicado" : "Rascunho"}</span><div><h2>{item.titulo}</h2><p>Atualizado em {formatarData(item.atualizadoEm)}</p></div><div className="acoes-item-painel"><button type="button" onClick={() => editarRegistro(item)}>Editar</button><button type="button" onClick={() => excluir(item)}>Excluir</button></div></article>
                 ))}
               </div>
             )}
@@ -397,9 +420,9 @@ function CampoFormulario({ campo, valor, mudar, enviarArquivo }: { campo: CampoP
   // mostra o endereço e envio de arquivo
   if (campo.tipo === "arquivo") return <div className="campo-largo"><label><span>{campo.rotulo}</span><input type="text" inputMode="url" value={String(valor ?? "")} onChange={(evento) => mudar(evento.target.value)} placeholder="Cole um link ou envie um arquivo abaixo" required={campo.obrigatorio} /><input className="entrada-arquivo" type="file" accept={["imagemUrl", "fotoUrl"].includes(campo.chave) ? "image/png,image/jpeg,image/webp" : ".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp"} onChange={(evento) => enviarArquivo(evento.target.files?.[0])} />{campo.dica && <small>{campo.dica}</small>}</label><EscolherArquivo aceitar={["imagemUrl", "fotoUrl"].includes(campo.chave) ? "imagem" : "todos"} selecionar={(arquivo) => mudar(arquivo.url)} /></div>;
   // oferece páginas publicadas para o botão interno da notícia
-  if (campo.tipo === "pagina") return <label><span>{campo.rotulo}</span><SeletorPagina valor={String(valor ?? "")} mudar={(endereco) => mudar(endereco)} /></label>;
+  if (campo.tipo === "pagina") return <label><span>{campo.rotulo}</span><SeletorPagina valor={String(valor ?? "")} mudar={(endereco) => mudar(endereco)} obrigatorio={campo.chave !== "paginaUrl"} />{campo.dica && <small>{campo.dica}</small>}</label>;
   // mostra um campo simples
-  return <label className={campo.chave === "destaqueAte" ? "campo-largo" : undefined}><span>{campo.rotulo}</span><input type={campo.tipo} value={String(valor ?? "")} step={campo.tipo === "number" ? "0.01" : undefined} onChange={(evento) => mudar(campo.tipo === "number" ? Number(evento.target.value) : evento.target.value)} required={campo.obrigatorio} />{campo.dica && <small>{campo.dica}</small>}</label>;
+  return <label className={campo.chave === "destaqueAte" ? "campo-largo" : undefined}><span>{campo.rotulo}</span><input type={campo.tipo} value={String(valor ?? "")} step={campo.tipo === "number" ? campo.chave === "ano" ? "1" : "0.01" : undefined} onChange={(evento) => mudar(campo.tipo === "number" ? Number(evento.target.value) : evento.target.value)} required={campo.obrigatorio} />{campo.dica && <small>{campo.dica}</small>}</label>;
 }
 
 

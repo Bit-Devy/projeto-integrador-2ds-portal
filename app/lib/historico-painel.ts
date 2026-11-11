@@ -21,7 +21,7 @@ export async function registrarEntradaPainel(acesso: Pick<AcessoSalvo, "id" | "n
 export async function prepararHistoricoAcao(request: Request): Promise<ContextoAcao | null> {
   const caminho = new URL(request.url);
   const recurso = caminho.pathname.split("/")[2];
-  if (!["POST", "PUT", "DELETE"].includes(request.method) || !["conteudo", "eventos", "interclasses", "reunioes", "representantes", "mapa", "arquivos", "documentos-oficiais", "acessos", "cargos", "mensagens"].includes(recurso)) return null;
+  if (!["POST", "PUT", "DELETE"].includes(request.method) || !["conteudo", "eventos", "interclasses", "reunioes", "representantes", "mapa", "arquivos", "documentos-oficiais", "acessos", "cargos", "mensagens", "modulos", "calendario"].includes(recurso)) return null;
   if (recurso === "mensagens" && request.method === "POST") return null;
   const cookie = (request.headers.get("cookie") || "").split(";").map((parte) => parte.trim()).find((parte) => parte.startsWith(`${NOME_COOKIE_SESSAO}=`));
   if (!cookie) return null;
@@ -70,6 +70,8 @@ function resumirAcao(contexto: ContextoAcao, nome: string, registro: Objeto) {
   if (recurso === "arquivos") return metodo === "POST" ? `Arquivo${citado} enviado à biblioteca` : metodo === "DELETE" ? "Arquivo removido da biblioteca" : "Visibilidade de arquivo atualizada";
   if (recurso === "documentos-oficiais") return "Versão de documento oficial atualizada no portal";
   if (recurso === "acessos") return metodo === "POST" ? "Novo acesso criado no registro de senhas" : metodo === "DELETE" ? `Acesso${citado} revogado` : `Senha do acesso${citado} substituída`;
+  if (recurso === "modulos") return "Páginas e setores do portal atualizados";
+  if (recurso === "calendario") return "Calendário escolar atualizado";
   if (recurso === "cargos") return `Permissões do cargo${citado} atualizadas`;
   if (recurso === "mensagens") return metodo === "DELETE" ? `Mensagem #${Number(contexto.id)} excluída` : `Situação da mensagem #${Number(contexto.id)} atualizada`;
   const especiais: Record<string, string> = {
@@ -100,12 +102,12 @@ function resumirAcao(contexto: ContextoAcao, nome: string, registro: Objeto) {
 
 // escolhe apenas tabelas conhecidas para buscar os nomes dos registros
 function alvoDaAcao(recurso: string, entidade: string, tipo: string): Alvo | null {
-  if (recurso === "conteudo") return { tabela: "conteudos", nome: ({ noticias: "Notícia", projetos: "Projeto", documentos: "Documento", membros: "Integrante", movimentos: "Lançamento financeiro", canais: "Canal de contato", eventos: "Evento" } as Record<string, string>)[tipo] || "Conteúdo", cadastrado: ["membros", "movimentos", "canais"].includes(tipo) };
+  if (recurso === "conteudo") return { tabela: "conteudos", nome: ({ agenda: "Compromisso do calendário", cardapios: "Item de cardápio", oportunidades: "Oportunidade", noticias: "Notícia", projetos: "Projeto", documentos: "Documento", membros: "Integrante", movimentos: "Lançamento financeiro", canais: "Canal de contato", eventos: "Evento" } as Record<string, string>)[tipo] || "Conteúdo", cadastrado: ["membros", "movimentos", "canais"].includes(tipo) };
   if (recurso === "mapa") return ({ turmas: { tabela: "turmas_atividades", nome: "Turma", cadastrado: true }, locais: { tabela: "locais_colegio", nome: "Sala ou local", cadastrado: true }, ensalamentos: { tabela: "ensalamentos", nome: "Ensalamento", cadastrado: true }, categorias: { tabela: "categorias_mapa", nome: "Categoria do mapa", cadastrado: true } } as Record<string, Alvo>)[entidade] || { tabela: "", nome: "Mapa" };
   if (recurso === "eventos") return entidade === "documentos" ? { tabela: "documentos_eventos", nome: "Documento de evento", arquivar: true } : { tabela: "eventos_internos", nome: "Evento", arquivar: true };
   if (recurso === "interclasses") return ({ documentos: { tabela: "documentos_campeonato", nome: "Documento do campeonato", arquivar: true }, participantes: { tabela: "participantes_campeonato", nome: "Participante do campeonato", cadastrado: true, arquivar: true }, fases: { tabela: "fases_campeonato", nome: "Fase do campeonato", arquivar: true }, partidas: { tabela: "partidas", nome: "Partida", arquivar: true }, atualizacoes: { tabela: "atualizacoes_campeonato", nome: "Atualização do campeonato", arquivar: true } } as Record<string, Alvo>)[entidade] || { tabela: "campeonatos", nome: "Campeonato", arquivar: true };
   if (recurso === "reunioes") return ({ documentos: { tabela: "documentos_reuniao", nome: "Documento de reunião", arquivar: true }, itens: { tabela: "itens_reuniao", nome: "Item de reunião", arquivar: true }, votacoes: { tabela: "votacoes_reuniao", nome: "Votação", arquivar: true }, presencas: { tabela: "presencas_reuniao", nome: "Presença", cadastrado: true, arquivar: true } } as Record<string, Alvo>)[entidade] || { tabela: "reunioes", nome: "Reunião", arquivar: true };
-  return ({ representantes: { tabela: "representantes", nome: "Representante", cadastrado: true, arquivar: true }, acessos: { tabela: "acessos_painel", nome: "Acesso" }, cargos: { tabela: "", nome: "Cargo" }, arquivos: { tabela: "", nome: "Arquivo" }, "documentos-oficiais": { tabela: "", nome: "Documento oficial" }, mensagens: { tabela: "mensagens", nome: "Mensagem" } } as Record<string, Alvo>)[recurso] || null;
+  return ({ modulos: { tabela: "", nome: "Páginas e módulos" }, calendario: { tabela: "", nome: "Calendário escolar" }, representantes: { tabela: "representantes", nome: "Representante", cadastrado: true, arquivar: true }, acessos: { tabela: "acessos_painel", nome: "Acesso" }, cargos: { tabela: "", nome: "Cargo" }, arquivos: { tabela: "", nome: "Arquivo" }, "documentos-oficiais": { tabela: "", nome: "Documento oficial" }, mensagens: { tabela: "mensagens", nome: "Mensagem" } } as Record<string, Alvo>)[recurso] || null;
 }
 function objeto(valor: unknown): Objeto { return valor && typeof valor === "object" && !Array.isArray(valor) ? valor as Objeto : {}; }
 function objetoJson(valor: unknown) { try { return objeto(JSON.parse(String(valor || "{}"))); } catch { return {}; } }

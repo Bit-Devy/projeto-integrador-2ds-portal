@@ -1,5 +1,7 @@
 "use client";
 
+import { anoDoPortal } from "../conteudo/periodos";
+
 import Link from "next/link";
 import { Children, useEffect, useMemo, useRef, useState } from "react";
 import type { ClassificacaoPublica, DocumentoPublico, FasePublica, InterclassePublico, JogoPublico, ParticipantePublico, RespostaLista } from "../eventos/modelo-publico";
@@ -90,7 +92,7 @@ function SecaoInterclasses({ titulo, descricao, destino, vazio, carregando, erro
 type FiltrosInterclasse = { situacao: string; ano: string; modalidade: string; categoria: string; turno: string; busca: string };
 
 export function ListaInterclasses({ filtrosIniciais = {} }: { filtrosIniciais?: Partial<FiltrosInterclasse> }) {
-  const [filtros, setFiltros] = useState<FiltrosInterclasse>({ situacao: filtrosIniciais.situacao || "", ano: filtrosIniciais.ano || "", modalidade: filtrosIniciais.modalidade || "", categoria: filtrosIniciais.categoria || "", turno: filtrosIniciais.turno || "", busca: filtrosIniciais.busca || "" });
+  const [filtros, setFiltros] = useState<FiltrosInterclasse>({ situacao: filtrosIniciais.situacao || "", ano: filtrosIniciais.ano || String(filtrosIniciais.situacao === "arquivado" ? anoDoPortal() - 1 : anoDoPortal()), modalidade: filtrosIniciais.modalidade || "", categoria: filtrosIniciais.categoria || "", turno: filtrosIniciais.turno || "", busca: filtrosIniciais.busca || "" });
   const [pagina, setPagina] = useState(1);
   const [esporteAtivo, setEsporteAtivo] = useState("");
   const [arquivoAberto, setArquivoAberto] = useState(() => Object.values(filtrosIniciais).some(Boolean));
@@ -100,6 +102,7 @@ export function ListaInterclasses({ filtrosIniciais = {} }: { filtrosIniciais?: 
   const url = useMemo(() => {
     const parametros = new URLSearchParams({ pagina: String(pagina), limite: "24" });
     Object.entries(filtros).forEach(([chave, valor]) => { if (valor) parametros.set(chave, valor); });
+    if (!filtros.ano) parametros.set("ano", "todos");
     const consulta = parametros.toString();
     return `/api/interclasses${consulta ? `?${consulta}` : ""}`;
   }, [filtros, pagina]);
@@ -113,7 +116,7 @@ export function ListaInterclasses({ filtrosIniciais = {} }: { filtrosIniciais?: 
     .sort((primeiro, segundo) => String(segundo.jogo.atualizadoEm || segundo.jogo.data || "").localeCompare(String(primeiro.jogo.atualizadoEm || primeiro.jogo.data || "")))
     .slice(0, 3);
   function alterar(campo: keyof FiltrosInterclasse, valor: string) { setFiltros((atuais) => ({ ...atuais, [campo]: valor })); setPagina(1); }
-  function limpar() { setFiltros({ situacao: "", ano: "", modalidade: "", categoria: "", turno: "", busca: "" }); setPagina(1); }
+  function limpar() { setFiltros({ situacao: "", ano: String(anoDoPortal()), modalidade: "", categoria: "", turno: "", busca: "" }); setPagina(1); }
   return (
     <main id="conteudo">
       <CabecalhoPagina titulo="Interclasses" resumo="Sua turma em jogo. Acompanhe os confrontos, descubra os próximos jogos e torça até a final." caminho="Eventos / Interclasses" />

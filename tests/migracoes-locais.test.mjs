@@ -25,6 +25,16 @@ async function bancoDaPrevia() {
 const retrato = (banco) => banco.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all()
   .map(({ name }) => [name, banco.prepare(`SELECT * FROM "${name}" ORDER BY rowid`).all()]);
 
+// a prévia pode criar o mesmo calendário com a tabela escrita em uma única linha
+test("reconhece restrições completas em tabelas de uma linha", () => {
+  const primeiro = new DatabaseSync(":memory:"), segundo = new DatabaseSync(":memory:");
+  try {
+    primeiro.exec("CREATE TABLE exemplo (tipo TEXT CHECK (tipo IN ('anual', 'semestral')), total INTEGER CHECK (total >= 0))");
+    segundo.exec("CREATE TABLE exemplo (tipo TEXT CHECK (tipo IN ('anual', 'semestral')),\n total INTEGER CHECK (total >= 0)\n)");
+    assert.deepEqual(conferirEstrutura(lerEstrutura(primeiro), lerEstrutura(segundo)), []);
+  } finally { primeiro.close(); segundo.close(); }
+});
+
 test("reconhece a estrutura inicializada pelo site sem modificar os registros", async () => {
   const banco = await bancoDaPrevia();
   try {

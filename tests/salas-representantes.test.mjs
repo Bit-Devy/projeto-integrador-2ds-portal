@@ -53,7 +53,7 @@ test("criar sala pode vincular uma turma publicada no turno e na validade dela",
 // uma turma fora do público não pode ocupar uma sala por esse atalho
 test("sala só aceita turma existente ativa publicada e dentro da validade", () => comBanco(async (sqlite) => {
   const antes = sqlite.prepare("SELECT COUNT(*) AS total FROM locais_colegio").get().total;
-  for (const outros of [{ ativo: false }, { publicado: false }, { fimValidade: "2000-01-01" }, { inicioValidade: "2999-01-01" }]) {
+  for (const outros of [{ ativo: false }, { publicado: false }, { fimValidade: "2000-01-01" }, { inicioValidade: "2027-01-01" }]) {
     const item = await criarRegistroMapa("turmas", turma("Indisponível", outros));
     await assert.rejects(criarRegistroMapa("locais", { nome: "Não salvar", tipo: "sala_aula", ala: "Par", publicado: true, turmaId: item.id }), /turma já publicada/);
   }
@@ -76,8 +76,13 @@ test("editar sala com turma conflitante exige confirmação e salva tudo junto",
 }));
 
 // simula a virada do ano com o mesmo filtro usado no banco publicado
-test("em janeiro de 2027 só mostra mandatos válidos naquele período", () => comBanco(async (sqlite) => {
-  sqlite.function("date", (valor) => valor === "now" ? "2027-01-01" : valor);
+test("em janeiro de 2027 só mostra mandatos válidos naquele período", () => comBanco(async () => {
+  const DataOriginal = globalThis.Date;
+  globalThis.Date = class extends DataOriginal {
+    constructor(...argumentos) { super(...(argumentos.length ? argumentos : ["2027-01-01T15:00:00Z"])); }
+    static now() { return new DataOriginal("2027-01-01T15:00:00Z").getTime(); }
+  };
+  try {
   const item = await criarRegistroMapa("turmas", turma("2DS"));
   const encerrado = await criarRepresentante(pessoa(item.id, { inicioMandato: "2026-01-01", fimMandato: "2026-12-31" }));
   const atual = await criarRepresentante(pessoa(item.id, { inicioMandato: "2027-01-01", fimMandato: "2027-12-31" }));
@@ -85,6 +90,7 @@ test("em janeiro de 2027 só mostra mandatos válidos naquele período", () => c
   assert.deepEqual((await listarRepresentantes(new URLSearchParams())).itens.map((registro) => registro.id), [atual.id]);
   const painel = await listarRepresentantes(new URLSearchParams(), true);
   assert.ok([encerrado.id, atual.id, futuro.id].every((id) => painel.itens.some((registro) => registro.id === id)));
+  } finally { globalThis.Date = DataOriginal; }
 }));
 
 test("sala ocupada exige confirmação e a substituição atualiza o mapa sem apagar o histórico", () => comBanco(async (sqlite, sala) => {
@@ -104,7 +110,7 @@ test("turnos e períodos diferentes podem usar a mesma sala e mudanças conflita
   const primeira = await criarRegistroMapa("turmas", turma("2A", { salaId: sala.id, inicioValidade: "2026-01-01", fimValidade: "2026-06-30" }));
   await criarRegistroMapa("turmas", turma("2B", { salaId: sala.id, inicioValidade: "2026-07-01", fimValidade: "2026-12-31" }));
   const tarde = await criarRegistroMapa("turmas", turma("2C", { salaId: sala.id, turno: "tarde", inicioValidade: "2026-01-01", fimValidade: "2026-06-30" }));
-  await assert.rejects(atualizarRegistroMapa("turmas", tarde.id, { ...tarde, turno: "manha" }), (erro) => erro.status === 409 && erro.conflitos.length === 1);
+  await assert.rejects(atualizarRegistroMapa("turmas", tarde.id, { ...tarde, ano: undefined, turno: "manha" }), (erro) => erro.status === 409 && erro.conflitos.length === 1);
   assert.equal(sqlite.prepare("SELECT turno FROM turmas_atividades WHERE id = ?").get(tarde.id).turno, "tarde");
   await assert.rejects(criarRegistroMapa("ensalamentos", { turmaAtividadeId: primeira.id, localId: sala.id, turno: "manha", tipo: "aula_regular", publicado: true }), /sala_ocupada/);
 }));

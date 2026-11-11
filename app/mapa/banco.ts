@@ -1,3 +1,4 @@
+import { dataSqlDoPortal } from "../conteudo/periodos";
 // importa o acesso direto ao banco
 import { getD1 } from "../../db";
 // compartilha a regra de publicação com o cadastro de representantes
@@ -74,6 +75,7 @@ type LinhaLocal = {
 
 // define uma linha de turma do banco
 type LinhaTurma = {
+  ano: number;
   nivel_ensino: string;
   id: number;
   nome: string;
@@ -126,8 +128,8 @@ export async function obterDadosMapa(opcoes: OpcoesListagem = {}): Promise<Dados
   const d1 = getD1();
   const todos = Boolean(opcoes.todos);
   // limita turmas e ensalamentos ao período atual
-  const filtroVigente = `(inicio_validade = '' OR inicio_validade <= date('now'))
-    AND (fim_validade = '' OR fim_validade >= date('now'))`;
+  const filtroVigente = `(inicio_validade = '' OR inicio_validade <= ${dataSqlDoPortal()})
+    AND (fim_validade = '' OR fim_validade >= ${dataSqlDoPortal()})`;
 
   // escolhe entre consultas privadas e públicas
   const consultas = todos
@@ -155,8 +157,8 @@ export async function obterDadosMapa(opcoes: OpcoesListagem = {}): Promise<Dados
         LEFT JOIN locais_colegio l ON l.id = e.local_id
         WHERE e.publicado = 1 AND e.ativo = 1 AND ${filtroVigente.replaceAll("inicio_validade", "e.inicio_validade").replaceAll("fim_validade", "e.fim_validade")}
           AND t.publicado = 1 AND t.ativo = 1
-          AND (t.inicio_validade = '' OR t.inicio_validade <= date('now'))
-          AND (t.fim_validade = '' OR t.fim_validade >= date('now'))
+          AND (t.inicio_validade = '' OR t.inicio_validade <= ${dataSqlDoPortal()})
+          AND (t.fim_validade = '' OR t.fim_validade >= ${dataSqlDoPortal()})
           AND e.turno = t.turno AND e.tipo = t.tipo
           AND EXISTS (
             SELECT 1 FROM categorias_mapa ct
@@ -358,7 +360,7 @@ async function salvarTurmaComSala(id: number | null, valor: unknown) {
   const recebido = objetoRecebido(valor);
   const existente = id ? await buscarTurma(id) : null;
   if (id && !existente) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
-  const dados = validarTurmaMapa({ ...existente, ...recebido });
+  const dados = validarTurmaMapa({ ...existente, ...recebido, ...(recebido.ano === undefined && ("inicioValidade" in recebido || "fimValidade" in recebido) ? { ano: undefined } : {}) });
   if (!dados.ativo) dados.publicado = false;
   await exigirCategoria("atividade", dados.tipo);
   const d1 = getD1();
@@ -386,8 +388,9 @@ async function salvarTurmaComSala(id: number | null, valor: unknown) {
     : d1.prepare(`INSERT INTO turmas_atividades (chave_importacao, ${colunasTurma}) VALUES (?, ${placeholdersTurma})`).bind(chave, ...valoresTurma(dados)));
   // mantém o nome e o turno dos representantes ligados ao cadastro atual da turma
   if (id) comandos.push(d1.prepare(`UPDATE representantes SET turma = ?, turma_normalizada = ?, turno = ?,
-    nivel_ensino = ?, serie = ?, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?`)
-    .bind(dados.nome, dados.nomeNormalizado, dados.turno, dados.nivelEnsino, dados.serie || "Não informado", id));
+    nivel_ensino = ?, serie = ?, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND ano = ?`)
+    .bind(dados.nome, dados.nomeNormalizado, dados.turno, dados.nivelEnsino, dados.serie || "Não informado", id, dados.ano));
+  if (id && !dados.ativo) comandos.push(d1.prepare("UPDATE representantes SET ativo = 0, publicado = 0, arquivado_em = COALESCE(arquivado_em, CURRENT_TIMESTAMP), atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?").bind(id));
   if (salaId) {
     comandos.push(d1.prepare(`INSERT INTO ensalamentos (${colunasEnsalamento})
       SELECT id, ?, ?, ?, '', ?, ?, 0, ?, ? FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`)
@@ -688,6 +691,7 @@ function formatarLocal(linha: LinhaLocal): LocalMapa {
 function formatarTurma(linha: LinhaTurma): TurmaAtividadeMapa {
   return {
     id: linha.id,
+    ano: linha.ano,
     nivelEnsino: linha.nivel_ensino || "medio",
     nome: linha.nome,
     nomeNormalizado: linha.nome_normalizado,
@@ -759,6 +763,7 @@ function valoresLocal(dados: LocalMapaValidado) {
 // coloca os valores da turma na ordem da consulta
 function valoresTurma(dados: TurmaMapaValidada) {
   return [
+    dados.ano,
     dados.nivelEnsino,
     dados.nome,
     dados.nomeNormalizado,
@@ -811,13 +816,13 @@ const sqlAtualizarLocal = `UPDATE locais_colegio SET
   publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
 // define as colunas e consultas usadas pelas turmas
-const colunasTurma = `nivel_ensino, nome, nome_normalizado, aliases, aliases_normalizados, turno, tipo,
+const colunasTurma = `ano, nivel_ensino, nome, nome_normalizado, aliases, aliases_normalizados, turno, tipo,
   curso, serie, turma, descricao, observacoes, inicio_validade, fim_validade, ordem, ativo, publicado`;
 // cria um marcador para cada valor da turma
-const placeholdersTurma = Array.from({ length: 17 }, () => "?").join(", ");
+const placeholdersTurma = Array.from({ length: 18 }, () => "?").join(", ");
 // atualiza todos os campos editáveis da turma
 const sqlAtualizarTurma = `UPDATE turmas_atividades SET
-  nivel_ensino = ?, nome = ?, nome_normalizado = ?, aliases = ?, aliases_normalizados = ?, turno = ?, tipo = ?,
+  ano = ?, nivel_ensino = ?, nome = ?, nome_normalizado = ?, aliases = ?, aliases_normalizados = ?, turno = ?, tipo = ?,
   curso = ?, serie = ?, turma = ?, descricao = ?, observacoes = ?, inicio_validade = ?,
   fim_validade = ?, ordem = ?, ativo = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
@@ -853,7 +858,7 @@ function sqlImportarLocal() {
 function sqlImportarTurma() {
   return `INSERT INTO turmas_atividades (id, ${colunasTurma}) VALUES (?, ${placeholdersTurma})
     ON CONFLICT (id) DO UPDATE SET
-      nome = excluded.nome, nome_normalizado = excluded.nome_normalizado,
+      ano = excluded.ano, nome = excluded.nome, nome_normalizado = excluded.nome_normalizado,
       aliases = excluded.aliases, aliases_normalizados = excluded.aliases_normalizados,
       turno = excluded.turno, tipo = excluded.tipo, curso = excluded.curso,
       serie = excluded.serie, turma = excluded.turma, descricao = excluded.descricao,

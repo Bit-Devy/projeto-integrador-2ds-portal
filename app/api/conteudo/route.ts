@@ -1,3 +1,6 @@
+// mantém os registros de cada gestão separados por ano
+import { tiposComAno, anoDoRegistro } from "../../conteudo/ciclos";
+import { anoDoPortal } from "../../conteudo/periodos";
 // importa o acesso direto ao banco
 import { getD1 } from "../../../db";
 // importa a preparação das tabelas
@@ -20,9 +23,14 @@ import { validarSenhaAdministrativa } from "../../lib/sessao";
 import { consumirTentativa, identificarNavegador, guardarNavegador, limparTentativasLogin } from "../../lib/limites";
 // mantém as vagas publicadas da equipe ligadas aos cargos do estatuto
 import { condicaoVagaLivre, prepararMembroEquipe } from "../../conteudo/equipe";
+// valida e protege as publicações das páginas modulares
+import { validarServico } from "../../servicos/validacao";
+import { moduloAtivo, obterModulos } from "../../servicos/banco";
+import type { ModuloPortal } from "../../servicos/tipos";
 
 // lista os tipos aceitos pela api
 const tiposPermitidos: TipoConteudo[] = [
+  "agenda", "cardapios", "oportunidades",
   "membros",
   "eventos",
   "noticias",
@@ -34,6 +42,9 @@ const tiposPermitidos: TipoConteudo[] = [
 
 // lista os campos obrigatórios de cada tipo
 const camposObrigatorios: Record<TipoConteudo, string[]> = {
+  agenda: ["titulo", "data", "modalidade", "descricao"],
+  cardapios: ["titulo", "data", "categoria", "turno", "descricao"],
+  oportunidades: ["titulo", "categoria", "organizacao", "local", "escolaridade", "requisitos", "descricao", "data", "situacao", "link", "fonte"],
   membros: ["nome", "diretoria"],
   eventos: ["titulo", "data", "horario", "local", "categoria", "descricao"],
   noticias: ["titulo", "data", "categoria", "resumo"],
@@ -83,18 +94,31 @@ export async function GET(request: Request) {
     }
 
     // monta a consulta pública ou privada
-    const area = mostrarTodos && ["noticias", "projetos", "documentos", "eventos"].includes(tipo) ? url.searchParams.get("areaResponsavel") : null;
+    const area = mostrarTodos && ["noticias", "projetos", "documentos", "eventos", "agenda", "cardapios", "oportunidades"].includes(tipo) ? url.searchParams.get("areaResponsavel") : null;
     const filtro = mostrarTodos
       ? "SELECT * FROM conteudos WHERE tipo = ?"
       : "SELECT * FROM conteudos WHERE tipo = ? AND publicado = 1";
     // executa a consulta com o tipo informado
-    const ano = url.searchParams.get("ano");
-    if (ano && !/^(19|20|21)\d{2}$/.test(ano)) throw new Error("Informe um ano válido.");
+    const anoRecebido = url.searchParams.get("ano") || (!mostrarTodos && tiposComAno.includes(tipo) ? String(anoDoPortal()) : null);
+    const ano = anoRecebido === "todos" ? null : anoRecebido;
+    if (ano && ano !== "todos" && !/^(19|20|21)\d{2}$/.test(ano)) throw new Error("Informe um ano válido.");
     // usa a data da publicação para consultar um ano sem apagar o histórico
-    const consulta = `${filtro}${area ? " AND json_extract(dados_json, '$.areaResponsavel') = ?" : ""}${ano ? " AND substr(COALESCE(NULLIF(json_extract(dados_json, '$.data'), ''), json_extract(dados_json, '$.dataDocumento')), 1, 4) = ?" : ""} ${ordemMaisRecente}`;
+    const colunaAno = ["projetos", "membros"].includes(tipo) ? "CAST(COALESCE(json_extract(dados_json, '$.ano'), substr(criado_em, 1, 4)) AS TEXT)" : "substr(COALESCE(NULLIF(json_extract(dados_json, '$.data'), ''), json_extract(dados_json, '$.dataDocumento')), 1, 4)";
+    const consulta = `${filtro}${area ? " AND json_extract(dados_json, '$.areaResponsavel') = ?" : ""}${ano ? ` AND ${colunaAno} = ?` : ""} ${ordemMaisRecente}`;
     const resultado = await getD1().prepare(consulta).bind(tipo, ...(area ? [area] : []), ...(ano ? [ano] : [])).all<LinhaConteudo>();
 
-    return Response.json({ itens: resultado.results.map(formatarLinha) });
+    let itens = resultado.results.map(formatarLinha);
+    if (!mostrarTodos && ["agenda", "cardapios", "oportunidades"].includes(tipo)) {
+      const modulos = await obterModulos();
+      const modulo = ({ agenda: "calendario", cardapios: "cantina", oportunidades: "estagios" } as const)[tipo as "agenda" | "cardapios" | "oportunidades"];
+      if (!moduloAtivo(modulos, modulo)) return Response.json({ erro: "Esta página está desativada." }, { status: 404 });
+      if (tipo === "cardapios") itens = itens.filter((item) => moduloAtivo(modulos, String(item.dados.categoria) as ModuloPortal));
+      if (tipo === "agenda") {
+        const destinos = new Set((await paginasPublicadas()).map((pagina) => pagina.url));
+        itens = itens.map((item) => ({ ...item, dados: { ...item.dados, paginaUrl: destinos.has(String(item.dados.paginaUrl)) ? item.dados.paginaUrl : "" } }));
+      }
+    }
+    return Response.json({ itens }, { headers: { "cache-control": "no-store" } });
   } catch (erro) {
     return respostaErro(erro);
   }
@@ -123,7 +147,7 @@ export async function POST(request: Request) {
     // salva o conteúdo e devolve a linha criada
     const resultado = await getD1()
       .prepare(`INSERT INTO conteudos (tipo, titulo, dados_json, publicado) SELECT ?, ?, ?, ? WHERE ${condicaoVagaLivre} RETURNING *`)
-      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, corpo.tipo, corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), -1, JSON.stringify(corpo.dados), JSON.stringify(corpo.dados))
+      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, corpo.tipo, corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), -1, JSON.stringify(corpo.dados), JSON.stringify(corpo.dados), JSON.stringify(corpo.dados))
       .first<LinhaConteudo>();
 
     if (!resultado) throw new ErroJsonInvalido("A vaga mudou durante o salvamento. Recarregue a Equipe e confira quem está publicado.");
@@ -169,7 +193,7 @@ export async function PUT(request: Request) {
           json_set(?, '$.jaPublicada', json(CASE WHEN publicado = 1 OR json_extract(dados_json, '$.jaPublicada') = 1 OR ? = 1 THEN 'true' ELSE 'false' END)) ELSE ? END,
           publicado = ?, atualizado_em = CURRENT_TIMESTAMP
         WHERE id = ? AND ${condicaoVagaLivre} RETURNING *`)
-      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, id, corpo.tipo, corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), id, JSON.stringify(corpo.dados), JSON.stringify(corpo.dados))
+      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, id, corpo.tipo, corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), id, JSON.stringify(corpo.dados), JSON.stringify(corpo.dados), JSON.stringify(corpo.dados))
       .first<LinhaConteudo>();
 
     // informa quando o registro não existe
@@ -227,10 +251,11 @@ async function protegerDocumentoOficial(id: number) {
 
 // confere os endereços antes de publicar os botões opcionais
 async function validarBotoes(tipo: TipoConteudo, dados: Record<string, unknown>) {
+  if (tipo === "agenda" && dados.paginaUrl && !(await paginasPublicadas()).some((pagina) => pagina.url === dados.paginaUrl)) throw new ErroJsonInvalido("Escolha uma página ou jogo que exista e esteja publicado no portal.");
   if (tipo !== "noticias") return;
   if (dados.botaoInternoAtivo) {
     const endereco = caminhoInterno(String(dados.botaoInternoUrl || ""));
-    if (!endereco || !(await paginasPublicadas()).some((pagina) => pagina.url === endereco.pathname)) throw new ErroJsonInvalido("Escolha uma página pública válida para o botão do portal.");
+    if (!endereco || !(await paginasPublicadas()).some((pagina) => pagina.url === `${endereco.pathname}${endereco.hash}`)) throw new ErroJsonInvalido("Escolha uma página pública válida para o botão do portal.");
   }
   if (dados.botaoExternoAtivo && !/^https?:\/\//.test(String(dados.botaoExternoUrl || ""))) throw new ErroJsonInvalido("Informe um endereço completo para o botão externo.");
 }
@@ -252,6 +277,9 @@ function validarCorpo(corpo: Record<string, unknown>) {
 
   // limpa os campos e encontra o título principal
   const dados = limparObjeto(corpo.dados as Record<string, unknown>);
+  if (tipo === "agenda" && String((corpo.dados as Record<string, unknown>).paginaUrl || "").trim() && !dados.paginaUrl) throw new ErroJsonInvalido("Escolha um endereço interno válido para o compromisso.");
+  validarServico(tipo, dados);
+  if (tiposComAno.includes(tipo)) { if (dados.ano !== undefined && dados.ano !== "" && (!Number.isInteger(Number(dados.ano)) || Number(dados.ano) < 1900 || Number(dados.ano) > 2199)) throw new ErroJsonInvalido("Informe um ano válido."); dados.ano = anoDoRegistro(dados); }
   const titulo = obterTitulo(tipo, dados);
   if (!titulo || titulo.length > 180) throw new Error("Informe um título válido.");
 
@@ -333,12 +361,15 @@ function formatarLinha(linha: LinhaConteudo) {
   } catch {
     dados = {};
   }
+  if (tiposComAno.includes(linha.tipo)) dados.ano = anoDoRegistro(dados, linha.criado_em);
   // retira a opção antiga também dos registros já existentes
   if (linha.tipo === "movimentos") delete dados.exemplo;
   // muda os nomes dos campos para o formato do portal
   return {
     id: linha.id,
     tipo: linha.tipo,
+    ano: anoDoRegistro(dados, linha.criado_em),
+    arquivadoAno: tiposComAno.includes(linha.tipo) && anoDoRegistro(dados, linha.criado_em) !== anoDoPortal(),
     titulo: linha.titulo,
     dados,
     publicado: Boolean(linha.publicado),

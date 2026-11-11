@@ -20,6 +20,10 @@ import { comandosProtecaoSalas } from "./estrutura-salas";
 import { comandosEstruturaAcessos, garantirColunasLogin } from "./estrutura-acessos";
 // importa as entradas e as ações feitas no painel
 import { comandosEstruturaHistorico } from "./estrutura-historico";
+// prepara os serviços e os calendários enviados para 2026
+import { comandosEstruturaServicos } from "./estrutura-servicos";
+import { calendarioInicial2026 } from "../app/servicos/calendarios-2026";
+import { prepararAnosEscolares, arquivarCiclosEscolares } from "./ciclos-anuais";
 
 // guarda uma única inicialização em andamento
 let tarefaInicializacao: Promise<void> | null = null;
@@ -34,12 +38,16 @@ export function garantirBanco() {
       throw erro;
     });
   }
-  return tarefaInicializacao;
+  return tarefaInicializacao.then(() => arquivarCiclosEscolares());
 }
 
 // cria as tabelas e insere os dados iniciais
 async function prepararBanco() {
   const d1 = getD1();
+
+  // acrescenta os serviços sem substituir calendários que a gestão já alterou
+  await d1.batch(comandosEstruturaServicos.map((comando) => d1.prepare(comando)));
+  await d1.batch((["anual", "semestral"] as const).map((modalidade) => d1.prepare("INSERT OR IGNORE INTO calendarios_escolares (ano, modalidade, dados_json, publicado) VALUES (2026, ?, ?, 1)").bind(modalidade, JSON.stringify(calendarioInicial2026(modalidade)))));
 
   // cria todas as tabelas e índices que ainda não existem
   await d1.batch([
@@ -242,6 +250,7 @@ async function prepararBanco() {
       WHEN CAST(serie AS INTEGER) BETWEEN 6 AND 9 THEN 'fundamental'
       WHEN tipo NOT IN ('aula_regular', 'curso_tecnico') THEN 'outro' ELSE 'medio' END`).run();
   }
+  await prepararAnosEscolares(d1);
   await carregarMapa2026(d1);
   await d1.batch(comandosProtecaoSalas.map((comando) => d1.prepare(comando)));
 

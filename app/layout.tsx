@@ -9,6 +9,11 @@ import "./eventos.css";
 // importa estilos isolados das novas áreas administrativas
 import "./painel-eventos.css";
 import "./interclasses.css";
+// mantém o estilo dos serviços junto da identidade visual do portal
+import "./servicos.css";
+import { obterModulos } from "./servicos/banco";
+import { modulosPadrao } from "./servicos/tipos";
+import { obterAmbiente } from "../worker/ambiente";
 
 // define os dados principais do portal
 export const metadata: Metadata = {
@@ -22,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 // monta a estrutura usada em todas as páginas
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -31,7 +36,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         {/* envolve a página com o cabeçalho e o rodapé */}
-        <EstruturaPortal>{children}</EstruturaPortal>
+        <EstruturaPortal modulosIniciais={obterAmbiente().DB ? await obterModulos() : modulosPadrao}>{children}</EstruturaPortal>
       </body>
     </html>
   );

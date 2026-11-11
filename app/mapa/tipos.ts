@@ -49,6 +49,7 @@ export type LocalMapa = {
 
 // define os dados de uma turma ou atividade
 export type TurmaAtividadeMapa = {
+  ano: number;
   id: number;
   nome: string;
   nivelEnsino: string;

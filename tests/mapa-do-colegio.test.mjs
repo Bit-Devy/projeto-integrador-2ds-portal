@@ -380,6 +380,7 @@ async function importarValidacao(sufixo) {
   // troca os imports locais por endereços completos
   const fonte = (await readFile(caminho, "utf8"))
     .replace('from "./normalizacao"', `from "${normalizacao}"`)
+    .replace('from "../conteudo/periodos"', `from "${pathToFileURL(path.join(raiz, "app/conteudo/periodos.ts")).href}"`)
     .replace('from "./tipos"', `from "${pathToFileURL(path.join(raiz, "app/mapa/tipos.ts")).href}"`);
   // importa o compilador de typescript
   const moduloTypeScript = await import("typescript");

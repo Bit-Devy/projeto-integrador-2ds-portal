@@ -14,11 +14,35 @@ const migracoesDaPrevia = [
   "0013_pretty_hammerhead.sql",
   "0014_simple_timeslip.sql",
   "0015_fixed_young_avengers.sql",
+  "0016_high_nico_minoru.sql",
+  "0017_first_randall.sql",
 ];
 const identificador = (valor) => `"${valor.replaceAll('"', '""')}"`;
 const normalizarSql = (sql) => sql.match(/'(?:''|[^'])*'|[^']+/g).map((trecho) => trecho.startsWith("'")
   ? trecho : trecho.replace(/["`\s]/g, "").toLowerCase()).join("");
 const normalizarPadrao = (valor) => valor === null ? null : normalizarSql(String(valor)).replace(/^true$/, "1").replace(/^false$/, "0");
+
+// lê apenas a expressão de cada restrição mesmo quando a tabela está em uma linha
+function restricoesDaTabela(sql) {
+  const expressoes = [];
+  const busca = /\bCHECK\s*\(/gi;
+  let encontrado;
+  while ((encontrado = busca.exec(sql))) {
+    let nivel = 1, aspas = "", fim = busca.lastIndex;
+    for (; fim < sql.length && nivel; fim += 1) {
+      const letra = sql[fim];
+      if (aspas) {
+        if (letra === aspas && sql[fim + 1] === aspas) fim += 1;
+        else if (letra === aspas) aspas = "";
+      } else if (["'", '"', "`"].includes(letra)) aspas = letra;
+      else if (letra === "(") nivel += 1;
+      else if (letra === ")") nivel -= 1;
+    }
+    expressoes.push(sql.slice(encontrado.index, fim));
+    busca.lastIndex = fim;
+  }
+  return expressoes;
+}
 
 export function lerEstrutura(banco) {
   return banco.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('_cf_METADATA', 'd1_migrations') ORDER BY name").all().map(({ name, sql }) => ({
@@ -32,7 +56,7 @@ export function lerEstrutura(banco) {
     indices: banco.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND sql IS NOT NULL ORDER BY name").all(name)
       .map((indice) => ({ nome: indice.name, sql: normalizarSql(indice.sql) })),
     // considera iguais as restrições com ou sem o nome da própria tabela
-    verificacoes: (sql.match(/CHECK[^\n]+/gi) ?? []).map((trecho) => normalizarSql(trecho).replaceAll(`${name.toLowerCase()}.`, "")).sort(),
+    verificacoes: restricoesDaTabela(sql).map((trecho) => normalizarSql(trecho).replaceAll(`${name.toLowerCase()}.`, "")).sort(),
   }));
 }
 

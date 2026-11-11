@@ -208,7 +208,7 @@ function dadosPublicos(dados: DadosMapa): DadosMapaPublico {
       horario: local.horario, imagemUrl: local.imagemUrl, ordem: local.ordem, atualizadoEm: local.atualizadoEm,
     })),
     turmas: dados.turmas.map((turma) => ({
-      id: turma.id, nome: turma.nome, nivelEnsino: turma.nivelEnsino, nomeNormalizado: turma.nomeNormalizado, aliases: turma.aliases,
+      ano: turma.ano, id: turma.id, nome: turma.nome, nivelEnsino: turma.nivelEnsino, nomeNormalizado: turma.nomeNormalizado, aliases: turma.aliases,
       turno: turma.turno, tipo: turma.tipo, curso: turma.curso, serie: turma.serie, turma: turma.turma,
       descricao: turma.descricao, observacoes: turma.observacoes, inicioValidade: turma.inicioValidade,
       fimValidade: turma.fimValidade, ordem: turma.ordem, atualizadoEm: turma.atualizadoEm,

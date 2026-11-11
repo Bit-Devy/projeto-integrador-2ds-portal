@@ -1419,7 +1419,7 @@ async function testarMapa(cookie) {
     await requisicaoMapa(cookie, "PUT", {
       entidade: "turmas",
       id: idTurma,
-      dados: { ...turmaPublicada, fimValidade: "2000-01-01", ativo: true, publicado: true },
+      dados: { ...turmaPublicada, ano: undefined, inicioValidade: "", fimValidade: "2000-01-01", ativo: true, publicado: true },
     });
     publico = await obterMapaPublico(`${sufixo}-validade-expirada`);
     assert.ok(!publico.turmas.some((item) => item.id === idTurma));
@@ -1428,7 +1428,7 @@ async function testarMapa(cookie) {
     await requisicaoMapa(cookie, "PUT", {
       entidade: "turmas",
       id: idTurma,
-      dados: { ...turmaPublicada, fimValidade: "", ativo: true, publicado: true },
+      dados: { ...turmaPublicada, ano: undefined, inicioValidade: "", fimValidade: "", ativo: true, publicado: true },
     });
 
     // importa uma atualização parcial

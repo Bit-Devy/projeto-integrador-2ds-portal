@@ -1,5 +1,8 @@
 "use client";
 
+// mantém as edições separadas pelo ano local
+import { anoDoPortal } from "../conteudo/periodos";
+
 // explica as opções de marcar sem alterar seu funcionamento
 import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 
@@ -116,7 +119,7 @@ type ResultadoPartida = {
 type ConfirmacaoSalva = { tipo: "publicado" | "rascunho" | "atualizado"; titulo: string; mensagem: string };
 
 const formularioVazio: FormularioCampeonato = {
-  slug: "", nome: "", edicao: "", ano: new Date().getFullYear(), modalidade: "", categoria: "", turno: "",
+  slug: "", nome: "", edicao: "", ano: anoDoPortal(), modalidade: "", categoria: "", turno: "",
   descricao: "", premiacao: "", regulamento: "", organizacao: "", locais: "", observacoesPublicas: "", observacoesInternas: "",
   formato: "mata_mata", situacao: "proximo", faseAtual: "", dataInicial: "", dataFinal: "", imagemCapaUrl: "",
   chavePublicada: true, publicado: false, ativo: true, diferencaMaximaAnos: null,
@@ -135,6 +138,8 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   const [detalhes, setDetalhes] = useState<DetalhesCampeonato | null>(null);
   const [idEditando, setIdEditando] = useState<Identificador | null>(null);
   const [etapa, setEtapa] = useState(0);
+  const [etapaLiberada, setEtapaLiberada] = useState(0);
+  const editorEtapas = useRef<HTMLDivElement>(null);
   // separa a atualização dos jogos da criação do campeonato
   const [atualizandoJogos, setAtualizandoJogos] = useState(false);
   const [confirmacaoSalva, setConfirmacaoSalva] = useState<ConfirmacaoSalva | null>(null);
@@ -158,7 +163,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   const [busca, setBusca] = useState("");
   const [filtroSituacao, setFiltroSituacao] = useState("");
   const [filtroModalidade, setFiltroModalidade] = useState("");
-  const [filtroAno, setFiltroAno] = useState("");
+  const [filtroAno, setFiltroAno] = useState(String(anoDoPortal()));
   // começa mostrando apenas as edições ativas
   const [filtroArquivo, setFiltroArquivo] = useState("ativos");
 
@@ -178,9 +183,9 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
 
   useEffect(() => { const temporizador = window.setTimeout(() => void carregar(), 0); return () => window.clearTimeout(temporizador); }, [carregar]);
 
-  const anos = useMemo(() => Array.from(new Set(itens.map((item) => item.ano).filter((ano): ano is number => ano !== null))).sort((a, b) => b - a), [itens]);
+  const anos = useMemo(() => Array.from(new Set([anoDoPortal(), ...itens.map((item) => item.ano).filter((ano): ano is number => ano !== null)])).sort((a, b) => b - a), [itens]);
   const modalidades = useMemo(() => Array.from(new Set(itens.map((item) => item.modalidade).filter(Boolean))).sort(), [itens]);
-  const filtrados = useMemo(() => { const termo = normalizarBusca(busca); return itens.filter((item) => (filtroArquivo === "todos" || item.ativo === (filtroArquivo === "ativos")) && (!termo || normalizarBusca(`${item.nome} ${item.edicao} ${item.modalidade} ${item.categoria}`).includes(termo)) && (!filtroSituacao || item.situacao === filtroSituacao) && (!filtroModalidade || item.modalidade === filtroModalidade) && (!filtroAno || String(item.ano) === filtroAno)); }, [busca, filtroAno, filtroModalidade, filtroSituacao, filtroArquivo, itens]);
+  const filtrados = useMemo(() => { const termo = normalizarBusca(busca); return itens.filter((item) => (filtroArquivo === "todos" || (item.ativo && item.ano === anoDoPortal()) === (filtroArquivo === "ativos")) && (!termo || normalizarBusca(`${item.nome} ${item.edicao} ${item.modalidade} ${item.categoria}`).includes(termo)) && (!filtroSituacao || item.situacao === filtroSituacao) && (!filtroModalidade || item.modalidade === filtroModalidade) && (!filtroAno || String(item.ano) === filtroAno)); }, [busca, filtroAno, filtroModalidade, filtroSituacao, filtroArquivo, itens]);
   const participantes = idEditando === null ? participantesLocais : detalhes?.participantes ?? [];
 
   function mudar<K extends keyof FormularioCampeonato>(chave: K, valor: FormularioCampeonato[K]) { setFormulario((atual) => atual ? { ...atual, [chave]: valor } : atual); setMudou(true); setSucesso(""); }
@@ -319,8 +324,8 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   async function novo() {
     if (!await confirmarSaida(mudou)) return;
     setAtualizandoJogos(false);
-    setFormulario({ ...formularioVazio, ano: new Date().getFullYear() }); setIdEditando(null); setDetalhes(null);
-    setParticipantesLocais([]); setTextoTurmas(""); setNovoParticipante({ nome: "", nomeExibicao: "", apelido: "", posicaoInicial: 1, ativo: true }); setDocumento(null); setAtualizacao(null); setEtapa(0); setMudou(false); setErro(""); setSucesso("");
+    setFormulario({ ...formularioVazio, ano: anoDoPortal() }); setIdEditando(null); setDetalhes(null);
+    setParticipantesLocais([]); setTextoTurmas(""); setNovoParticipante({ nome: "", nomeExibicao: "", apelido: "", posicaoInicial: 1, ativo: true }); setDocumento(null); setAtualizacao(null); setEtapa(0); setEtapaLiberada(0); setMudou(false); setErro(""); setSucesso("");
   }
 
   async function carregarDetalhes(id: Identificador) {
@@ -338,7 +343,9 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
       // abre a mesma chave em um menu próprio para resultados
       setAtualizandoJogos(atualizarJogos); setFase(null); setPartida(null); setResultado(null); setPartidaResultado(null); setSucesso("");
       setTextoTurmas(""); setNovoParticipante({ nome: "", nomeExibicao: "", apelido: "", posicaoInicial: 1, ativo: true });
-      setFormulario(dados); setDetalhes(completo); setIdEditando(item.id); setDocumento(null); setAtualizacao(null); setEtapa(etapaInicial); setMudou(false);
+      // retoma um rascunho sem liberar etapas cujos dados ainda não existem
+      const liberada = !dados.nome.trim() || !dados.modalidade.trim() ? 0 : completo.participantes.filter((participante) => participante.ativo).length < 2 ? 1 : completo.fases.length || completo.partidas.length ? 3 : 2;
+      setFormulario(dados); setDetalhes(completo); setIdEditando(item.id); setDocumento(null); setAtualizacao(null); setEtapa(Math.min(etapaInicial, liberada)); setEtapaLiberada(liberada); setMudou(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível abrir o campeonato."); }
     finally { setCarregando(false); }
@@ -503,7 +510,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
       const resposta = await requisitarPainel<Record<string, unknown>>("/api/interclasses", { method: "PUT", ...corpoJson({ acao: "gerar_chave", id, confirmar: substituir }) });
       const completo = normalizarDetalhes(resposta); setDetalhes(completo);
       setFormulario((atual) => atual ? { ...atual, chavePublicada: true, faseAtual: completo.item.faseAtual } : atual);
-      setSucesso("Chave gerada. Arraste as turmas para ajustar os confrontos e toque em um jogo para editar os detalhes."); setEtapa(2);
+      setSucesso("Chave gerada. Arraste as turmas para ajustar os confrontos e toque em um jogo para editar os detalhes."); setEtapaLiberada((atual) => Math.max(2, atual)); setEtapa(2);
     } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível gerar a chave."); }
     finally { setSalvando(false); }
   }
@@ -597,8 +604,28 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   }
 
   // confirma a troca e mantém os dados que pertencem ao mesmo campeonato
+  // só libera a próxima etapa depois de validar os campos e concluir a atual
+  function conferirEtapa() {
+    const campos = editorEtapas.current?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea");
+    for (const campo of campos || []) if (etapa === 0 && !campo.closest("form") && !campo.disabled && !campo.checkValidity()) { campo.reportValidity(); setErro("Preencha e confira os campos desta etapa antes de continuar."); return false; }
+    if (!formulario?.nome.trim() || !formulario.modalidade.trim()) { setErro("Informe o nome do campeonato e selecione o esporte para continuar."); return false; }
+    if (etapa >= 1 && (participantes.length < 2 || turmaPendente)) { setErro("Adicione pelo menos duas turmas e conclua os cadastros pendentes antes de continuar."); return false; }
+    return true;
+  }
+
+  async function continuarEtapa() {
+    if (salvando || !conferirEtapa()) return;
+    if (etapa === 1) {
+      if (!detalhes?.fases.length && formulario?.formato === "mata_mata") { await gerarChave(); return; }
+      if (idEditando === null && await salvarCampeonato(false) === null) return;
+    }
+    setErro(""); setEtapaLiberada((atual) => Math.max(atual, etapa + 1)); setEtapa(etapa + 1);
+  }
+
   async function irEtapa(nova: number) {
     if (nova === etapa || salvando) return;
+    if (nova > etapaLiberada) { setErro("Conclua a etapa atual pelo botão Continuar antes de abrir as próximas."); return; }
+    if (nova > etapa && !conferirEtapa()) return;
     const subeditor = Boolean(documento || atualizacao || fase || partida || resultado);
     if (subeditor && !await confirmarSaida(mudou)) return;
     if (!subeditor && mudou && !await confirmarNoPainel("Trocar de etapa?", "Há alterações ainda não salvas. Os dados preenchidos serão mantidos neste cadastro, mas você precisa salvar o campeonato antes de sair dele.", "Continuar para outra etapa", "Continuar editando")) return;
@@ -614,8 +641,8 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
       <p className="pev-introducao">Clique em um jogo para informar o placar, escolher o vencedor ou atualizar data, horário e detalhes. Ao enviar, a atualização aparece no portal e você volta à visão geral.</p>
       <div className="ic-resumo-atualizacao"><span><strong>{detalhes?.partidas.filter((jogo) => jogo.formaVitoria !== "bye" && (jogo.situacao === "encerrada" || jogo.situacao === "wo")).length ?? 0}</strong> jogos concluídos</span><span><strong>{detalhes?.partidas.filter((jogo) => !["encerrada", "wo", "cancelada"].includes(jogo.situacao)).length ?? 0}</strong> jogos a acompanhar</span><span><strong>{participantes.length}</strong> turmas</span></div>
       <PreviaChave fases={detalhes?.fases ?? []} partidas={detalhes?.partidas ?? []} abrirResultado={abrirResultado} salvando={salvando} erro={erro} />
-    </div> : <><nav className="pev-etapas" aria-label="Etapas do campeonato">{nomesEtapas.map((nome, indice) => <button type="button" className={etapa === indice ? "ativo" : indice < etapa ? "concluida" : ""} aria-current={etapa === indice ? "step" : undefined} onClick={() => irEtapa(indice)} disabled={salvando} key={nome}><span>{indice + 1}</span>{nome}</button>)}</nav>
-      <div className="pev-formulario"><div className="pev-formulario__topo"><div><small>ETAPA {etapa + 1} DE {nomesEtapas.length}</small><h2 id="titulo-painel-interclasses">{nomesEtapas[etapa]}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>Fechar</button></div>
+    </div> : <><nav className="pev-etapas" aria-label="Etapas do campeonato">{nomesEtapas.map((nome, indice) => <button type="button" className={etapa === indice ? "ativo" : indice < etapaLiberada ? "concluida" : ""} aria-current={etapa === indice ? "step" : undefined} onClick={() => irEtapa(indice)} disabled={salvando || indice > etapaLiberada} key={nome}><span>{indice + 1}</span>{nome}</button>)}</nav>
+      <div className="pev-formulario" ref={editorEtapas}><div className="pev-formulario__topo"><div><small>ETAPA {etapa + 1} DE {nomesEtapas.length}</small><h2 id="titulo-painel-interclasses">{nomesEtapas[etapa]}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>Fechar</button></div>
         {etapa === 0 && !documento && !atualizacao && <EtapaInformacoes formulario={formulario} mudar={mudar} enviarCapa={enviarCapa} enviando={enviando === "capa"} />}
         {etapa === 0 && <EtapaModalidade formulario={formulario} mudar={mudar} detalhes={detalhes} salvo={idEditando !== null} documento={documento} setDocumento={definirDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} arquivarDocumento={arquivarDocumento} atualizacao={atualizacao} setAtualizacao={definirAtualizacao} salvarAtualizacao={salvarAtualizacao} arquivarAtualizacao={arquivarAtualizacao} salvando={salvando} enviandoDocumento={enviando === "documento"} />}
         {etapa === 1 && <EtapaParticipantes textoTurmas={textoTurmas} mudarTextoTurmas={setTextoTurmas} participantes={participantes} novoParticipante={novoParticipante} setNovoParticipante={setNovoParticipante} adicionar={adicionarParticipante} adicionarLote={adicionarLote} renomear={renomearParticipante} remover={removerParticipante} salvando={salvando} />}
@@ -624,17 +651,9 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
         {etapa === 2 && <EtapaChave detalhes={detalhes} participantes={participantes} fase={fase} setFase={async (valor) => { if (valor && !fase && mudou) { setErro("Salve o campeonato antes de adicionar uma fase."); return; } if (!valor && mudou && !await confirmarSaida(true)) return; setFase(valor); setMudou(Boolean(valor && fase)); }} salvarFase={salvarFase} partida={partida} setPartida={async (valor) => { if (valor && !partida && mudou) { setErro("Salve o campeonato antes de adicionar um jogo."); return; } if (!valor && mudou && !await confirmarSaida(true)) return; setPartida(valor); setMudou(Boolean(valor && partida)); }} salvarPartida={salvarPartida} abrirResultado={abrirResultado} trocar={trocarTurmas} salvando={salvando} erro={erro} sucesso={sucesso} />}
         {etapa === 3 && <EtapaRevisao formulario={formulario} participantes={participantes} detalhes={detalhes} />}
         {etapa === 3 && <EtapaPublicacao formulario={formulario} mudar={mudar} participantes={participantes} detalhes={detalhes} salvar={() => void salvarEVoltar(true)} salvarRascunho={() => void salvarEVoltar(false)} campeaoSelecionado={campeaoSelecionado} setCampeaoSelecionado={setCampeaoSelecionado} definirCampeao={definirCampeao} salvando={salvando} />}
-        {!resultado && !documento && !atualizacao && !fase && !partida && <div className="pev-navegacao-etapas"><button type="button" className="pev-botao" onClick={() => etapa === 0 ? fechar() : irEtapa(etapa - 1)}>{etapa === 0 ? "Cancelar" : "Voltar"}</button><div><button type="button" className="pev-botao" onClick={() => void salvarEVoltar(Boolean(detalhes?.item.publicado))} disabled={salvando}>{salvando ? "Salvando…" : detalhes?.item.publicado ? "Salvar alterações" : "Salvar rascunho"}</button>{etapa < nomesEtapas.length - 1 && <button type="button" className="pev-botao pev-botao--primario" onClick={async () => {
-          if (etapa === 0 && (!formulario.nome.trim() || !formulario.modalidade)) { setErro("Informe o nome do campeonato e selecione o esporte para continuar."); return; }
-          if (etapa === 1) {
-            if (participantes.length < 2) { setErro("Adicione pelo menos duas turmas para continuar."); return; }
-            if (!detalhes?.fases.length && formulario.formato === "mata_mata") { await gerarChave(); return; }
-            if (idEditando === null && await salvarCampeonato(false) === null) return;
-          }
-          setEtapa((atual) => Math.min(nomesEtapas.length - 1, atual + 1));
-        }} disabled={salvando}>Continuar</button>}</div></div>}
+        {!resultado && !documento && !atualizacao && !fase && !partida && <div className="pev-navegacao-etapas"><button type="button" className="pev-botao" onClick={() => etapa === 0 ? fechar() : irEtapa(etapa - 1)}>{etapa === 0 ? "Cancelar" : "Voltar"}</button><div><button type="button" className="pev-botao" onClick={() => void salvarEVoltar(Boolean(detalhes?.item.publicado))} disabled={salvando}>{salvando ? "Salvando…" : detalhes?.item.publicado ? "Salvar alterações" : "Salvar rascunho"}</button>{etapa < nomesEtapas.length - 1 && <button type="button" className="pev-botao pev-botao--primario" onClick={() => void continuarEtapa()} disabled={salvando}>Continuar</button>}</div></div>}
       </div></>}
-    </div> : <><div className="pev-filtros ic-filtros-admin"><label className="pev-filtro--busca"><span>Buscar campeonato</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, edição, modalidade ou categoria" /></label><label><span>Exibir</span><select value={filtroArquivo} onChange={(e) => setFiltroArquivo(e.target.value)}><option value="ativos">Ativos</option><option value="arquivados">Arquivados</option><option value="todos">Todos</option></select></label><label><span>Situação</span><select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}><option value="">Todas</option>{situacoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label><label><span>Modalidade</span><select value={filtroModalidade} onChange={(e) => setFiltroModalidade(e.target.value)}><option value="">Todas</option>{modalidades.map((nome) => <option key={nome}>{nome}</option>)}</select></label><label><span>Ano</span><select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}><option value="">Todos</option>{anos.map((ano) => <option key={ano}>{ano}</option>)}</select></label></div>{carregando && <EstadoVazio titulo="Carregando campeonatos…" texto="Aguarde enquanto consultamos chaves e resultados." />}{!carregando && !filtrados.length && <EstadoVazio titulo={itens.length ? "Nenhum campeonato encontrado" : "Nenhum campeonato cadastrado"} texto={itens.length ? "Altere os filtros ou a busca." : "Use “Novo campeonato” para iniciar uma edição."} />}<div className="pev-lista">{filtrados.map((item) => <article className="pev-cartao" key={item.id}><div className="pev-cartao__estados"><span className={classeStatus(!item.ativo ? "arquivado" : item.publicado ? "publicado" : "rascunho")}>{!item.ativo ? "Arquivado" : item.publicado ? "Publicado" : "Rascunho"}</span><span className={classeStatus(item.situacao)}>{statusLegivel(item.situacao)}</span></div><div className="pev-cartao__conteudo"><h2>{item.nome}</h2><p>{[item.edicao || item.ano, item.modalidade, item.categoria].filter(Boolean).join(" · ")}</p><small>{item.situacao === "encerrado" && item.campeaoNome ? `Campeão: ${item.campeaoNome}` : item.faseAtual ? `Fase atual: ${item.faseAtual}` : item.chavePublicada ? "Chave publicada" : "Chave ainda oculta"}</small></div><div className="pev-cartao__acoes">{item.ativo && item.publicado && <button type="button" className="pev-botao pev-botao--primario" onClick={() => void editar(item, 2, true)} disabled={carregando || salvando}>Atualizar interclasse</button>}<button type="button" className="pev-botao" onClick={() => void editar(item)} disabled={carregando || salvando}>Editar</button><button type="button" className="pev-botao" onClick={() => void editar(item, 2)}>Chave e jogos</button><button type="button" className="pev-botao" onClick={() => void duplicar(item)}>Duplicar edição</button>{item.ativo && <button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void arquivar(item)}>Arquivar</button>}</div></article>)}</div></>}
+    </div> : <><div className="pev-filtros ic-filtros-admin"><label className="pev-filtro--busca"><span>Buscar campeonato</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, edição, modalidade ou categoria" /></label><label><span>Exibir</span><select value={filtroArquivo} onChange={(e) => { setFiltroArquivo(e.target.value); setFiltroAno(e.target.value === "arquivados" ? "" : String(anoDoPortal())); }}><option value="ativos">Ativos</option><option value="arquivados">Arquivados</option><option value="todos">Todos</option></select></label><label><span>Situação</span><select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}><option value="">Todas</option>{situacoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label><label><span>Modalidade</span><select value={filtroModalidade} onChange={(e) => setFiltroModalidade(e.target.value)}><option value="">Todas</option>{modalidades.map((nome) => <option key={nome}>{nome}</option>)}</select></label><label><span>Ano</span><select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}><option value="">Todos</option>{anos.map((ano) => <option key={ano}>{ano}</option>)}</select></label></div>{carregando && <EstadoVazio titulo="Carregando campeonatos…" texto="Aguarde enquanto consultamos chaves e resultados." />}{!carregando && !filtrados.length && <EstadoVazio titulo={itens.length ? "Nenhum campeonato encontrado" : "Nenhum campeonato cadastrado"} texto={itens.length ? "Altere os filtros ou a busca." : "Use “Novo campeonato” para iniciar uma edição."} />}<div className="pev-lista">{filtrados.map((item) => <article className="pev-cartao" key={item.id}><div className="pev-cartao__estados"><span className={classeStatus((!item.ativo || item.ano !== anoDoPortal()) ? "arquivado" : item.publicado ? "publicado" : "rascunho")}>{(!item.ativo || item.ano !== anoDoPortal()) ? "Arquivado" : item.publicado ? "Publicado" : "Rascunho"}</span><span className={classeStatus(item.situacao)}>{statusLegivel(item.situacao)}</span></div><div className="pev-cartao__conteudo"><h2>{item.nome}</h2><p>{[item.edicao || item.ano, item.modalidade, item.categoria].filter(Boolean).join(" · ")}</p><small>{item.situacao === "encerrado" && item.campeaoNome ? `Campeão: ${item.campeaoNome}` : item.faseAtual ? `Fase atual: ${item.faseAtual}` : item.chavePublicada ? "Chave publicada" : "Chave ainda oculta"}</small></div><div className="pev-cartao__acoes">{item.ativo && item.publicado && <button type="button" className="pev-botao pev-botao--primario" onClick={() => void editar(item, 2, true)} disabled={carregando || salvando}>Atualizar interclasse</button>}<button type="button" className="pev-botao" onClick={() => void editar(item)} disabled={carregando || salvando}>Editar</button><button type="button" className="pev-botao" onClick={() => void editar(item, 2)}>Chave e jogos</button><button type="button" className="pev-botao" onClick={() => void duplicar(item)}>Duplicar edição</button>{item.ativo && <button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void arquivar(item)}>Arquivar</button>}</div></article>)}</div></>}
     {resultado && partidaResultado && (atualizandoJogos
       ? <FormularioResultadoRapido jogo={partidaResultado} resultado={resultado} setResultado={(valor) => { setResultado(valor); setMudou(true); }} salvar={registrarResultado} fechar={fecharResultado} salvando={salvando} erro={erro} />
       : <FormularioResultado jogo={partidaResultado} fases={detalhes?.fases ?? []} partidas={detalhes?.partidas ?? []} participantes={participantes} resultado={resultado} setResultado={(valor) => { setResultado(valor); setMudou(true); }} salvar={registrarResultado} fechar={fecharResultado} salvando={salvando} erro={erro} />)}

@@ -1,3 +1,6 @@
+// importa os dados dos serviços do estudante
+import type { CompromissoCalendario, ItemCardapio, Oportunidade } from "../servicos/tipos";
+
 // lista os tipos de conteúdo do portal
 export type TipoConteudo =
   | "membros"
@@ -6,10 +9,15 @@ export type TipoConteudo =
   | "projetos"
   | "documentos"
   | "canais"
+  | "agenda"
+  | "cardapios"
+  | "oportunidades"
   | "movimentos";
 
 // define os campos comuns dos registros
 export type RegistroBase = {
+  ano?: number;
+  arquivadoAno?: boolean;
   id?: number;
   publicado?: boolean;
   criadoEm?: string;
@@ -106,6 +114,9 @@ export type MovimentoGecep = RegistroBase & {
 
 // relaciona cada tipo com seus dados
 export type DadosPorTipo = {
+  agenda: CompromissoCalendario;
+  cardapios: ItemCardapio;
+  oportunidades: Oportunidade;
   membros: MembroGecep;
   eventos: EventoGecep;
   noticias: NoticiaGecep;
@@ -120,6 +131,8 @@ export type RegistroConteudo<T extends TipoConteudo = TipoConteudo> = {
   id: number;
   tipo: T;
   titulo: string;
+  ano?: number;
+  arquivadoAno?: boolean;
   dados: DadosPorTipo[T];
   publicado: boolean;
   criadoEm?: string;

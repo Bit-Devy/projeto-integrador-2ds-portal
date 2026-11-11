@@ -345,6 +345,7 @@ export type DetalheReuniao<T = ReuniaoPublica> = {
 };
 
 export type RepresentantePublico = {
+  ano: number;
   id: number;
   nome: string;
   nomeExibicao: string;

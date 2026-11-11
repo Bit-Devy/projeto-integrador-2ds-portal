@@ -19,7 +19,10 @@ Para executar a versão compilada, use `npm run build` e depois `npm run start`.
 - **CRT e representantes:** explicação da representação estudantil e consulta dos representantes de turma
 - **Notícias:** publicações com foto, descrição da imagem, crédito, fonte e texto completo, com busca e arquivo por ano
 - **Projetos:** apresentação das iniciativas estudantis e seus estados de andamento
-- **Eventos e calendário:** consulta de atividades, datas e programações publicadas
+- **Calendário:** agenda com links para notícias, projetos, eventos e jogos existentes, calendário escolar anual ou semestral e calculadora de faltas em aulas
+- **Cantina:** merenda por semana, data e turno e cardápios da APMF, GECEP e robótica
+- **Central de Estágios:** busca de estágios, empregos, jovem aprendiz e concursos, com requisitos, prazo, fonte e candidatura
+- **Eventos:** consulta de atividades, datas e programações publicadas, com Projetos no submenu
 - **Interclasses:** campeonatos, participantes, fases, chaves, partidas, placares e resultados
 - **Reuniões e atas:** pautas, registros, presenças, votações e documentos publicados pela gestão
 - **Turmas:** cadastro e busca de turmas, vínculo opcional com salas por turno e período, confirmação de conflitos e opções de retirar do público, arquivar, restaurar e excluir turmas arquivadas
@@ -41,6 +44,10 @@ Nos formulários, a opção de preservar identidade pede confirmação e desativ
 Sugestões têm o limite de três envios por hora em cada navegador. No login, cinco erros exigem uma espera de 15 minutos; mais cinco erros bloqueiam o navegador por 24 horas. Uma entrada correta reinicia o contador.
 
 O ano inicial acompanha o calendário. Use o seletor de ano para consultar o histórico ou preparar 2027 e os próximos períodos. Eventos, reuniões e interclasses também aceitam datas e edições futuras. Informe as datas de início e fim dos mandatos; representantes encerrados ou futuros não aparecem como atuais. Ao renovar as turmas, ajuste a validade no painel e cadastre as novas sem apagar os registros anteriores.
+
+Em **Calendário → Agenda do GECEP**, publique datas com título, descrição, modalidade e página relacionada. Há também um atalho em Notícias. Em **Calendário escolar e faltas**, abra o ano e a modalidade, selecione dias ou um intervalo, aplique a marcação e salve. Os calendários de 2026 já estão cadastrados; anos novos começam vazios. Conselhos podem ocorrer com ou sem aulas. A calculadora usa 6 aulas por dia e tem um botão discreto para alterar essa quantidade; seus resultados são estimativas e não substituem a frequência oficial.
+
+Use **Cantina** para cadastrar pratos e produtos por setor, período e turno e **Central de Estágios** para divulgar oportunidades. Prazos vencidos aparecem como encerrados. Em **Páginas e módulos**, ligue ou desligue Calendário, Cantina, seus quatro setores e Central de Estágios. Desligar preserva os registros e bloqueia a consulta pública, inclusive pelo endereço direto. Os novos menus também participam do gerenciamento de permissões por cargo.
 
 Os lançamentos financeiros locais ainda são fictícios por escolha durante o desenvolvimento. Antes do uso público, substitua-os pelos registros reais, complete os integrantes e horários e configure D1, R2 e segredos de produção. O banco local não é enviado automaticamente na publicação.
 

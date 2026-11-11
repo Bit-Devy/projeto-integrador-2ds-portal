@@ -1,3 +1,5 @@
+// usa o ano local do portal sem confundir com a série do estudante
+import { anoDoPortal } from "../conteudo/periodos";
 import {
   formatosCampeonato,
   funcoesRepresentante,
@@ -136,7 +138,7 @@ export function validarCampeonato(valor: unknown) {
   const dataInicial = data(dados.dataInicial, "data inicial");
   const dataFinal = data(dados.dataFinal, "data final");
   validarPeriodo(dataInicial, dataFinal, "A data final do campeonato não pode ser anterior à inicial.");
-  const ano = inteiroOpcional(dados.ano, 1900, 2200, "ano");
+  const ano = inteiroOpcional(dados.ano, 1900, 2199, "ano") ?? Number(dataInicial.slice(0, 4) || anoDoPortal());
   const formato = enumValor(dados.formato ?? "mata_mata", formatosCampeonato, "formato") as FormatoCampeonato;
   const situacao = enumValor(normalizarSituacaoEvento(dados.situacao ?? "proximo"), situacoesEvento, "situação") as SituacaoEvento;
   return {
@@ -266,6 +268,7 @@ export function validarRepresentante(valor: unknown) {
   const fimMandato = data(dados.fimMandato, "fim do mandato");
   validarPeriodo(inicioMandato, fimMandato, "O fim do mandato não pode ser anterior ao início.");
   return {
+    ano: Number(dados.ano || anoDoPortal()),
     turmaAtividadeId: idOpcional(dados.turmaAtividadeId, "turma cadastrada"),
     nome,
     nomeExibicao,

@@ -1,5 +1,7 @@
 "use client";
 
+import { anoDoPortal } from "../conteudo/periodos";
+
 // identifica a diretoria responsável por cada publicação
 import AreaResponsavel from "./AreaResponsavel";
 import { areaRestrita } from "../lib/cargos";
@@ -95,7 +97,7 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
   const [busca, setBusca] = useState("");
   const [filtroSituacao, setFiltroSituacao] = useState("");
   const [filtroPublicacao, setFiltroPublicacao] = useState("");
-  const [filtroAno, setFiltroAno] = useState("");
+  const [filtroAno, setFiltroAno] = useState(String(anoDoPortal()));
   const [eventoSituacao, setEventoSituacao] = useState<EventoInterno | null>(null);
   const [situacaoNova, setSituacaoNova] = useState("");
   const janelaSituacao = useRef<HTMLDialogElement>(null);
@@ -120,12 +122,12 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
 
   useEffect(() => { const temporizador = window.setTimeout(() => void carregar(), 0); return () => window.clearTimeout(temporizador); }, [carregar]);
 
-  const anos = useMemo(() => Array.from(new Set(itens.map((item) => item.dataInicial.slice(0, 4)).filter(Boolean))).sort().reverse(), [itens]);
+  const anos = useMemo(() => Array.from(new Set([String(anoDoPortal()), ...itens.map((item) => item.dataInicial.slice(0, 4)).filter(Boolean)])).sort().reverse(), [itens]);
   const filtrados = useMemo(() => {
     const termo = normalizarBusca(busca);
     return itens.filter((item) => {
       const texto = normalizarBusca([item.titulo, item.subtitulo, item.categoria, item.local, item.publicoDestinado].join(" "));
-      const publicacao = item.arquivado ? "arquivado" : item.publicado ? "publicado" : "rascunho";
+      const publicacao = item.arquivado || item.dataInicial.slice(0, 4) !== String(anoDoPortal()) ? "arquivado" : item.publicado ? "publicado" : "rascunho";
       return (!termo || texto.includes(termo))
         && (!filtroSituacao || item.situacao === filtroSituacao)
         && (!filtroPublicacao || publicacao === filtroPublicacao)
@@ -319,14 +321,14 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
           <div className="pev-filtros">
             <label className="pev-filtro--busca"><span>Buscar evento</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Título, categoria, local ou público" /></label>
             <label><span>Situação</span><select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}><option value="">Todas</option>{situacoesEvento.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label>
-            <label><span>Publicação</span><select value={filtroPublicacao} onChange={(e) => setFiltroPublicacao(e.target.value)}><option value="">Todos</option><option value="publicado">Publicados</option><option value="rascunho">Rascunhos</option><option value="arquivado">Arquivados</option></select></label>
+            <label><span>Publicação</span><select value={filtroPublicacao} onChange={(e) => { setFiltroPublicacao(e.target.value); if (e.target.value === "arquivado") setFiltroAno(""); }}><option value="">Todos</option><option value="publicado">Publicados</option><option value="rascunho">Rascunhos</option><option value="arquivado">Arquivados</option></select></label>
             <label><span>Ano</span><select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}><option value="">Todos</option>{anos.map((ano) => <option key={ano}>{ano}</option>)}</select></label>
           </div>
           {carregando && <EstadoVazio titulo="Carregando eventos…" texto="Aguarde enquanto consultamos os registros." />}
           {!carregando && !filtrados.length && <EstadoVazio titulo={itens.length ? "Nenhum evento encontrado" : "Nenhum evento cadastrado"} texto={itens.length ? "Altere os filtros ou a busca para ver outros registros." : "Use “Novo evento” para criar o primeiro registro, sem inventar informações."} />}
           <div className="pev-lista">
             {filtrados.map((item) => <article className="pev-cartao" key={item.id}>
-              <div className="pev-cartao__estados"><span className={classeStatus(item.arquivado ? "arquivado" : item.publicado ? "publicado" : "rascunho")}>{item.arquivado ? "Arquivado" : item.publicado ? "Publicado" : "Rascunho"}</span><span className={classeStatus(item.situacao)}>{situacoesEvento.find(([chave]) => chave === item.situacao)?.[1] || statusLegivel(item.situacao)}</span></div>
+              <div className="pev-cartao__estados"><span className={classeStatus((item.arquivado || item.dataInicial.slice(0, 4) !== String(anoDoPortal())) ? "arquivado" : item.publicado ? "publicado" : "rascunho")}>{(item.arquivado || item.dataInicial.slice(0, 4) !== String(anoDoPortal())) ? "Arquivado" : item.publicado ? "Publicado" : "Rascunho"}</span><span className={classeStatus(item.situacao)}>{situacoesEvento.find(([chave]) => chave === item.situacao)?.[1] || statusLegivel(item.situacao)}</span></div>
               <div className="pev-cartao__conteudo"><h2>{item.titulo || "Evento sem título"}</h2><p>{[dataLegivel(item.dataInicial), item.diaTodo ? "Dia todo" : item.horarioInicial, item.local].filter(Boolean).join(" · ")}</p>{item.descricaoCurta && <small>{item.descricaoCurta}</small>}</div>
               <div className="pev-cartao__acoes">
                 <button type="button" className="pev-botao" onClick={() => editar(item)}>Editar</button>

@@ -1,5 +1,7 @@
 "use client";
 
+import { anoDoPortal } from "../conteudo/periodos";
+
 import Link from "next/link";
 import { Children, useMemo, useState } from "react";
 import type { CentralEventosPublica, DocumentoPublico, EventoPublico, InterclassePublico, JogoPublico, ReuniaoPublica, RespostaLista } from "../eventos/modelo-publico";
@@ -149,7 +151,7 @@ export function CentralEventos() {
 type FiltrosEvento = { situacao: string; ano: string; mes: string; categoria: string; turno: string; publico: string };
 
 export function ListaEventosInternos({ filtrosIniciais = {} }: { filtrosIniciais?: Partial<FiltrosEvento> }) {
-  const [filtros, setFiltros] = useState<FiltrosEvento>({ situacao: filtrosIniciais.situacao || "", ano: filtrosIniciais.ano || "", mes: filtrosIniciais.mes || "", categoria: filtrosIniciais.categoria || "", turno: filtrosIniciais.turno || "", publico: filtrosIniciais.publico || "" });
+  const [filtros, setFiltros] = useState<FiltrosEvento>({ situacao: filtrosIniciais.situacao || "", ano: filtrosIniciais.ano || String(filtrosIniciais.situacao === "arquivado" ? anoDoPortal() - 1 : anoDoPortal()), mes: filtrosIniciais.mes || "", categoria: filtrosIniciais.categoria || "", turno: filtrosIniciais.turno || "", publico: filtrosIniciais.publico || "" });
   const [pagina, setPagina] = useState(1);
   const [arquivoAberto, setArquivoAberto] = useState(() => Object.values(filtrosIniciais).some(Boolean));
   const agora = useConsultaPublica<RespostaLista<EventoPublico> | EventoPublico[]>("/api/eventos?situacao=acontecendo_agora&limite=3");
@@ -158,6 +160,7 @@ export function ListaEventosInternos({ filtrosIniciais = {} }: { filtrosIniciais
   const url = useMemo(() => {
     const parametros = new URLSearchParams({ pagina: String(pagina), limite: "24" });
     Object.entries(filtros).forEach(([chave, valor]) => { if (valor) parametros.set(chave, valor); });
+    if (!filtros.ano) parametros.set("ano", "todos");
     const consulta = parametros.toString();
     return `/api/eventos${consulta ? `?${consulta}` : ""}`;
   }, [filtros, pagina]);
@@ -167,7 +170,7 @@ export function ListaEventosInternos({ filtrosIniciais = {} }: { filtrosIniciais
   const eventosProximos = proximos.dados ? extrairItens(proximos.dados) : [];
   const eventosRecentes = recentes.dados ? extrairItens(recentes.dados) : [];
   function alterar(campo: keyof FiltrosEvento, valor: string) { setFiltros((atuais) => ({ ...atuais, [campo]: valor })); setPagina(1); }
-  function limpar() { setFiltros({ situacao: "", ano: "", mes: "", categoria: "", turno: "", publico: "" }); setPagina(1); }
+  function limpar() { setFiltros({ situacao: "", ano: String(anoDoPortal()), mes: "", categoria: "", turno: "", publico: "" }); setPagina(1); }
 
   return (
     <main id="conteudo">
