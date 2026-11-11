@@ -5,7 +5,7 @@ import { obterAmbiente } from "../../../../worker/ambiente";
 // confere a publicação atual antes de liberar o arquivo
 import { garantirBanco } from "../../../../db/inicializar";
 import { podeUsarArquivo } from "../../../arquivos/acesso";
-import { possuiReferenciaPublica } from "../../../arquivos/publicacao";
+import { possuiComprovanteArquivado, possuiReferenciaPublica } from "../../../arquivos/publicacao";
 
 // devolve um arquivo guardado no armazenamento
 export async function GET(
@@ -90,6 +90,7 @@ export async function DELETE(
   await garantirBanco();
   if (!await podeUsarArquivo(chave, acesso.usuario!)) return Response.json({ erro: "Arquivo de outra área." }, { status: 403 });
   if (await possuiReferenciaPublica(chave)) return Response.json({ erro: "Retire o arquivo das publicações antes de excluí-lo." }, { status: 409 });
+  if (await possuiComprovanteArquivado(chave)) return Response.json({ erro: "Este comprovante faz parte do histórico da Transparência." }, { status: 409 });
   await bucket.delete(chave);
   return Response.json({ removido: true });
 }

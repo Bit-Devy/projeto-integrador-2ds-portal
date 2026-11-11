@@ -1280,6 +1280,24 @@
   grid-template-columns: minmax(0, 2fr) repeat(2, minmax(8rem, 1fr));
 }
 
+.ferramentas-turmas {
+  grid-template-columns: minmax(0, 2fr) minmax(8rem, 1fr) auto;
+  align-items: end;
+}
+
+.ferramentas-turmas .botao-arquivo-turmas {
+  min-height: 2.75rem;
+  border-color: #bed4e2;
+  background: #eef6fb;
+}
+
+.ferramentas-turmas .botao-arquivo-turmas:hover {
+  border-color: var(--azul);
+  background: #e2f0f9;
+}
+
+.campos-turno-parcial { margin-top: 1rem; }
+
 .ferramentas-turmas label,
 .ferramentas-salas label {
   display: grid;
@@ -1342,6 +1360,16 @@
   display: grid;
 }
 
+/* mostra os dados e as ações abaixo do representante selecionado */
+.pev-cartao.cartao-mandato { grid-template-columns: minmax(6rem, auto) minmax(0, 1fr); }
+.detalhe-mandato { grid-column: 1 / -1; border-top: 1px solid #dbe3e6; padding-top: 0.85rem; }
+.detalhe-mandato p { margin: 0.6rem 0 0; overflow-wrap: anywhere; }
+.detalhe-mandato .pev-botao--perigoso,
+.pev-formulario .pev-acoes-formulario > .pev-botao--perigoso { color: #fff; background: #a32929; border-color: #a32929; }
+.detalhe-mandato .pev-botao--perigoso:hover,
+.pev-formulario .pev-acoes-formulario > .pev-botao--perigoso:hover { color: #fff; background: #812020; border-color: #812020; }
+.linha-contato-representante { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr) auto; align-items: end; gap: 0.75rem; margin-top: 1rem; }
+
 @media (max-width: 45rem) {
 
   .ferramentas-turmas,
@@ -1358,4 +1386,7 @@
     max-width: 100%;
     justify-content: flex-start;
   }
+
+  .pev-cartao.cartao-mandato,
+  .linha-contato-representante { grid-template-columns: minmax(0, 1fr); }
 }

@@ -2,6 +2,7 @@ import {
   arquivarRepresentante,
   atualizarRepresentante,
   criarRepresentante,
+  destituirRepresentante,
   diagnosticoRepresentantes,
   listarRepresentantes,
 } from "../../eventos/banco";
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
       return Response.json(await diagnosticoRepresentantes(), { headers: { "cache-control": "private, no-store" } });
     }
     return Response.json(await listarRepresentantes(parametros, todos), {
-      headers: { "cache-control": todos ? "private, no-store" : "public, max-age=30" },
+      headers: { "cache-control": todos ? "private, no-store" : "no-store" },
     });
   } catch (erro) {
     return responderErroEventos(erro, "GET /api/representantes");
@@ -40,6 +41,10 @@ export async function PUT(request: Request) {
   if (bloqueio) return bloqueio;
   try {
     const corpo = await lerObjeto(request);
+    if (corpo.acao === "destituir") {
+      if (corpo.confirmado !== true) throw new ErroEventos("Confirme o encerramento do mandato antes de salvar.");
+      return Response.json({ item: await destituirRepresentante(corpo.id, dadosDoCorpo(corpo)) });
+    }
     return Response.json({ item: await atualizarRepresentante(corpo.id, dadosDoCorpo(corpo)) });
   } catch (erro) {
     return responderErroEventos(erro, "PUT /api/representantes");

@@ -56,6 +56,9 @@ export type TurmaAtividadeMapa = {
   nomeNormalizado: string;
   aliases: string;
   turno: TurnoMapa;
+  turnoParcial: boolean;
+  horarioInicial: string;
+  horarioFinal: string;
   tipo: string;
   curso: string;
   serie: string;
@@ -86,6 +89,13 @@ export type EnsalamentoMapa = {
   publicado: boolean;
   criadoEm: string;
   atualizadoEm: string;
+};
+
+// reúne os vínculos anteriores sem expor os contatos dos representantes
+export type HistoricoTurma = {
+  turma: TurmaAtividadeMapa;
+  salas: { sala: string; turno: TurnoMapa; vinculadoEm: string; encerradoEm: string | null }[];
+  representantes: { id: number; nome: string; funcao: string; inicioMandato: string; fimMandato: string; arquivadoEm: string | null; ano: number; ativo: boolean; destituidoEm: string | null }[];
 };
 
 // reúne todos os dados privados do mapa

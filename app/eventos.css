@@ -1242,16 +1242,30 @@ a.partida-chave:focus-visible {
   font-size: 0.75rem;
 }
 
+/* destaca os nomes que abrem os dados do mandato */
+.nome-representante-acao {
+  border: 0;
+  background: transparent;
+  color: var(--azul-escuro);
+  padding: 0.25rem 0;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.nome-representante-acao:hover { text-decoration: underline; }
+.nome-representante-acao span { color: var(--azul); }
+.detalhe-representante-publico { padding-top: 1rem; margin-top: 0.75rem; border-top: 1px solid #dce5eb; }
+.detalhe-representante-publico > a { margin-top: 0.85rem; }
+.dados-mandato { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: 0.75rem 1rem; margin: 0; }
+.dados-mandato dt { font-size: 0.75rem; font-weight: 700; color: #506975; }
+.dados-mandato dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; }
+
 .grade-representantes dl {
   display: grid;
   gap: 9px;
   margin: 20px 0 0;
-}
-
-.grade-representantes dl > div {
-  display: grid;
-  grid-template-columns: 75px 1fr;
-  gap: 8px;
 }
 
 .grade-representantes dt {

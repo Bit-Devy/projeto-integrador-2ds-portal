@@ -8,6 +8,7 @@ import {
   exportarDadosMapa,
   importarDadosMapa,
   obterDadosMapa,
+  obterHistoricoTurma,
 } from "../../mapa/banco";
 // importa o tipo das entidades do mapa
 import type { EntidadeMapa } from "../../mapa/tipos";
@@ -31,6 +32,11 @@ export async function GET(request: Request) {
     const parametros = new URL(request.url).searchParams;
     const todos = parametros.get("todos") === "1";
     const exportar = parametros.get("exportar") === "1";
+    if (parametros.has("historico")) {
+      const { resposta } = await exigirAdministradorApi("turmas", false);
+      if (resposta) return resposta;
+      return respostaJson(await obterHistoricoTurma(parametros.get("historico")), 200, true);
+    }
     // exige administrador para dados privados ou exportação
     if (todos || exportar) {
       const secao = parametros.get("secao");
@@ -209,7 +215,8 @@ function dadosPublicos(dados: DadosMapa): DadosMapaPublico {
     })),
     turmas: dados.turmas.map((turma) => ({
       ano: turma.ano, id: turma.id, nome: turma.nome, nivelEnsino: turma.nivelEnsino, nomeNormalizado: turma.nomeNormalizado, aliases: turma.aliases,
-      turno: turma.turno, tipo: turma.tipo, curso: turma.curso, serie: turma.serie, turma: turma.turma,
+      turno: turma.turno, turnoParcial: turma.turnoParcial, horarioInicial: turma.horarioInicial, horarioFinal: turma.horarioFinal,
+      tipo: turma.tipo, curso: turma.curso, serie: turma.serie, turma: turma.turma,
       descricao: turma.descricao, observacoes: turma.observacoes, inicioValidade: turma.inicioValidade,
       fimValidade: turma.fimValidade, ordem: turma.ordem, atualizadoEm: turma.atualizadoEm,
     })),

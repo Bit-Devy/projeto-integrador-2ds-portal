@@ -3,6 +3,7 @@
 
 // importa tipos, efeitos e controles de estado
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 // importa funções de busca por locais especiais
 import { buscarLocaisEspeciaisComoAtividade, localPesquisavelComoAtividade } from "../mapa/busca-publica";
 // importa os tipos dos dados do mapa
@@ -50,7 +51,7 @@ type ResultadoBuscaPrincipal =
 type OpcaoTipo = { valor: string; nome: string; ordem: number };
 
 // mostra a consulta pública do mapa
-export default function MapaColegioInterativo() {
+export default function MapaColegioInterativo({ turmaInicial }: { turmaInicial?: number }) {
   // guarda os dados carregados
   const [dados, setDados] = useState<DadosMapa | null>(null);
   // controla o carregamento
@@ -127,7 +128,7 @@ export default function MapaColegioInterativo() {
       </div>
 
       {/* busca por turma e atividade */}
-      <BuscaTurma dados={dados} />
+      <BuscaTurma key={turmaInicial ?? "busca"} dados={dados} turmaInicial={dados.turmas.find((turma) => turma.id === turmaInicial)} />
       {/* busca por sala e local */}
       <BuscaLocal dados={dados} />
     </section>
@@ -135,13 +136,21 @@ export default function MapaColegioInterativo() {
 }
 
 // mostra a busca por turma ou atividade
-function BuscaTurma({ dados }: { dados: DadosMapa }) {
+function BuscaTurma({ dados, turmaInicial }: { dados: DadosMapa; turmaInicial?: TurmaAtividadeMapa }) {
   // guarda os filtros e resultados
-  const [turno, setTurno] = useState<Turno>("");
-  const [tipo, setTipo] = useState("");
-  const [termo, setTermo] = useState("");
-  const [estado, setEstado] = useState<EstadoConsulta>("incompleto");
-  const [resultados, setResultados] = useState<ResultadoBuscaPrincipal[]>([]);
+  const [turno, setTurno] = useState<Turno>(turmaInicial?.turno || "");
+  const [tipo, setTipo] = useState(turmaInicial?.tipo || "");
+  const [termo, setTermo] = useState(turmaInicial?.nome || "");
+  const [estado, setEstado] = useState<EstadoConsulta>(turmaInicial ? "resultado" : "incompleto");
+  const [resultados, setResultados] = useState<ResultadoBuscaPrincipal[]>(() => turmaInicial
+    ? resultadosDaTurma(dados, turmaInicial, turmaInicial.turno, turmaInicial.tipo).map((resultado) => ({ origem: "turma", resultado })) : []);
+
+  // mostra o ensalamento selecionado no link do representante
+  useEffect(() => {
+    if (!turmaInicial) return;
+    const quadro = requestAnimationFrame(() => document.getElementById("resultados-busca-turma")?.scrollIntoView({ block: "start" }));
+    return () => cancelAnimationFrame(quadro);
+  }, [turmaInicial]);
 
   // monta os tipos permitidos para o turno
   const opcoesTipo = useMemo(
@@ -428,6 +437,7 @@ function CartaoResultadoTurma({ resultado, categorias }: { resultado: ResultadoT
   const atualizadoEm = dataMaisRecente(turma.atualizadoEm, ensalamento?.atualizadoEm, local?.atualizadoEm);
   // verifica se existem observações
   const temObservacoes = temTexto(turma.observacoes, ensalamento?.observacoes, local?.observacoes);
+  const filtrosRepresentantes = new URLSearchParams({ turmaId: String(turma.id), turma: turma.nome, turno: turma.turno });
 
   return (
     <article className="cartao-resultado-mapa">
@@ -474,6 +484,7 @@ function CartaoResultadoTurma({ resultado, categorias }: { resultado: ResultadoT
       <dl className="detalhes-mapa detalhes-complementares-mapa">
         <DetalheMapa rotulo="Curso" valor={turma.curso} />
         <DetalheMapa rotulo="Série ou ano" valor={turma.serie} />
+        {turma.turnoParcial && <DetalheMapa rotulo="Horário das aulas" valor={`${turma.horarioInicial} às ${turma.horarioFinal}`} />}
         <DetalheMapa rotulo="Acessibilidade do local" valor={local?.acessibilidade} ocultarVazio />
         <DetalheMapa rotulo="Funcionamento" valor={local?.horario} ocultarVazio />
         <DetalheMapa rotulo="Início da validade" valor={formatarData(ensalamento?.inicioValidade || turma.inicioValidade)} ocultarVazio />
@@ -488,6 +499,7 @@ function CartaoResultadoTurma({ resultado, categorias }: { resultado: ResultadoT
         </figure>
       )}
 
+      <Link className="botao-secundario" href={`/representantes?${filtrosRepresentantes}#resultado-representantes`}>Ver representantes da turma ›</Link>
       <p className="atualizacao-mapa">Última atualização: {valorOuInformacao(formatarData(atualizadoEm))}</p>
     </article>
   );
@@ -543,7 +555,7 @@ function CartaoResultadoLocal({ resultado, categorias }: { resultado: ResultadoL
               <li key={ensalamento.id}>
                 <div>
                   <strong>{turma.nome}</strong>
-                  <span>{rotuloTurno(ensalamento.turno || turma.turno)} · {nomeCategoria(categorias, "atividade", ensalamento.tipo || turma.tipo)}</span>
+                  <span>{rotuloTurno(ensalamento.turno || turma.turno)} · {nomeCategoria(categorias, "atividade", ensalamento.tipo || turma.tipo)}{turma.turnoParcial && ` · ${turma.horarioInicial} às ${turma.horarioFinal}`}</span>
                 </div>
                 {ensalamento.observacoes && <p><b>Observação deste ensalamento:</b> {ensalamento.observacoes}</p>}
               </li>

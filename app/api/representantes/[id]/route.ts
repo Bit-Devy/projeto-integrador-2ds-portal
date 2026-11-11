@@ -7,7 +7,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     if (bloqueio) return bloqueio;
     const { id } = await params;
     return Response.json({ item: await obterRepresentante(identificadorDaRota(id), todos) }, {
-      headers: { "cache-control": todos ? "private, no-store" : "public, max-age=30" },
+      headers: { "cache-control": todos ? "private, no-store" : "no-store" },
     });
   } catch (erro) {
     return responderErroEventos(erro, "GET /api/representantes/[id]");

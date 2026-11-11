@@ -417,6 +417,7 @@ async function importarInterfaceMapa(sufixo) {
   // adapta os imports e libera os cartões para o teste
   const fonte = (await readFile(caminho, "utf8"))
     .replace('from "react"', `from "${estados}"`)
+    .replace('from "next/link"', `from "${import.meta.resolve("next/link.js")}"`)
     .replace(
       'from "../mapa/busca-publica"',
       `from "${pathToFileURL(path.join(raiz, "app/mapa/busca-publica.ts")).href}"`,

@@ -8,6 +8,7 @@ import type { TipoConteudo } from "../conteudo/tipos";
 import type { RecursoPainel } from "../lib/cargos";
 import { anoDoRegistro } from "../conteudo/ciclos";
 import { anoDoPortal } from "../conteudo/periodos";
+import ArquivoMovimentos from "./ArquivoMovimentos";
 import "./painel-consulta.css";
 
 type Registro = Record<string, unknown>;
@@ -26,6 +27,7 @@ export default function PainelConsulta({ recurso, publicos = false }: { recurso:
   const [detalhe, setDetalhe] = useState<Registro | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [abrindo, setAbrindo] = useState(false);
+  const [arquivoFinanceiro, setArquivoFinanceiro] = useState(false);
   const [filtros, setFiltros] = useState<Filtros>({ busca: "", estado: recurso === "noticias" && !publicos || recurso === "mensagens" ? "ativas" : "todos", ano: String(anoDoPortal()) });
   const [consulta, setConsulta] = useState(filtros);
   const [tentativa, setTentativa] = useState(0);
@@ -94,8 +96,9 @@ export default function PainelConsulta({ recurso, publicos = false }: { recurso:
   const paginaAtual = Math.min(pagina, paginas);
   const visiveis = listaLocal ? filtrados.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina) : filtrados;
   const titulo = ({ eventos: "Eventos internos", interclasses: "Interclasses e campeonatos", reunioes: "Reuniões, atas e presenças", representantes: "Representantes", arquivos: "Biblioteca de arquivos", mapa: "Mapa e ensalamento", turmas: "Turmas", oficiais: "Estatuto e regimento", mensagens: "Mensagens recebidas" } as Record<string, string>)[recurso] || configuracaoPainel[(( { calendario: "agenda", cantina: "cardapios", estagios: "oportunidades" } as Record<string, string>)[recurso] || recurso) as TipoConteudo]?.nome || "Consulta";
+  if (arquivoFinanceiro) return <ArquivoMovimentos voltar={() => setArquivoFinanceiro(false)} />;
   return <section className="consulta-painel">
-    <header className="topo-painel"><div><span className="rotulo-secao">SOMENTE CONSULTA</span><h1>{titulo}</h1><p>{publicos ? "Consulte as publicações disponíveis para seu cargo." : "Consulte publicações, rascunhos e registros arquivados disponíveis para seu cargo."} Este acesso não permite alterações.</p></div></header>
+    <header className="topo-painel"><div><span className="rotulo-secao">SOMENTE CONSULTA</span><h1>{titulo}</h1><p>{publicos ? "Consulte as publicações disponíveis para seu cargo." : "Consulte publicações, rascunhos e registros arquivados disponíveis para seu cargo."} Este acesso não permite alterações.</p></div>{recurso === "movimentos" && !publicos && <div className="acoes-topo-servicos"><button className="botao-primario botao-historico-financeiro" type="button" onClick={() => setArquivoFinanceiro(true)}>Ver registros de anos anteriores</button></div>}</header>
     {erro && <p className="erro-painel" role="alert">{erro} <button className="pev-botao" type="button" onClick={() => setTentativa((valor) => valor + 1)}>Tentar novamente</button></p>}
     {recurso === "arquivos" ? <ListaBiblioteca /> : <>
       {/* a busca e os filtros também estão disponíveis para quem apenas consulta */}

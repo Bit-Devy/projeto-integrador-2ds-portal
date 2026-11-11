@@ -7,6 +7,7 @@ import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 import { alasMapa, nomesTurnos, type CategoriaMapa, type DadosMapa, type LocalMapa } from "../mapa/tipos";
 import { confirmarSaida, useAvisoMudancas, type AoMudarEstadoSujo } from "./painel-eventos-comum";
 import { confirmarNoPainel } from "./confirmacao-painel";
+import { dataDoPortal } from "../conteudo/periodos";
 type ValorFormulario = string | number | boolean | null;
 type FormularioMapa = Record<string, ValorFormulario>;
 const dadosVazios: DadosMapa = { categorias: [], locais: [], turmas: [], ensalamentos: [] };
@@ -71,7 +72,7 @@ export default function PainelMapaColegio({ aoMudarEstadoSujo }: { aoMudarEstado
     finally { setSalvando(false); }
   }
   // oferece somente turmas que já podem aparecer no portal
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = dataDoPortal();
   const turmasDisponiveis = dados.turmas.filter((item) => item.ativo && item.publicado && (!item.inicioValidade || item.inicioValidade <= hoje) && (!item.fimValidade || item.fimValidade >= hoje) && dados.categorias.some((categoria) => categoria.grupo === "atividade" && categoria.slug === item.tipo && categoria.ativo));
   // confirma a exclusão e impede remover uma sala ainda vinculada
   async function excluir(local: LocalMapa) {
@@ -101,7 +102,17 @@ export default function PainelMapaColegio({ aoMudarEstadoSujo }: { aoMudarEstado
       <div className="titulo-formulario-painel"><h2>{idEditando ? "Atualizar sala" : "Cadastrar sala"}</h2><button type="button" onClick={fecharFormulario}>Fechar</button></div>
       <div className="grade-campos-painel"><CamposLocal formulario={formulario} mudar={mudar} categorias={categoriasLocal} enviarImagem={enviarImagem} /></div>
       {/* vincula uma turma existente sem criar um segundo cadastro */}
-      <details className="salas-vinculo"><summary>Vincular turma (opcional)</summary><label><CheckboxComAjuda checked={vincularTurma} onChange={(evento) => { setVincularTurma(evento.target.checked); setMudou(true); }} explicacao="Marcado: vincula uma turma já publicada a esta sala usando o turno e a validade dela. Desmarcado: salva a sala sem adicionar ou trocar vínculos de turma." aria-label="Escolher uma turma existente" />Escolher uma turma existente</label>{vincularTurma && <div className="grade-campos-painel"><label><span>Turma publicada</span><select required value={turmaId} onChange={(evento) => { setTurmaId(evento.target.value); setMudou(true); }}><option value="">Selecione a turma</option>{turmasDisponiveis.map((item) => <option key={item.id} value={item.id}>{item.nome} · {nomesTurnos[item.turno]}</option>)}</select></label></div>}<p>O vínculo usa o turno e a validade da turma escolhida. Se ela já tiver uma sala, você poderá confirmar a transferência. Para criar uma turma nova, use o menu Turmas.</p></details>
+      <details className="salas-vinculo">
+        <summary>Vincular turma (opcional)</summary>
+        <label><CheckboxComAjuda checked={vincularTurma} onChange={(evento) => { setVincularTurma(evento.target.checked); setMudou(true); }} explicacao="Marcado: vincula uma turma já publicada e confere os horários da sala. Desmarcado: salva a sala sem adicionar ou trocar vínculos de turma." aria-label="Escolher uma turma existente" />Escolher uma turma existente</label>
+        {vincularTurma && <div className="grade-campos-painel"><label><span>Turma publicada</span>
+          <select required value={turmaId} onChange={(evento) => { setTurmaId(evento.target.value); setMudou(true); }}>
+            <option value="">Selecione a turma</option>
+            {turmasDisponiveis.map((item) => <option key={item.id} value={item.id}>{item.nome} · {nomesTurnos[item.turno]}{item.turnoParcial ? ` · ${item.horarioInicial}–${item.horarioFinal}` : ""}</option>)}
+          </select>
+        </label></div>}
+        <p>O vínculo considera o turno, o horário e a validade da turma. Se ela já tiver uma sala, você poderá confirmar a transferência. Para criar uma turma nova, use o menu Turmas.</p>
+      </details>
       <div className="acoes-formulario-painel"><button type="button" onClick={fecharFormulario}>Cancelar</button><button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Salvar sala"}</button></div>
     </form> : <>
       <div className="ferramentas-salas"><label>Buscar sala ou local<input type="search" value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Número, nome ou ala" /></label><label>Tipo do local<select value={filtroTipo} onChange={(evento) => setFiltroTipo(evento.target.value)}><option value="">Todos</option>{categoriasLocal.map((item) => <option key={item.id} value={item.slug}>{item.nome}</option>)}</select></label><label>Publicação<select value={filtroEstado} onChange={(evento) => setFiltroEstado(evento.target.value)}><option value="">Todas</option><option value="publicado">Publicadas</option><option value="oculto">Fora do público</option></select></label></div>

@@ -16,6 +16,22 @@ export async function prepararAnosEscolares(d1 = getD1()) {
   await d1.prepare("UPDATE campeonatos SET ano = CAST(COALESCE(NULLIF(substr(data_inicial, 1, 4), ''), substr(criado_em, 1, 4)) AS INTEGER) WHERE ano IS NULL").run();
 }
 
+// adiciona os horários e os dados de mandato nos bancos já usados pelo portal
+export async function prepararDetalhesEscolares(d1 = getD1()) {
+  const tabelas = {
+    turmas_atividades: { horario_inicial: "TEXT NOT NULL DEFAULT ''", horario_final: "TEXT NOT NULL DEFAULT ''" },
+    representantes: { contatos_json: "TEXT NOT NULL DEFAULT '[]'", contatos_publicos: "INTEGER NOT NULL DEFAULT 0", destituido_em: "TEXT" },
+  };
+  for (const [tabela, campos] of Object.entries(tabelas)) {
+    const colunas = await d1.prepare(`PRAGMA table_info(${tabela})`).all<{ name: string }>();
+    for (const [nome, definicao] of Object.entries(campos)) {
+      if (colunas.results.some((coluna) => coluna.name === nome)) continue;
+      try { await d1.prepare(`ALTER TABLE ${tabela} ADD COLUMN ${nome} ${definicao}`).run(); }
+      catch (erro) { if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro; }
+    }
+  }
+}
+
 // executa a virada também no primeiro acesso do novo ano sem depender de um agendador
 export async function arquivarCiclosEscolares(ano = anoDoPortal(), d1 = getD1()) {
   await d1.batch([

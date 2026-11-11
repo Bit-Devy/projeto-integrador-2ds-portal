@@ -10,7 +10,8 @@ import { CabecalhoPainel, Campo, MensagensPainel, confirmarSaida, requisitarPain
 import { confirmarNoPainel } from "./confirmacao-painel";
 import { anoDoPortal } from "../conteudo/periodos";
 import ArquivoAnual from "./ArquivoAnual";
-const turmaVazia = { ano: anoDoPortal(), nome: "", nivelEnsino: "medio", serie: "", turma: "", turno: "manha", tipo: "aula_regular", curso: "", inicioValidade: "", fimValidade: "", ativo: true, publicado: true };
+import HistoricoTurmaPainel from "./HistoricoTurmaPainel";
+const turmaVazia = { ano: anoDoPortal(), nome: "", nivelEnsino: "medio", serie: "", turma: "", turno: "manha", turnoParcial: false, horarioInicial: "", horarioFinal: "", tipo: "aula_regular", curso: "", inicioValidade: "", fimValidade: "", ativo: true, publicado: true };
 
 // organiza a busca e a edição das turmas do colégio
 export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?: AoMudarEstadoSujo }) {
@@ -45,7 +46,7 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
   // abre o cadastro com os dados da turma e seu vínculo atual
   async function editarTurma(item?: TurmaAtividadeMapa) {
     if (!await fechar()) return;
-    setTurma(item ? { ...item } : { ...turmaVazia });
+    setTurma(item ? { ...item } : { ...turmaVazia, ano: anoDoPortal() });
     const vinculo = dados.ensalamentos.find((registro) => registro.turmaAtividadeId === item?.id && registro.ativo && registro.localId);
     setVincularSala(Boolean(vinculo)); setSalaId(vinculo?.localId ? String(vinculo.localId) : ""); setSucesso("");
   }
@@ -93,19 +94,39 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
   return <section className="pev-painel painel-turmas">
     <CabecalhoPainel rotulo="COMUNIDADE ESCOLAR" titulo="Turmas" descricao="Cadastre turmas, defina o turno e vincule cada uma a uma sala publicada no mapa." acao={turma ? undefined : () => void editarTurma()} nomeAcao="+ Cadastrar turma" />
     <MensagensPainel erro={erro} sucesso={sucesso} />
-    {arquivoAberto && <ArquivoAnual titulo="Turmas arquivadas" itens={dados.turmas.filter((item) => !item.ativo || item.ano !== anoDoPortal()).map((item) => ({ id: item.id, ano: item.ano, titulo: item.nome, descricao: `${item.serie} · ${nomesTurnos[item.turno]} · ${item.curso || "Ensino regular"}`, observacao: item.observacoes }))} fechar={() => setArquivoAberto(false)} />}
-    {!turma && <div className="acoes-arquivo-anual"><button className="pev-botao" type="button" onClick={() => setArquivoAberto(true)}>Arquivados</button></div>}
+    {arquivoAberto && <ArquivoAnual titulo="Turmas arquivadas" itens={dados.turmas.filter((item) => !item.ativo || item.ano !== anoDoPortal()).map((item) => ({ id: item.id, ano: item.ano, titulo: item.nome, descricao: [item.serie, nomesTurnos[item.turno], item.curso].filter(Boolean).join(" · "), observacao: item.observacoes }))} detalhar={(item) => <HistoricoTurmaPainel id={item.id} />} fechar={() => setArquivoAberto(false)} />}
     {/* mostra a ocupação existente antes de trocar uma turma de sala */}
     <dialog ref={dialogo} className="dialogo-anonimato" aria-labelledby="titulo-substituir-sala" onCancel={(evento) => { evento.preventDefault(); setConflitos(null); }}>
       <h2 id="titulo-substituir-sala">Substituir a ocupação desta sala?</h2><p>Esta sala está ocupada por {conflitos?.map((item) => item.nome).join(", ")} neste turno e período.</p><p>As ocupações anteriores serão desativadas e permanecerão no histórico.</p>
       <div className="acoes-dialogo-anonimato"><button className="botao-secundario" type="button" onClick={() => setConflitos(null)}>Cancelar substituição</button><button className="botao-primario" type="button" onClick={() => { const ids = conflitos?.map((item) => item.id) || []; setConflitos(null); void salvar(ids); }}>Sim, substituir ocupação</button></div>
     </dialog>
     {!turma ? <>
-      <div className="ferramentas-turmas"><label><span>Buscar turma</span><input type="search" value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Nome, série, curso ou turno" /></label><label><span>Exibir</span><select value={visao} onChange={(evento) => setVisao(evento.target.value)}><option value="ativas">Ativas</option><option value="ocultas">Fora do público</option><option value="arquivadas">Arquivadas</option><option value="todas">Todas</option></select></label></div>
+      <div className="ferramentas-turmas">
+        <label><span>Buscar turma</span><input type="search" value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Nome, série, curso ou turno" /></label>
+        <label><span>Exibir</span><select value={visao} onChange={(evento) => setVisao(evento.target.value)}><option value="ativas">Ativas</option><option value="ocultas">Fora do público</option><option value="arquivadas">Arquivadas</option><option value="todas">Todas</option></select></label>
+        <button className="pev-botao botao-arquivo-turmas" type="button" onClick={() => setArquivoAberto(true)}>Ver turmas arquivadas ›</button>
+      </div>
       {carregando ? <p role="status">Carregando turmas...</p> : <p className="ajuda-busca">{turmas.length} {turmas.length === 1 ? "turma encontrada" : "turmas encontradas"}</p>}
       <div className="pev-lista">{turmas.map((item) => {
         const vinculos = dados.ensalamentos.filter((registro) => registro.turmaAtividadeId === item.id && registro.ativo && registro.localId);
-        return <article className="cartao-turma" key={item.id}><div><span className={item.ativo && item.publicado ? "estado-publicado" : "estado-rascunho"}>{!item.ativo ? "Arquivada" : item.publicado ? "Publicada" : "Fora do público"}</span><h2>{item.nome}</h2><p>{nomesTurnos[item.turno]} · {item.serie || "Série não informada"}{item.curso ? ` · ${item.curso}` : ""} · {item.ano}</p><small>{vinculos.length ? vinculos.map((vinculo) => dados.locais.find((local) => local.id === vinculo.localId)?.nome || "Sala cadastrada").join(", ") : "Sem sala vinculada"}</small></div><div className="acoes-turma"><button className="pev-botao" type="button" disabled={salvando} onClick={() => void editarTurma(item)}>Editar</button>{item.ativo ? <><button className="pev-botao" type="button" disabled={salvando} onClick={() => void alterarEstado(item, item.publicado ? "ocultar" : "publicar")}>{item.publicado ? "Tirar do público" : "Publicar"}</button><button className="pev-botao" type="button" disabled={salvando} onClick={() => void alterarEstado(item, "arquivar")}>Arquivar</button></> : <><button className="pev-botao" type="button" onClick={() => void alterarEstado(item, "restaurar")} disabled={salvando || item.ano !== anoDoPortal()}>Restaurar</button><button className="pev-botao" type="button" disabled={salvando} onClick={() => void alterarEstado(item, "excluir")}>Excluir</button></>}</div></article>;
+        return <article className="cartao-turma" key={item.id}>
+          <div>
+            <span className={item.ativo && item.publicado ? "estado-publicado" : "estado-rascunho"}>{!item.ativo ? "Arquivada" : item.publicado ? "Publicada" : "Fora do público"}</span>
+            <h2>{item.nome}</h2>
+            <p>{nomesTurnos[item.turno]}{item.turnoParcial && ` · ${item.horarioInicial}–${item.horarioFinal}`} · {item.serie || "Série não informada"}{item.curso ? ` · ${item.curso}` : ""} · {item.ano}</p>
+            <small>{vinculos.length ? vinculos.map((vinculo) => dados.locais.find((local) => local.id === vinculo.localId)?.nome || "Sala cadastrada").join(", ") : "Sem sala vinculada"}</small>
+          </div>
+          <div className="acoes-turma">
+            <button className="pev-botao" type="button" disabled={salvando} onClick={() => void editarTurma(item)}>Editar</button>
+            {item.ativo ? <>
+              <button className="pev-botao" type="button" disabled={salvando} onClick={() => void alterarEstado(item, item.publicado ? "ocultar" : "publicar")}>{item.publicado ? "Tirar do público" : "Publicar"}</button>
+              <button className="pev-botao" type="button" disabled={salvando} onClick={() => void alterarEstado(item, "arquivar")}>Arquivar</button>
+            </> : <>
+              <button className="pev-botao" type="button" onClick={() => void alterarEstado(item, "restaurar")} disabled={salvando || item.ano !== anoDoPortal()}>Restaurar</button>
+              <button className="pev-botao" type="button" disabled={salvando} onClick={() => void alterarEstado(item, "excluir")}>Excluir</button>
+            </>}
+          </div>
+        </article>;
       })}</div>
       {!carregando && !turmas.length && <p>Nenhuma turma encontrada. Altere os filtros ou cadastre uma turma.</p>}
     </> : <form className="pev-formulario" onSubmit={(evento: FormEvent<HTMLFormElement>) => { evento.preventDefault(); void salvar(); }}>
@@ -124,7 +145,17 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
       </div>
       {/* a atribuição de sala é opcional mas exige uma sala publicada quando usada */}
       {<details open={vincularSala || undefined} className="salas-vinculo"><summary>Vincular a uma sala (opcional)</summary><label><CheckboxComAjuda checked={vincularSala} onChange={(e) => { setVincularSala(e.target.checked); setMudou(true); }} explicacao="Marcado: vincula esta turma a uma sala publicada no turno e período escolhidos. Desmarcado: remove o vínculo atual ao salvar, preservando seu histórico." aria-label={"Escolher uma sala para esta turma"} />Escolher uma sala para esta turma</label>{vincularSala && <Campo rotulo={`Sala publicada · turno ${nomesTurnos[turma.turno as keyof typeof nomesTurnos]}`}><select required value={salaId} onChange={(e) => { setSalaId(e.target.value); setMudou(true); }}><option value="">Selecione a sala</option>{salasDisponiveis.map((item) => <option key={item.id} value={item.id}>{item.nome || item.numero}</option>)}</select></Campo>}<p>A ocupação usa o turno e o ano escolar da turma. Alterar esses campos também confere conflitos. Ao desmarcar a escolha, o vínculo atual será retirado quando você salvar.</p></details>}
-      <div className="pev-opcoes">{(["ativo", "publicado"] as const).map((campo) => <label key={campo}><CheckboxComAjuda disabled={turma.ano !== anoDoPortal()} checked={turma[campo]} onChange={(evento) => { setTurma({ ...turma, [campo]: evento.target.checked }); setMudou(true); }} explicacao={descricaoCheckbox(campo)} aria-label={campo === "ativo" ? "Turma ativa" : "Publicar turma"} />{campo === "ativo" ? "Turma ativa" : "Publicar turma"}</label>)}</div>
+      <div className="pev-opcoes">
+        {(["ativo", "publicado"] as const).map((campo) => <label key={campo}><CheckboxComAjuda disabled={turma.ano !== anoDoPortal()} checked={turma[campo]} onChange={(evento) => { setTurma({ ...turma, [campo]: evento.target.checked }); setMudou(true); }} explicacao={descricaoCheckbox(campo)} aria-label={campo === "ativo" ? "Turma ativa" : "Publicar turma"} />{campo === "ativo" ? "Turma ativa" : "Publicar turma"}</label>)}
+        <label><CheckboxComAjuda checked={turma.turnoParcial} onChange={(evento) => { setTurma({ ...turma, turnoParcial: evento.target.checked }); setMudou(true); }} explicacao="Marcado: você escolhe a hora de início e de fim. A turma pode dividir a sala com outras turmas parciais do mesmo turno, em horários diferentes. Desmarcado: a turma usa a sala durante todo o turno." aria-label="Turno parcial ou extracurricular" />Turno parcial / extracurricular</label>
+      </div>
+      {turma.turnoParcial && <fieldset className="pev-bloco campos-turno-parcial">
+        <legend>Horário das aulas</legend>
+        <div className="pev-grade-campos">
+          <Campo rotulo="Das"><input type="time" required value={turma.horarioInicial} onChange={(evento) => { setTurma({ ...turma, horarioInicial: evento.target.value }); setMudou(true); }} /></Campo>
+          <Campo rotulo="Até"><input type="time" required value={turma.horarioFinal} onChange={(evento) => { setTurma({ ...turma, horarioFinal: evento.target.value }); setMudou(true); }} /></Campo>
+        </div>
+      </fieldset>}
       <div className="pev-acoes-formulario"><button className="pev-botao" type="button" onClick={fechar}>Cancelar</button><button className="pev-botao pev-botao--primario" type="submit" disabled={salvando}>{salvando ? "Salvando…" : "Salvar turma"}</button></div>
     </form>}
   </section>;

@@ -145,6 +145,8 @@ export const turmasAtividades = sqliteTable(
     aliases: text("aliases").notNull().default(""),
     aliasesNormalizados: text("aliases_normalizados").notNull().default(""),
     turno: text("turno").notNull(),
+    horarioInicial: text("horario_inicial").notNull().default(""),
+    horarioFinal: text("horario_final").notNull().default(""),
     tipo: text("tipo").notNull(),
     curso: text("curso").notNull().default(""),
     serie: text("serie").notNull().default(""),
@@ -203,6 +205,16 @@ export const ensalamentos = sqliteTable(
     index("ensalamentos_publicacao_idx").on(tabela.publicado, tabela.ativo),
   ],
 );
+
+// preserva salas de vínculos editados ou removidos do mapa
+export const historicoSalasTurma = sqliteTable("historico_salas_turma", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  turmaAtividadeId: integer("turma_atividade_id").notNull().references(() => turmasAtividades.id, { onDelete: "cascade", onUpdate: "cascade" }),
+  sala: text("sala").notNull(),
+  turno: text("turno").notNull(),
+  vinculadoEm: text("vinculado_em").notNull(),
+  encerradoEm: text("encerrado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (tabela) => [index("historico_salas_turma_idx").on(tabela.turmaAtividadeId)]);
 
 // cargas iniciais que já foram aplicadas
 export const cargasIniciais = sqliteTable("cargas_iniciais", {
@@ -497,6 +509,9 @@ export const representantes = sqliteTable(
     ordem: integer("ordem").notNull().default(0),
     observacaoPublica: text("observacao_publica").notNull().default(""),
     observacaoInterna: text("observacao_interna").notNull().default(""),
+    contatosJson: text("contatos_json").notNull().default("[]"),
+    contatosPublicos: integer("contatos_publicos", { mode: "boolean" }).notNull().default(false),
+    destituidoEm: text("destituido_em"),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     arquivadoEm: text("arquivado_em"),

@@ -1601,14 +1601,16 @@ async function testarPublicacoes2027(cookie) {
     assert.match(html, /Crédito temporário/);
     assert.match(html, /Conteúdo temporário completo/);
 
-    // um lançamento de outro ano não pode misturar os registros de 2026
-    const financeiro = { descricao: `Movimento temporário 2027 ${Date.now()}`, data: "2027-03-02", tipo: "entrada", categoria: "Teste", valor: 12.5, comprovanteUrl: "" };
+    // aceita lançamentos somente no exercício em andamento
+    const anoAtual = new Intl.DateTimeFormat("pt-BR", { year: "numeric", timeZone: "America/Sao_Paulo" }).format(new Date());
+    const financeiro = { descricao: `Movimento temporário ${Date.now()}`, data: `${anoAtual}-03-02`, tipo: "entrada", categoria: "Teste", valor: 12.5, comprovanteUrl: "" };
     await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: { ...financeiro, exemplo: true } }, 400);
-    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: { ...financeiro, data: "2027-02-30" } }, 400);
+    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: { ...financeiro, data: `${anoAtual}-02-30` } }, 400);
+    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: { ...financeiro, data: `${Number(anoAtual) + 1}-03-02` } }, 400);
     const movimento = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: financeiro }, 201)).item;
     criados.push(movimento.id);
-    assert.ok((await requisicaoPublica("/api/conteudo?tipo=movimentos&ano=2027")).itens.some((item) => item.id === movimento.id));
-    assert.ok(!(await requisicaoPublica("/api/conteudo?tipo=movimentos&ano=2026")).itens.some((item) => item.id === movimento.id));
+    assert.ok((await requisicaoPublica(`/api/conteudo?tipo=movimentos&ano=${anoAtual}`)).itens.some((item) => item.id === movimento.id));
+    assert.equal((await requisicaoPublica(`/api/conteudo?tipo=movimentos&ano=${Number(anoAtual) - 1}`)).itens.length, 0);
     await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: movimento.id, tipo: "movimentos", dados: { ...financeiro, exemplo: true } }, 400);
     await requisicaoPublica("/api/conteudo?tipo=noticias&ano=errado", 400);
 

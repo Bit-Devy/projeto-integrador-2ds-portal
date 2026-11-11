@@ -344,6 +344,8 @@ export type DetalheReuniao<T = ReuniaoPublica> = {
   presencas: Array<PresencaPublica | PresencaAdministrativa>;
 };
 
+export type ContatoRepresentante = { tipo: "whatsapp" | "email" | "telefone"; valor: string };
+
 export type RepresentantePublico = {
   ano: number;
   id: number;
@@ -358,12 +360,17 @@ export type RepresentantePublico = {
   fimMandato: string;
   ordem: number;
   observacaoPublica: string;
+  contatos?: ContatoRepresentante[];
+  mapaUrl?: string;
   atualizadoEm: string;
 };
 
 export type RepresentanteAdministrativo = RepresentantePublico & {
   turmaAtividadeId: number | null;
   observacaoInterna: string;
+  contatos: ContatoRepresentante[];
+  contatosPublicos: boolean;
+  destituidoEm: string | null;
   ativo: boolean;
   publicado: boolean;
   arquivadoEm: string | null;

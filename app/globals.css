@@ -7090,15 +7090,11 @@ html:has(#topo.texto-maior) {
   line-height: 1.5;
 }
 
-/* organiza a troca de ano nas páginas de notícias e transparência */
+/* organiza a escolha de ano em um controle curto */
 .seletor-ano {
-  display: flex;
-  align-items: flex-end;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding-bottom: 1.5rem;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid #dce3e6;
+  display: grid;
+  gap: 0.75rem;
+  width: min(100%, 20rem);
 }
 
 .seletor-ano label {
@@ -7111,8 +7107,8 @@ html:has(#topo.texto-maior) {
 
 .seletor-ano select,
 .seletor-ano button {
-  min-height: 2.75rem;
-  padding: 0.65rem 0.9rem;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.7rem;
   font: inherit;
   border: 1px solid #cad6dc;
   background: white;
@@ -7134,6 +7130,12 @@ html:has(#topo.texto-maior) {
   cursor: default;
 }
 
+.acoes-seletor-ano {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
 .cartao-canal:hover,
 .cartao-canal:focus-visible {
   background: #f1f8fc;
@@ -7147,19 +7149,6 @@ html:has(#topo.texto-maior) {
 
 /* deixa os filtros e as notícias mais simples de ler no celular */
 @media (max-width: 780px) {
-  .seletor-ano {
-    gap: 0.65rem;
-  }
-
-  .seletor-ano label {
-    width: 100%;
-    order: -1;
-  }
-
-  .seletor-ano button {
-    flex: 1;
-  }
-
   .grade-noticias,
   .grade-noticias-completa {
     grid-template-columns: minmax(0, 1fr);
@@ -7217,23 +7206,37 @@ html:has(#topo.texto-maior) {
 
 /* deixa o período discreto até a pessoa abrir a escolha de ano */
 .periodo-recolhido {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  min-width: 0;
 }
 
 .periodo-recolhido>summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   width: fit-content;
-  color: #6c787e;
-  font-size: 0.8125rem;
+  color: var(--azul-escuro);
+  background: #f3f7fa;
+  border: 1px solid #d3e0e8;
+  border-radius: 3px;
+  font-size: 0.875rem;
   cursor: pointer;
-  padding: 0.35rem 0;
+  padding: 0.5rem 0.7rem;
 }
 
+.periodo-recolhido>summary::-webkit-details-marker { display: none; }
+.periodo-recolhido>summary:hover,
+.periodo-recolhido[open]>summary { background: #e7f2f9; }
+.seta-seletor-ano { width: 0.4rem; height: 0.4rem; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+.periodo-recolhido[open] .seta-seletor-ano { transform: rotate(225deg); }
+
 .periodo-recolhido[open] .seletor-ano {
-  margin-top: 0.65rem;
-  margin-bottom: 0;
-  padding: 1rem;
-  background: #f6f8f9;
-  border: 1px solid #dce3e6;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
+  padding: 0.85rem;
+  background: #f7fafc;
+  border: 1px solid #d3e0e8;
+  border-top: 3px solid var(--azul);
 }
 
 /* organiza a biblioteca sem mudar as outras seções do painel */

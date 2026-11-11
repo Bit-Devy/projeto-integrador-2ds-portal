@@ -18,6 +18,7 @@ import type {
   EnsalamentoMapa,
   EntidadeMapa,
   ExportacaoMapa,
+  HistoricoTurma,
   LocalMapa,
   TurmaAtividadeMapa,
 } from "./tipos";
@@ -82,6 +83,8 @@ type LinhaTurma = {
   nome_normalizado: string;
   aliases: string;
   turno: "manha" | "tarde" | "noite";
+  horario_inicial: string;
+  horario_final: string;
   tipo: string;
   curso: string;
   serie: string;
@@ -298,19 +301,23 @@ export async function atualizarRegistroMapa(entidade: EntidadeMapa, idRecebido: 
 }
 
 // confere o mesmo conflito nos cadastros de salas e de turmas
-async function conferirOcupacoes(salas: number[], dados: Pick<TurmaMapaValidada, "ativo" | "publicado" | "turno" | "inicioValidade" | "fimValidade">, turmaId: number | null, confirmacao: unknown) {
+async function conferirOcupacoes(salas: number[], dados: Pick<TurmaMapaValidada, "ativo" | "publicado" | "turno" | "inicioValidade" | "fimValidade" | "horarioInicial" | "horarioFinal">, turmaId: number | null, confirmacao: unknown) {
   const d1 = getD1();
   const ocupacoes = new Map<number, { id: number; nome: string }>();
   if (dados.ativo && dados.publicado) for (const local of salas) {
-    const encontrados = await d1.prepare(`SELECT e.id, t.nome FROM ensalamentos e
+    const encontrados = await d1.prepare(`SELECT e.id, t.nome, t.horario_inicial, t.horario_final FROM ensalamentos e
       JOIN turmas_atividades t ON t.id = e.turma_atividade_id
       WHERE e.local_id = ? AND e.turno = ? AND e.turma_atividade_id <> ?
         AND e.ativo = 1 AND e.publicado = 1
         AND COALESCE(NULLIF(e.fim_validade, ''), '9999-12-31') >= ?
-        AND COALESCE(NULLIF(e.inicio_validade, ''), '0001-01-01') <= ?`)
-      .bind(local, dados.turno, turmaId ?? -1, dados.inicioValidade || "0001-01-01", dados.fimValidade || "9999-12-31")
-      .all<{ id: number; nome: string }>();
-    encontrados.results.forEach((item) => ocupacoes.set(item.id, item));
+        AND COALESCE(NULLIF(e.inicio_validade, ''), '0001-01-01') <= ?
+        AND (t.horario_inicial = '' OR ? = '' OR (t.horario_inicial < ? AND ? < t.horario_final))`)
+      .bind(local, dados.turno, turmaId ?? -1, dados.inicioValidade || "0001-01-01", dados.fimValidade || "9999-12-31", dados.horarioInicial, dados.horarioFinal, dados.horarioInicial)
+      .all<{ id: number; nome: string; horario_inicial: string; horario_final: string }>();
+    for (const item of encontrados.results) {
+      const horario = item.horario_inicial ? `${item.horario_inicial}–${item.horario_final}` : "turno inteiro";
+      ocupacoes.set(item.id, { id: item.id, nome: `${item.nome} (${horario})` });
+    }
   }
   const confirmados = Array.isArray(confirmacao) ? confirmacao : [];
   if ([...ocupacoes.values()].some((item) => !confirmados.includes(item.id))) {
@@ -381,16 +388,16 @@ async function salvarTurmaComSala(id: number | null, valor: unknown) {
   const ocupacoes = await conferirOcupacoes(salas, dados, id, recebido.substituirOcupacoes);
   for (const ocupacao of ocupacoes) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?").bind(ocupacao.id));
   // libera a sala ao arquivar e conserva os vínculos anteriores como histórico
-  if (id && (salaId || desvincular || !dados.ativo)) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?").bind(id));
+  if (id && (salaId || desvincular || !dados.ativo)) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND (ativo = 1 OR publicado = 1)").bind(id));
   const chave = `cadastro:${crypto.randomUUID()}`;
   comandos.push(id
     ? d1.prepare(`${sqlAtualizarTurma} WHERE id = ?`).bind(...valoresTurma(dados), id)
     : d1.prepare(`INSERT INTO turmas_atividades (chave_importacao, ${colunasTurma}) VALUES (?, ${placeholdersTurma})`).bind(chave, ...valoresTurma(dados)));
   // mantém o nome e o turno dos representantes ligados ao cadastro atual da turma
   if (id) comandos.push(d1.prepare(`UPDATE representantes SET turma = ?, turma_normalizada = ?, turno = ?,
-    nivel_ensino = ?, serie = ?, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND ano = ?`)
+    nivel_ensino = ?, serie = ?, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND ano = ? AND ativo = 1`)
     .bind(dados.nome, dados.nomeNormalizado, dados.turno, dados.nivelEnsino, dados.serie || "Não informado", id, dados.ano));
-  if (id && !dados.ativo) comandos.push(d1.prepare("UPDATE representantes SET ativo = 0, publicado = 0, arquivado_em = COALESCE(arquivado_em, CURRENT_TIMESTAMP), atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ?").bind(id));
+  if (id && !dados.ativo) comandos.push(d1.prepare("UPDATE representantes SET ativo = 0, publicado = 0, arquivado_em = COALESCE(arquivado_em, CURRENT_TIMESTAMP), atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND (ativo = 1 OR publicado = 1)").bind(id));
   if (salaId) {
     comandos.push(d1.prepare(`INSERT INTO ensalamentos (${colunasEnsalamento})
       SELECT id, ?, ?, ?, '', ?, ?, 0, ?, ? FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`)
@@ -402,6 +409,26 @@ async function salvarTurmaComSala(id: number | null, valor: unknown) {
   await d1.batch(comandos);
   const linha = await d1.prepare(`SELECT * FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`).bind(id ?? chave).first<LinhaTurma>();
   return linha ? formatarTurma(linha) : null;
+}
+
+// reúne salas anteriores e mandatos pelo identificador da turma
+export async function obterHistoricoTurma(idRecebido: unknown): Promise<HistoricoTurma> {
+  const id = idPositivo(idRecebido, "turma");
+  const turma = await buscarTurma(id);
+  if (!turma) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
+  const d1 = getD1();
+  const [salas, representantes] = await d1.batch([
+    d1.prepare(`SELECT COALESCE(NULLIF(l.nome, ''), l.numero) AS sala, e.turno, e.criado_em AS vinculadoEm,
+        CASE WHEN e.ativo = 0 THEN e.atualizado_em ELSE NULL END AS encerradoEm
+      FROM ensalamentos e JOIN locais_colegio l ON l.id = e.local_id WHERE e.turma_atividade_id = ?
+      UNION ALL SELECT sala, turno, vinculado_em, encerrado_em FROM historico_salas_turma WHERE turma_atividade_id = ?
+      ORDER BY vinculadoEm DESC`).bind(id, id),
+    d1.prepare(`SELECT id, nome, funcao, inicio_mandato AS inicioMandato, fim_mandato AS fimMandato,
+      arquivado_em AS arquivadoEm, destituido_em AS destituidoEm, ano, ativo
+      FROM representantes WHERE turma_atividade_id = ? ORDER BY inicio_mandato, criado_em, id`).bind(id),
+  ]);
+  const mandatos = representantes.results as (Omit<HistoricoTurma["representantes"][number], "ativo"> & { ativo: number })[];
+  return { turma, salas: salas.results as HistoricoTurma["salas"], representantes: mandatos.map((item) => ({ ...item, ativo: Boolean(item.ativo) })) };
 }
 
 // exclui um registro da entidade escolhida
@@ -511,7 +538,7 @@ export async function importarDadosMapa(valor: unknown) {
     d1.prepare(sqlImportarTurma()).bind(id, ...valoresTurma(dados)),
     d1.prepare(`UPDATE ensalamentos
       SET turno = ?, tipo = ?, atualizado_em = CURRENT_TIMESTAMP
-      WHERE turma_atividade_id = ?`).bind(dados.turno, dados.tipo, id),
+      WHERE turma_atividade_id = ? AND ativo = 1`).bind(dados.turno, dados.tipo, id),
   ));
   // prepara a criação ou atualização dos ensalamentos
   ensalamentos.forEach(({ id, dados }) => comandosEnsalamentos.push(d1.prepare(sqlImportarEnsalamento()).bind(id, ...valoresEnsalamento(dados))));
@@ -697,6 +724,9 @@ function formatarTurma(linha: LinhaTurma): TurmaAtividadeMapa {
     nomeNormalizado: linha.nome_normalizado,
     aliases: linha.aliases,
     turno: linha.turno,
+    turnoParcial: Boolean(linha.horario_inicial && linha.horario_final),
+    horarioInicial: linha.horario_inicial,
+    horarioFinal: linha.horario_final,
     tipo: linha.tipo,
     curso: linha.curso,
     serie: linha.serie,
@@ -770,6 +800,8 @@ function valoresTurma(dados: TurmaMapaValidada) {
     dados.aliases,
     dados.aliasesNormalizados,
     dados.turno,
+    dados.horarioInicial,
+    dados.horarioFinal,
     dados.tipo,
     dados.curso,
     dados.serie,
@@ -816,13 +848,13 @@ const sqlAtualizarLocal = `UPDATE locais_colegio SET
   publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
 // define as colunas e consultas usadas pelas turmas
-const colunasTurma = `ano, nivel_ensino, nome, nome_normalizado, aliases, aliases_normalizados, turno, tipo,
+const colunasTurma = `ano, nivel_ensino, nome, nome_normalizado, aliases, aliases_normalizados, turno, horario_inicial, horario_final, tipo,
   curso, serie, turma, descricao, observacoes, inicio_validade, fim_validade, ordem, ativo, publicado`;
 // cria um marcador para cada valor da turma
-const placeholdersTurma = Array.from({ length: 18 }, () => "?").join(", ");
+const placeholdersTurma = Array.from({ length: 20 }, () => "?").join(", ");
 // atualiza todos os campos editáveis da turma
 const sqlAtualizarTurma = `UPDATE turmas_atividades SET
-  ano = ?, nivel_ensino = ?, nome = ?, nome_normalizado = ?, aliases = ?, aliases_normalizados = ?, turno = ?, tipo = ?,
+  ano = ?, nivel_ensino = ?, nome = ?, nome_normalizado = ?, aliases = ?, aliases_normalizados = ?, turno = ?, horario_inicial = ?, horario_final = ?, tipo = ?,
   curso = ?, serie = ?, turma = ?, descricao = ?, observacoes = ?, inicio_validade = ?,
   fim_validade = ?, ordem = ?, ativo = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
@@ -860,7 +892,7 @@ function sqlImportarTurma() {
     ON CONFLICT (id) DO UPDATE SET
       ano = excluded.ano, nome = excluded.nome, nome_normalizado = excluded.nome_normalizado,
       aliases = excluded.aliases, aliases_normalizados = excluded.aliases_normalizados,
-      turno = excluded.turno, tipo = excluded.tipo, curso = excluded.curso,
+      turno = excluded.turno, horario_inicial = excluded.horario_inicial, horario_final = excluded.horario_final, tipo = excluded.tipo, curso = excluded.curso,
       serie = excluded.serie, turma = excluded.turma, descricao = excluded.descricao,
       observacoes = excluded.observacoes, inicio_validade = excluded.inicio_validade,
       fim_validade = excluded.fim_validade, ordem = excluded.ordem, ativo = excluded.ativo,

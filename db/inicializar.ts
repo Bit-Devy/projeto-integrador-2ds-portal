@@ -15,7 +15,7 @@ import {
 // importa a mesma estrutura aditiva da migração do sistema de eventos
 import { comandosEstruturaEventos } from "./estrutura-eventos";
 // importa a proteção contra ocupações repetidas das salas
-import { comandosProtecaoSalas } from "./estrutura-salas";
+import { comandosHistoricoSalas, comandosProtecaoSalas } from "./estrutura-salas";
 // importa as tabelas do acesso por cargo
 import { comandosEstruturaAcessos, garantirColunasLogin } from "./estrutura-acessos";
 // importa as entradas e as ações feitas no painel
@@ -23,7 +23,7 @@ import { comandosEstruturaHistorico } from "./estrutura-historico";
 // prepara os serviços e os calendários enviados para 2026
 import { comandosEstruturaServicos } from "./estrutura-servicos";
 import { calendarioInicial2026 } from "../app/servicos/calendarios-2026";
-import { prepararAnosEscolares, arquivarCiclosEscolares } from "./ciclos-anuais";
+import { prepararAnosEscolares, prepararDetalhesEscolares, arquivarCiclosEscolares } from "./ciclos-anuais";
 
 // guarda uma única inicialização em andamento
 let tarefaInicializacao: Promise<void> | null = null;
@@ -251,8 +251,15 @@ async function prepararBanco() {
       WHEN tipo NOT IN ('aula_regular', 'curso_tecnico') THEN 'outro' ELSE 'medio' END`).run();
   }
   await prepararAnosEscolares(d1);
+  await prepararDetalhesEscolares(d1);
   await carregarMapa2026(d1);
-  await d1.batch(comandosProtecaoSalas.map((comando) => d1.prepare(comando)));
+  // substitui a regra antiga de turno inteiro e prepara o histórico dos vínculos
+  await d1.batch([
+    "DROP TRIGGER IF EXISTS salas_sem_conflito_insert",
+    "DROP TRIGGER IF EXISTS salas_sem_conflito_update",
+    ...comandosProtecaoSalas,
+    ...comandosHistoricoSalas,
+  ].map((comando) => d1.prepare(comando)));
 
   // retira do catálogo antigo a documentação interna que não é publicada no portal
   await d1.prepare(`DELETE FROM conteudos WHERE tipo = 'documentos'

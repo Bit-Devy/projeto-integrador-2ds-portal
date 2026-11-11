@@ -126,12 +126,30 @@
 .topo-painel .acoes-topo-servicos > .botao-primario { color: white; background: var(--azul); border: 1px solid var(--azul); padding: 13px 20px; font-weight: bold; cursor: pointer; }
 .topo-painel .acoes-topo-servicos > .botao-primario:hover { background: var(--azul-escuro); border-color: var(--azul-escuro); }
 .topo-painel .acoes-topo-servicos > .botao-secundario { color: var(--azul-escuro); background: white; border: 1px solid var(--azul); padding: 13px 20px; cursor: pointer; }
-.ferramentas-ano-painel, .acoes-arquivo-anual { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-block: 20px; }
+.ferramentas-ano-painel { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; margin-block: 20px; }
+.ferramentas-ano-painel .periodo-recolhido { margin-bottom: 0; max-width: 100%; }
+.abas-periodo-painel { display: flex; flex-wrap: wrap; gap: 6px; }
+.abas-periodo-painel button[aria-pressed="true"] { background: #e8f3fa; border-color: var(--azul); color: var(--azul-escuro); }
+.exercicio-financeiro { width: fit-content; padding: 0.5rem 0.75rem; margin-block: 1rem; border-left: 3px solid var(--azul); background: #eef5f9; color: var(--azul-escuro); }
+.topo-painel .acoes-topo-servicos > .botao-historico-financeiro { background: var(--azul-escuro); border-color: var(--azul-escuro); }
+.topo-painel .acoes-topo-servicos > .botao-historico-financeiro:hover { background: var(--azul); border-color: var(--azul); }
+.arquivo-financeiro .tabela-movimentos caption { text-align: left; padding-block: 0.75rem; color: var(--azul-escuro); font-weight: 700; }
 .arquivo-anual { width: min(900px, calc(100vw - 32px)); max-width: 900px; }
 .lista-arquivo-anual article { padding: 18px 0; border-top: 1px solid #dce5eb; }
 .lista-arquivo-anual article h3 { color: var(--azul-escuro); font-size: 1.05rem; margin: 8px 0; }
 .lista-arquivo-anual article small { color: #6b7c85; }
 .lista-arquivo-anual article p { white-space: pre-line; }
+.item-arquivo-acao { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; padding: 0.9rem; text-align: left; color: var(--azul-escuro); background: #f7fafc; border: 1px solid #dce5eb; cursor: pointer; }
+.item-arquivo-acao:hover, .item-arquivo-acao:focus-visible { border-color: var(--azul); background: #edf6fb; }
+.item-arquivo-acao > span:first-child { display: grid; gap: 0.3rem; overflow-wrap: anywhere; }
+.indicacao-arquivo-acao { font-size: 0.8125rem; font-weight: 700; color: var(--azul-escuro); }
+.historico-turma { display: grid; gap: 1rem; margin-block: 1.25rem; }
+.historico-turma section { padding: 1rem; background: #f5f8fa; border: 1px solid #dce5eb; }
+.historico-turma h3 { color: var(--azul-escuro); margin: 0 0 0.6rem; }
+.historico-turma ul { list-style: none; padding: 0; margin: 0; }
+.historico-turma li { display: grid; gap: 0.2rem; padding: 0.7rem 0; border-top: 1px solid #dce5eb; overflow-wrap: anywhere; }
+.historico-turma li span { font-size: 0.875rem; color: #435966; }
+.resumo-historico-turma p { white-space: pre-line; overflow-wrap: anywhere; }
 .mes-escolar-topo button:disabled { opacity: .35; cursor: default; }
 .pev-etapas button:disabled { cursor: not-allowed; opacity: .45; }
 .seletor-destinos .form-servico { margin-top: 24px; }

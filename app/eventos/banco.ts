@@ -1,4 +1,4 @@
-import { anoDoPortal } from "../conteudo/periodos";
+import { anoDoPortal, dataDoPortal } from "../conteudo/periodos";
 
 // confere as turmas publicadas usando a mesma regra do mapa
 import { condicaoTurmaPublicada } from "../mapa/turmas-publicadas";
@@ -15,6 +15,7 @@ import type {
   CampeonatoAdministrativo,
   CampeonatoPublico,
   CentralEventos,
+  ContatoRepresentante,
   DetalheCampeonato,
   DetalheReuniao,
   DocumentoAdministrativo,
@@ -49,6 +50,7 @@ import {
   textoFiltro,
   validarAtualizacaoCampeonato,
   validarCampeonato,
+  validarDatasMandato,
   validarDocumento,
   validarEventoInterno,
   validarFase,
@@ -253,6 +255,7 @@ export async function listarRepresentantes(parametros: URLSearchParams, todos = 
   }
   const turma = normalizarTurma(parametros.get("turma"));
   if (turma) adicionarLike(filtros, "r.turma_normalizada", turma);
+  if (parametros.has("turmaId")) adicionarIgual(filtros, "r.turma_atividade_id", idPositivo(parametros.get("turmaId"), "turma"));
   adicionarIgualSePresente(filtros, "r.turno", parametros.get("turno"), 20);
   adicionarIgualSePresente(filtros, "r.nivel_ensino", parametros.get("nivel") ?? parametros.get("nivelEnsino"), 120);
   adicionarIgualSePresente(filtros, "r.serie", parametros.get("serie"), 80);
@@ -280,42 +283,78 @@ export async function obterRepresentante(idRecebido: unknown, todos = false) {
   const filtro = todos ? "" : `AND publicado = 1 AND ativo = 1 AND arquivado_em IS NULL AND ${condicaoMandatoVigente("representantes")} AND EXISTS (SELECT 1 FROM turmas_atividades t WHERE t.id = representantes.turma_atividade_id AND ${condicaoTurmaPublicada()})`;
   const linha = await getD1().prepare(`SELECT * FROM representantes WHERE id = ? ${filtro}`).bind(id).first<Linha>();
   if (!linha) throw new ErroEventos("Representante não encontrado.", 404);
-  return formatarRepresentante(linha, todos);
+  return formatarRepresentante(linha, todos, true);
 }
 
 export async function criarRepresentante(valor: unknown) {
   const dados = await validarTurmaDoRepresentante(validarRepresentante(valor));
+  if (!dados.ativo) dados.publicado = false;
+  if (!dados.inicioMandato && (!dados.fimMandato || dados.fimMandato >= dataDoPortal())) dados.inicioMandato = dataDoPortal();
   const linha = await getD1().prepare(`${sqlInserirRepresentante} RETURNING *`)
-    .bind(...valoresRepresentante(dados)).first<Linha>();
-  if (!linha) throw new ErroEventos("Não foi possível criar o representante.", 500);
+    .bind(...valoresRepresentante(dados), ...valoresVagaRepresentante(dados)).first<Linha>();
+  if (!linha) throw erroVagaRepresentante();
   return formatarRepresentante(linha, true);
 }
 
 export async function atualizarRepresentante(idRecebido: unknown, valor: unknown) {
   const id = idPositivo(idRecebido, "representante");
   const existente = await obterRepresentante(id, true) as RepresentanteAdministrativo;
-  const recebido = valor as Record<string, unknown>;
+  const recebido = objetoRecebido(valor);
+  exigirAnoDoMandato(existente);
+  // conserva a identidade e a vaga associadas ao registro original
+  for (const campo of ["ano", "nome", "turmaAtividadeId", "turma", "turno", "nivelEnsino", "serie", "funcao"] as const) {
+    if (Object.hasOwn(recebido, campo) && String(recebido[campo] ?? "") !== String(existente[campo] ?? "")) {
+      throw new ErroEventos("A identificação, a turma e a função ficam vinculadas ao mandato original.");
+    }
+  }
+  if (existente.ativo && ["inicioMandato", "fimMandato"].some((campo) => Object.hasOwn(recebido, campo) && recebido[campo] !== existente[campo as "inicioMandato" | "fimMandato"])) {
+    throw new ErroEventos("Use a ação de destituição para registrar as datas de encerramento deste mandato.");
+  }
+  if (existente.destituidoEm && (booleano(recebido.ativo, false) || booleano(recebido.publicado, false))) {
+    throw new ErroEventos("Este mandato foi encerrado. Cadastre um novo representante para preencher a vaga.", 409);
+  }
   const reativando = Boolean(existente.arquivadoEm) && booleano(recebido.ativo, existente.ativo);
-  const validado = validarRepresentante({ ...existente, ...recebido, ...(reativando ? { publicado: false } : {}) });
-  if (reativando && existente.ano !== anoDoPortal()) throw new ErroEventos("Um representante de outro ano não pode ser reativado. Cadastre o mandato na turma do ano atual.");
+  if (reativando && existente.fimMandato && existente.fimMandato < dataDoPortal()) throw new ErroEventos("O período deste mandato já terminou.", 409);
+  const arquivar = booleano(recebido.arquivado, false);
+  const combinado = { ...existente, ...recebido, ...(reativando ? { publicado: false } : {}), ...(arquivar ? { ativo: false, publicado: false } : {}) };
+  const validado = validarRepresentante(combinado);
+  if (existente.destituidoEm) validarDatasMandato(combinado, true);
   const historico = !validado.ativo && !validado.publicado && !existente.ativo && validado.turmaAtividadeId === existente.turmaAtividadeId;
   const dados = historico ? { ...validado, ano: existente.ano } : await validarTurmaDoRepresentante(validado);
-  const d1 = getD1();
-  const comandos: D1PreparedStatement[] = [
-    d1.prepare(`${sqlAtualizarRepresentante} WHERE id = ?`).bind(...valoresRepresentante(dados), id),
-  ];
-  if (reativando) {
-    comandos.push(d1.prepare(`UPDATE representantes SET arquivado_em = NULL, publicado = 0,
-      atualizado_em = CURRENT_TIMESTAMP WHERE id = ?`).bind(id));
-  }
-  await d1.batch(comandos);
-  if (booleano(recebido.arquivado, false)) await arquivarRegistro("representantes", id);
-  return obterRepresentante(id, true);
+  if (!dados.ativo) dados.publicado = false;
+  const linha = await getD1().prepare(`${sqlAtualizarRepresentante},
+      arquivado_em = CASE WHEN ? = 0 THEN COALESCE(arquivado_em, CURRENT_TIMESTAMP) WHEN ? = 1 THEN NULL ELSE arquivado_em END
+    WHERE id = ? AND ano = ? AND ativo = ? AND arquivado_em IS ? AND destituido_em IS ?
+      AND ${condicaoVagaRepresentante} RETURNING *`)
+    .bind(...valoresRepresentante(dados), binario(dados.ativo), binario(reativando), id, anoDoPortal(), binario(existente.ativo), existente.arquivadoEm, existente.destituidoEm, ...valoresVagaRepresentante(dados, id))
+    .first<Linha>();
+  if (!linha) throw erroVagaRepresentante();
+  return formatarRepresentante(linha, true);
+}
+
+// encerra o mandato em uma única gravação sem alterar as presenças das reuniões
+export async function destituirRepresentante(idRecebido: unknown, valor: unknown) {
+  const id = idPositivo(idRecebido, "representante");
+  const existente = await obterRepresentante(id, true) as RepresentanteAdministrativo;
+  exigirAnoDoMandato(existente);
+  if (!existente.ativo) throw new ErroEventos("Este mandato já está encerrado ou arquivado.", 409);
+  const { inicioMandato, fimMandato } = validarDatasMandato(objetoRecebido(valor), true);
+  const linha = await getD1().prepare(`UPDATE representantes
+    SET inicio_mandato = ?, fim_mandato = ?, ativo = 0, publicado = 0,
+      destituido_em = CURRENT_TIMESTAMP, arquivado_em = CURRENT_TIMESTAMP, atualizado_em = CURRENT_TIMESTAMP
+    WHERE id = ? AND ano = ? AND ativo = 1 AND destituido_em IS NULL RETURNING *`)
+    .bind(inicioMandato, fimMandato, id, anoDoPortal()).first<Linha>();
+  if (!linha) throw new ErroEventos("O mandato mudou. Recarregue a lista e confira o registro.", 409);
+  return formatarRepresentante(linha, true);
+}
+
+function exigirAnoDoMandato(item: RepresentanteAdministrativo) {
+  if (item.ano !== anoDoPortal()) throw new ErroEventos("Este mandato faz parte do histórico de outro ano.", 409);
 }
 
 export async function arquivarRepresentante(idRecebido: unknown) {
   const id = idPositivo(idRecebido, "representante");
-  await exigirExistente("representantes", id, "Representante não encontrado.");
+  exigirAnoDoMandato(await obterRepresentante(id, true) as RepresentanteAdministrativo);
   await arquivarRegistro("representantes", id);
   return { arquivado: true, id };
 }
@@ -386,7 +425,7 @@ function formatarDocumento(linha: Linha, todos: boolean): DocumentoPublico | Doc
   return { ...publico, arquivoChave: string(linha.arquivo_chave), publicado: bool(linha.publicado), ativo: bool(linha.ativo), criadoEm: string(linha.criado_em) };
 }
 
-function formatarRepresentante(linha: Linha, todos: boolean) {
+function formatarRepresentante(linha: Linha, todos: boolean, detalhe = false) {
   const publico: RepresentantePublico = {
     ano: numero(linha.ano), id: numero(linha.id), nome: string(linha.nome), nomeExibicao: string(linha.nome_exibicao),
     nivelEnsino: string(linha.nivel_ensino), serie: string(linha.serie), turma: string(linha.turma),
@@ -394,9 +433,18 @@ function formatarRepresentante(linha: Linha, todos: boolean) {
     inicioMandato: string(linha.inicio_mandato), fimMandato: string(linha.fim_mandato), ordem: numero(linha.ordem),
     observacaoPublica: string(linha.observacao_publica), atualizadoEm: string(linha.atualizado_em),
   };
-  if (!todos) return publico;
+  if (!todos && !detalhe) return publico;
+  let contatos: ContatoRepresentante[] = [];
+  try { contatos = JSON.parse(string(linha.contatos_json) || "[]") as ContatoRepresentante[]; } catch {}
+  const contatosPublicos = bool(linha.contatos_publicos);
+  if (!todos) return {
+    ...publico,
+    contatos: contatosPublicos ? contatos : [],
+    mapaUrl: `/mapa-do-colegio?turmaId=${numero(linha.turma_atividade_id)}#resultados-busca-turma`,
+  };
   return {
     ...publico, turmaAtividadeId: nuloNumero(linha.turma_atividade_id), observacaoInterna: string(linha.observacao_interna),
+    contatos, contatosPublicos, destituidoEm: nuloString(linha.destituido_em),
     ativo: bool(linha.ativo), publicado: bool(linha.publicado), arquivadoEm: nuloString(linha.arquivado_em), criadoEm: string(linha.criado_em),
   } satisfies RepresentanteAdministrativo;
 }
@@ -437,19 +485,36 @@ function valoresDocumento(dados: ReturnType<typeof validarDocumento>) {
     dados.data, dados.ordem, binario(dados.publicado), binario(dados.ativo)];
 }
 
+// reserva a vaga da turma na gravação para evitar mandatos simultâneos
+const condicaoVagaRepresentante = `(? = 0 OR NOT EXISTS (
+  SELECT 1 FROM representantes r WHERE r.ano = ? AND r.turma_atividade_id = ? AND r.funcao = ? AND r.id <> ?
+    AND r.ativo = 1 AND r.arquivado_em IS NULL
+    AND COALESCE(NULLIF(r.inicio_mandato, ''), '0001-01-01') <= COALESCE(NULLIF(?, ''), '9999-12-31')
+    AND COALESCE(NULLIF(r.fim_mandato, ''), '9999-12-31') >= COALESCE(NULLIF(?, ''), '0001-01-01')
+))`;
+
+function valoresVagaRepresentante(dados: ReturnType<typeof validarRepresentante>, id = -1) {
+  return [binario(dados.ativo), dados.ano, dados.turmaAtividadeId, dados.funcao, id, dados.fimMandato, dados.inicioMandato];
+}
+
+function erroVagaRepresentante() {
+  return new ErroEventos("A vaga já tem um mandato nesse período ou o cadastro mudou. Confira os representantes da turma antes de salvar.", 409);
+}
+
 const sqlInserirRepresentante = `INSERT INTO representantes (
   ano, turma_atividade_id, nome, nome_exibicao, nome_normalizado, nivel_ensino, serie, turma, turma_normalizada,
-  turno, funcao, inicio_mandato, fim_mandato, ordem, observacao_publica, observacao_interna, ativo, publicado
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  turno, funcao, inicio_mandato, fim_mandato, ordem, observacao_publica, observacao_interna, contatos_json, contatos_publicos, ativo, publicado
+) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${condicaoVagaRepresentante}`;
 const sqlAtualizarRepresentante = `UPDATE representantes SET
   ano = ?, turma_atividade_id = ?, nome = ?, nome_exibicao = ?, nome_normalizado = ?, nivel_ensino = ?, serie = ?, turma = ?, turma_normalizada = ?,
   turno = ?, funcao = ?, inicio_mandato = ?, fim_mandato = ?, ordem = ?, observacao_publica = ?, observacao_interna = ?,
-  ativo = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
+  contatos_json = ?, contatos_publicos = ?, ativo = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
 function valoresRepresentante(dados: ReturnType<typeof validarRepresentante>) {
   return [dados.ano, dados.turmaAtividadeId, dados.nome, dados.nomeExibicao, dados.nomeNormalizado, dados.nivelEnsino,
     dados.serie, dados.turma, dados.turmaNormalizada, dados.turno, dados.funcao, dados.inicioMandato,
-    dados.fimMandato, dados.ordem, dados.observacaoPublica, dados.observacaoInterna, binario(dados.ativo), binario(dados.publicado)];
+    dados.fimMandato, dados.ordem, dados.observacaoPublica, dados.observacaoInterna, JSON.stringify(dados.contatos),
+    binario(dados.contatosPublicos), binario(dados.ativo), binario(dados.publicado)];
 }
 
 // exige uma turma que esteja disponível agora e guarda seus dados oficiais

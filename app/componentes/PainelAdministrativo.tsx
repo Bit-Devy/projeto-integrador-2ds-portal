@@ -40,7 +40,8 @@ import { useSaidaPainel } from "./useSaidaPainel";
 import EscolherArquivo from "./BibliotecaArquivos";
 import SeletorPagina from "./SeletorPagina";
 import SeletorAno from "./SeletorAno";
-import { anoDoPortal } from "../conteudo/periodos";
+import ArquivoMovimentos from "./ArquivoMovimentos";
+import { anoDoPortal, dataDoPortal } from "../conteudo/periodos";
 import { tiposComAno, anoDoRegistro } from "../conteudo/ciclos";
 // liga a composição da equipe às vagas do estatuto
 import CamposCargoEquipe from "./CamposCargoEquipe";
@@ -84,7 +85,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
   const [secaoEventos, setSecaoEventos] = useState<SecaoEventosPainel | null>(primeiraSecao || null);
   // guarda os registros carregados
   const [anoConteudo, setAnoConteudo] = useState(String(anoDoPortal()));
-  const [apenasArquivo, setApenasArquivo] = useState(false);
+  const [arquivoMovimentos, setArquivoMovimentos] = useState(false);
   const [itens, setItens] = useState<RegistroConteudo[]>([]);
   // controla o carregamento
   const [carregando, setCarregando] = useState(true);
@@ -128,14 +129,17 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
 
   // troca a seção de conteúdo
   async function trocarTipo(novoTipo: TipoConteudo) {
-    if (!cargosAbertos && !senhasAbertas && !historicoAberto && !mensagensAbertas && !mapaAberto && !secaoEventos && !secaoServico && tipo === novoTipo) return;
+    if (!cargosAbertos && !senhasAbertas && !historicoAberto && !mensagensAbertas && !mapaAberto && !secaoEventos && !secaoServico && tipo === novoTipo) {
+      if (arquivoMovimentos) setArquivoMovimentos(false);
+      return;
+    }
     if (!await prepararTroca()) return;
     setCarregando(true);
     setErro("");
     setMensagensAbertas(false);
     setMapaAberto(false);
     setSecaoEventos(null);
-    setTipo(novoTipo); setAnoConteudo(String(anoDoPortal())); setApenasArquivo(false);
+    setTipo(novoTipo); setAnoConteudo(String(anoDoPortal()));
     setFormulario(null);
     setIdEditando(null);
   }
@@ -184,6 +188,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     setCargosAbertos(false);
     setSenhasAbertas(false);
     setHistoricoAberto(false);
+    setArquivoMovimentos(false);
     setSecaoServico(null);
     return true;
   }
@@ -204,7 +209,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     const valores = Object.fromEntries(
       configuracao.campos.map((campo) => [campo.chave, campo.tipo === "checkbox" ? false : campo.chave === "ano" ? anoDoPortal() : campo.tipo === "number" ? 0 : campo.opcoes?.[0]?.valor ?? ""]),
     );
-    setFormulario({ ...valores, ...(tipo === "membros" ? { cargoChave: "", vaga: "", turno: "" } : {}), areaResponsavel: areaRestrita(usuario.cargo) || "geral" });
+    setFormulario({ ...valores, ...(tipo === "membros" ? { cargoChave: "", vaga: "", turno: "" } : {}), ...(tipo === "movimentos" ? { data: dataDoPortal() } : {}), areaResponsavel: areaRestrita(usuario.cargo) || "geral" });
     setPublicado(true);
     setNoticiaJaPublicada(false);
     setNoticiaOriginal(null);
@@ -307,7 +312,15 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
 
   const recursoAtual: RecursoPainel = secaoServico === "paginas" ? "paginas" : secaoServico === "calendario-escolar" ? "calendario" : mapaAberto ? "mapa" : mensagensAbertas ? "mensagens" : secaoEventos === "eventos-internos" ? "eventos" : secaoEventos || (tipo === "documentos" ? abaDocumentos === "arquivos" ? "arquivos" : abaDocumentos === "normas" ? "oficiais" : "documentos" : recursoConteudo(tipo));
   const somenteConsulta = !pode(recursoAtual, true);
-  const itensDoPeriodo = itens.filter((item) => !tiposComAno.includes(tipo) || (anoConteudo === "todos" || anoDoRegistro(item.dados as unknown as Record<string, unknown>, item.criadoEm) === Number(anoConteudo)) && (!apenasArquivo || anoDoRegistro(item.dados as unknown as Record<string, unknown>, item.criadoEm) !== anoDoPortal()));
+  const anoAtual = anoDoPortal();
+  const itensDaSecao = itens.filter((item) => item.tipo === tipo);
+  // usa uma escolha única de período para evitar filtros incompatíveis
+  const itensDoPeriodo = itensDaSecao.filter((item) => {
+    if (!tiposComAno.includes(tipo) && tipo !== "movimentos") return true;
+    const anoItem = anoDoRegistro(item.dados as unknown as Record<string, unknown>, item.criadoEm);
+    if (tipo === "movimentos") return anoItem === anoAtual;
+    return anoConteudo === "todos" ? anoItem !== anoAtual : anoItem === Number(anoConteudo);
+  });
   return (
     <div className="painel-administrativo">
       {/* menu lateral do painel */}
@@ -358,18 +371,29 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
           <PainelTurmas aoMudarEstadoSujo={setPainelFilhoSujo} />
         ) : mapaAberto ? (
           <PainelMapaColegio aoMudarEstadoSujo={setPainelFilhoSujo} />
-        ) : (
+        ) : tipo === "movimentos" && arquivoMovimentos ? <ArquivoMovimentos voltar={() => setArquivoMovimentos(false)} /> : (
           <>
             {/* título e botão de novo registro */}
             <header className="topo-painel">
               <div><span className="rotulo-secao">PAINEL DE CONTEÚDO</span><h1>{configuracao.nome}</h1><p>{configuracao.descricao}</p></div>
-              {!formulario && (tipo !== "documentos" || abaDocumentos === "publicacoes") && <div className="acoes-topo-servicos">{tipo === "noticias" && pode("calendario", true) && <button className="botao-secundario" type="button" onClick={() => void trocarTipo("agenda")}>Publicar no calendário</button>}<button className="botao-primario" type="button" onClick={novoRegistro}>+ Novo {configuracao.singular}</button></div>}
+              {!formulario && (tipo !== "documentos" || abaDocumentos === "publicacoes") && <div className="acoes-topo-servicos">
+                {tipo === "noticias" && pode("calendario", true) && <button className="botao-secundario" type="button" onClick={() => void trocarTipo("agenda")}>Publicar no calendário</button>}
+                {tipo === "movimentos" && <button className="botao-primario botao-historico-financeiro" type="button" onClick={() => setArquivoMovimentos(true)}>Ver registros de anos anteriores</button>}
+                <button className="botao-primario" type="button" onClick={novoRegistro}>{tipo === "movimentos" ? "+ Nova movimentação" : `+ Novo ${configuracao.singular}`}</button>
+              </div>}
             </header>
 
             {/* aviso de erro */}
             {erro && <p className="erro-painel" role="alert">{erro}</p>}
 
-            {!formulario && tiposComAno.includes(tipo) && <div className="ferramentas-ano-painel"><button className="pev-botao" type="button" aria-pressed={!apenasArquivo} onClick={() => { setApenasArquivo(false); setAnoConteudo(String(anoDoPortal())); }}>Ano atual</button><button className="pev-botao" type="button" aria-pressed={apenasArquivo} onClick={() => { setApenasArquivo(true); setAnoConteudo("todos"); }}>Arquivados</button><SeletorAno id="ano-conteudo-painel" ano={anoConteudo} datas={itens.map((item) => `${anoDoRegistro(item.dados as unknown as Record<string, unknown>, item.criadoEm)}-01-01`)} alterar={setAnoConteudo} /></div>}
+            {!formulario && tiposComAno.includes(tipo) && <div className="ferramentas-ano-painel">
+              <div className="abas-periodo-painel" role="group" aria-label="Período dos registros">
+                <button className="pev-botao" type="button" aria-pressed={anoConteudo === String(anoAtual)} onClick={() => setAnoConteudo(String(anoAtual))}>Ano atual</button>
+                <button className="pev-botao" type="button" aria-pressed={anoConteudo !== String(anoAtual)} onClick={() => setAnoConteudo("todos")}>Arquivados</button>
+              </div>
+              <SeletorAno key={tipo} id="ano-conteudo-painel" ano={anoConteudo} datas={itensDaSecao.map((item) => `${anoDoRegistro(item.dados as unknown as Record<string, unknown>, item.criadoEm)}-01-01`)} alterar={setAnoConteudo} rotuloTodos="Todos os anos arquivados" />
+            </div>}
+            {!formulario && tipo === "movimentos" && <p className="exercicio-financeiro">Exercício de <strong>{anoAtual}</strong></p>}
 
             {/* separa os arquivos privados das versões oficiais e das publicações */}
 
@@ -384,7 +408,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
                   {["noticias", "projetos", "documentos", "agenda", "cardapios", "oportunidades"].includes(tipo) && <label className="campo-largo"><span>Área responsável</span>{areaRestrita(usuario.cargo) ? <input value={areasPainel.find((area) => area.chave === areaRestrita(usuario.cargo))?.nome || ""} readOnly /> : <select value={String(formulario.areaResponsavel || "geral")} onChange={(evento) => void mudarFormulario("areaResponsavel", evento.target.value)}>{areasPainel.map((area) => <option key={area.chave} value={area.chave}>{area.nome}</option>)}</select>}<small>A área define quem pode editar esta publicação. Use Colégio e comunidade escolar para assuntos do CEP que afetam os estudantes. Comunicação e acesso geral acompanham todas as áreas.</small></label>}
 
                   {tipo === "membros" && <CamposCargoEquipe dados={formulario} mudar={mudarFormulario} />}
-                  {configuracao.campos.filter((campo) => (tipo !== "membros" || campo.chave !== "cargo") && (!campo.dependeDe || Boolean(formulario[campo.dependeDe]))).map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} key={campo.chave} />)}
+                  {configuracao.campos.filter((campo) => (tipo !== "membros" || campo.chave !== "cargo") && (!campo.dependeDe || Boolean(formulario[campo.dependeDe]))).map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} anoLimite={tipo === "movimentos" && campo.chave === "data" ? anoAtual : undefined} key={campo.chave} />)}
                   {tipo !== "noticias" && <label className="campo-publicado"><CheckboxComAjuda checked={publicado} onChange={(evento) => { setPublicado(evento.target.checked); setConteudoSujo(true); }} explicacao={descricaoCheckbox("publicado")} aria-label={"Publicar este registro no portal"} /><span>Publicar este registro no portal</span></label>}
                 </div>
                 {tipo === "noticias" && <p className="ajuda-busca">Salvar registro publica a notícia no portal. Salvar em rascunho mantém uma notícia nova apenas no painel.</p>}
@@ -395,7 +419,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
               <div className="lista-painel">
                 {/* estados da lista */}
                 {carregando && <p>Carregando registros...</p>}
-                {!carregando && !itensDoPeriodo.length && <div className="vazio-painel"><strong>Nenhum registro</strong><p>Use o botão acima para adicionar o primeiro item.</p></div>}
+                {!carregando && !itensDoPeriodo.length && <div className="vazio-painel"><strong>Nenhum registro</strong><p>{tiposComAno.includes(tipo) && anoConteudo !== String(anoAtual) ? "Não há registros neste período." : "Use o botão acima para adicionar o primeiro item."}</p></div>}
                 {/* registros da seção */}
                 {itensDoPeriodo.filter((item) => !(tipo === "documentos" && "documentoOficial" in item.dados)).map((item) => (
                   <article key={item.id}><span className={item.publicado ? "estado-publicado" : "estado-rascunho"}>{item.arquivadoAno ? `Arquivo · ${item.ano}` : item.publicado ? "Publicado" : "Rascunho"}</span><div><h2>{item.titulo}</h2><p>Atualizado em {formatarData(item.atualizadoEm)}</p></div><div className="acoes-item-painel"><button type="button" onClick={() => editarRegistro(item)}>Editar</button><button type="button" onClick={() => excluir(item)}>Excluir</button></div></article>
@@ -410,7 +434,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
 }
 
 // mostra um campo conforme seu tipo
-function CampoFormulario({ campo, valor, mudar, enviarArquivo }: { campo: CampoPainel; valor: ValorCampo | undefined; mudar: (valor: ValorCampo) => void; enviarArquivo: (arquivo?: File) => void }) {
+function CampoFormulario({ campo, valor, mudar, enviarArquivo, anoLimite }: { campo: CampoPainel; valor: ValorCampo | undefined; mudar: (valor: ValorCampo) => void; enviarArquivo: (arquivo?: File) => void; anoLimite?: number }) {
   // mostra uma caixa de seleção
   if (campo.tipo === "checkbox") return <label className="campo-publicado"><CheckboxComAjuda checked={Boolean(valor)} onChange={(evento) => mudar(evento.target.checked)} explicacao={descricaoCheckbox(campo.chave)} aria-label={campo.rotulo} /><span>{campo.rotulo}</span></label>;
   // mostra uma área de texto
@@ -422,7 +446,7 @@ function CampoFormulario({ campo, valor, mudar, enviarArquivo }: { campo: CampoP
   // oferece páginas publicadas para o botão interno da notícia
   if (campo.tipo === "pagina") return <label><span>{campo.rotulo}</span><SeletorPagina valor={String(valor ?? "")} mudar={(endereco) => mudar(endereco)} obrigatorio={campo.chave !== "paginaUrl"} />{campo.dica && <small>{campo.dica}</small>}</label>;
   // mostra um campo simples
-  return <label className={campo.chave === "destaqueAte" ? "campo-largo" : undefined}><span>{campo.rotulo}</span><input type={campo.tipo} value={String(valor ?? "")} step={campo.tipo === "number" ? campo.chave === "ano" ? "1" : "0.01" : undefined} onChange={(evento) => mudar(campo.tipo === "number" ? Number(evento.target.value) : evento.target.value)} required={campo.obrigatorio} />{campo.dica && <small>{campo.dica}</small>}</label>;
+  return <label className={campo.chave === "destaqueAte" ? "campo-largo" : undefined}><span>{campo.rotulo}</span><input type={campo.tipo} value={String(valor ?? "")} min={anoLimite ? `${anoLimite}-01-01` : undefined} max={anoLimite ? `${anoLimite}-12-31` : undefined} step={campo.tipo === "number" ? campo.chave === "ano" ? "1" : "0.01" : undefined} onChange={(evento) => mudar(campo.tipo === "number" ? Number(evento.target.value) : evento.target.value)} required={campo.obrigatorio} />{anoLimite && <small>O lançamento deve ser de {anoLimite}.</small>}{campo.dica && <small>{campo.dica}</small>}</label>;
 }
 
 

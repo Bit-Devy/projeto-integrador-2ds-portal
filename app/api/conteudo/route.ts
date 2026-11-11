@@ -99,9 +99,20 @@ export async function GET(request: Request) {
       ? "SELECT * FROM conteudos WHERE tipo = ?"
       : "SELECT * FROM conteudos WHERE tipo = ? AND publicado = 1";
     // executa a consulta com o tipo informado
-    const anoRecebido = url.searchParams.get("ano") || (!mostrarTodos && tiposComAno.includes(tipo) ? String(anoDoPortal()) : null);
+    const anoAtual = String(anoDoPortal());
+    const anoPedido = url.searchParams.get("ano");
+    const temAno = anoPedido && anoPedido !== "todos";
+    const anoValido = tipo === "movimentos" ? /^[0-9]{1,4}$/.test(anoPedido || "") && Number(anoPedido) > 0 : /^(19|20|21)\d{2}$/.test(anoPedido || "");
+    if (temAno && !anoValido) throw new ErroJsonInvalido("Informe um ano válido.");
+    const anoFinanceiro = temAno ? anoPedido.padStart(4, "0") : anoAtual;
+    // limita a transparência pública ao exercício atual
+    if (tipo === "movimentos" && ((!mostrarTodos && anoFinanceiro !== anoAtual) || anoFinanceiro > anoAtual)) {
+      return Response.json({ itens: [] }, { headers: { "cache-control": "no-store" } });
+    }
+    const anoRecebido = tipo === "movimentos"
+      ? anoFinanceiro
+      : anoPedido || (!mostrarTodos && tiposComAno.includes(tipo) ? anoAtual : null);
     const ano = anoRecebido === "todos" ? null : anoRecebido;
-    if (ano && ano !== "todos" && !/^(19|20|21)\d{2}$/.test(ano)) throw new Error("Informe um ano válido.");
     // usa a data da publicação para consultar um ano sem apagar o histórico
     const colunaAno = ["projetos", "membros"].includes(tipo) ? "CAST(COALESCE(json_extract(dados_json, '$.ano'), substr(criado_em, 1, 4)) AS TEXT)" : "substr(COALESCE(NULLIF(json_extract(dados_json, '$.data'), ''), json_extract(dados_json, '$.dataDocumento')), 1, 4)";
     const consulta = `${filtro}${area ? " AND json_extract(dados_json, '$.areaResponsavel') = ?" : ""}${ano ? ` AND ${colunaAno} = ?` : ""} ${ordemMaisRecente}`;
@@ -175,6 +186,7 @@ export async function PUT(request: Request) {
     const anterior = await getD1().prepare("SELECT * FROM conteudos WHERE id = ?").bind(id).first<LinhaConteudo>();
     const { resposta: bloqueio } = await exigirAdministradorApi(recursoConteudo(corpo.tipo));
     if (bloqueio) return bloqueio;
+    if (anterior?.tipo === "movimentos" && !movimentoDoAnoAtual(anterior)) return erroMovimentoArquivado();
     const areaAnterior = anterior ? JSON.parse(anterior.dados_json).areaResponsavel || "geral" : "geral";
     if (anterior && corpo.tipo !== "movimentos" && !areaPermitida(usuario, areaAnterior)) return erroArea();
     corpo.dados.areaResponsavel = escolherArea(usuario, corpo.dados.areaResponsavel, areaAnterior);
@@ -192,11 +204,13 @@ export async function PUT(request: Request) {
         SET tipo = ?, titulo = ?, dados_json = CASE WHEN tipo = 'noticias' THEN
           json_set(?, '$.jaPublicada', json(CASE WHEN publicado = 1 OR json_extract(dados_json, '$.jaPublicada') = 1 OR ? = 1 THEN 'true' ELSE 'false' END)) ELSE ? END,
           publicado = ?, atualizado_em = CURRENT_TIMESTAMP
-        WHERE id = ? AND ${condicaoVagaLivre} RETURNING *`)
-      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, id, corpo.tipo, corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), id, JSON.stringify(corpo.dados), JSON.stringify(corpo.dados), JSON.stringify(corpo.dados))
+        WHERE id = ? AND (tipo <> 'movimentos' OR substr(json_extract(dados_json, '$.data'), 1, 4) = ?)
+          AND ${condicaoVagaLivre} RETURNING *`)
+      .bind(corpo.tipo, titulo, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), corpo.publicado ? 1 : 0, id, String(anoDoPortal()), corpo.tipo, corpo.publicado ? 1 : 0, JSON.stringify(corpo.dados), id, JSON.stringify(corpo.dados), JSON.stringify(corpo.dados), JSON.stringify(corpo.dados))
       .first<LinhaConteudo>();
 
     // informa quando o registro não existe
+    if (!resultado && anterior?.tipo === "movimentos") return erroMovimentoArquivado();
     if (!resultado) return Response.json({ erro: anterior ? "A vaga mudou durante o salvamento. Recarregue a Equipe e confira quem está publicado." : "Registro não encontrado." }, { status: anterior ? 409 : 404 });
     return Response.json({ item: formatarLinha(resultado) });
   } catch (erro) {
@@ -222,6 +236,7 @@ export async function DELETE(request: Request) {
     if (registro) {
       const { resposta: bloqueio } = await exigirAdministradorApi(recursoConteudo(registro.tipo));
       if (bloqueio) return bloqueio;
+      if (registro.tipo === "movimentos" && !movimentoDoAnoAtual(registro)) return erroMovimentoArquivado();
       if (registro.tipo !== "movimentos" && !areaPermitida(usuario, JSON.parse(registro.dados_json).areaResponsavel || "geral")) return erroArea();
     }
     if (registro?.tipo === "noticias" && (registro.publicado || JSON.parse(registro.dados_json).jaPublicada)) {
@@ -235,12 +250,25 @@ export async function DELETE(request: Request) {
     }
     // remove o registro pelo identificador
     await protegerDocumentoOficial(id);
-    const removido = await getD1().prepare("DELETE FROM conteudos WHERE id = ? AND (tipo <> 'noticias' OR (publicado = 0 AND COALESCE(json_extract(dados_json, '$.jaPublicada'), 0) = 0) OR ? = 1)").bind(id, senhaConfirmada ? 1 : 0).run();
+    const removido = await getD1().prepare(`DELETE FROM conteudos WHERE id = ?
+      AND (tipo <> 'movimentos' OR substr(json_extract(dados_json, '$.data'), 1, 4) = ?)
+      AND (tipo <> 'noticias' OR (publicado = 0 AND COALESCE(json_extract(dados_json, '$.jaPublicada'), 0) = 0) OR ? = 1)`)
+      .bind(id, String(anoDoPortal()), senhaConfirmada ? 1 : 0).run();
+    if (registro?.tipo === "movimentos" && !removido.meta.changes) return erroMovimentoArquivado();
     if (registro && !removido.meta.changes) return Response.json({ erro: "A notícia mudou durante a operação. Recarregue e confirme a exclusão novamente." }, { status: 409 });
     return Response.json({ removido: true });
   } catch (erro) {
     return respostaErro(erro);
   }
+}
+
+// preserva os lançamentos fora do exercício em andamento
+function movimentoDoAnoAtual(linha: LinhaConteudo) {
+  return String(JSON.parse(linha.dados_json).data || "").startsWith(`${anoDoPortal()}-`);
+}
+
+function erroMovimentoArquivado() {
+  return Response.json({ erro: "Este lançamento está arquivado. Consulte o histórico da Transparência." }, { status: 409 });
 }
 
 // impede alterações paralelas que deixariam o leitor com um pdf diferente
@@ -300,6 +328,7 @@ function validarCorpo(corpo: Record<string, unknown>) {
     // impede que o antigo aviso seja ativado por uma chamada direta
     if (dados.exemplo) throw new Error("Campo exemplo inválido para movimentações.");
     delete dados.exemplo;
+    if (!String(dados.data).startsWith(`${anoDoPortal()}-`)) throw new ErroJsonInvalido("A data do lançamento deve ser do ano atual.");
     if (!["entrada", "saida"].includes(String(dados.tipo))) throw new Error("Escolha entrada ou saída.");
     if (!Number.isFinite(Number(dados.valor)) || Number(dados.valor) < 0) throw new Error("Informe um valor válido.");
   }
@@ -361,15 +390,16 @@ function formatarLinha(linha: LinhaConteudo) {
   } catch {
     dados = {};
   }
-  if (tiposComAno.includes(linha.tipo)) dados.ano = anoDoRegistro(dados, linha.criado_em);
+  const ano = linha.tipo === "movimentos" ? Number(String(dados.data || "").slice(0, 4)) || anoDoRegistro(dados, linha.criado_em) : anoDoRegistro(dados, linha.criado_em);
+  if (tiposComAno.includes(linha.tipo)) dados.ano = ano;
   // retira a opção antiga também dos registros já existentes
   if (linha.tipo === "movimentos") delete dados.exemplo;
   // muda os nomes dos campos para o formato do portal
   return {
     id: linha.id,
     tipo: linha.tipo,
-    ano: anoDoRegistro(dados, linha.criado_em),
-    arquivadoAno: tiposComAno.includes(linha.tipo) && anoDoRegistro(dados, linha.criado_em) !== anoDoPortal(),
+    ano,
+    arquivadoAno: (tiposComAno.includes(linha.tipo) || linha.tipo === "movimentos") && ano !== anoDoPortal(),
     titulo: linha.titulo,
     dados,
     publicado: Boolean(linha.publicado),

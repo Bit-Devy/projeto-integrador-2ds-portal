@@ -5,24 +5,22 @@
 import { useState } from "react";
 // importa a busca de conteúdo público
 import { useConteudoPublico } from "../conteudo/useConteudoPublico";
-// importa a navegação entre os períodos
-import SeletorAno from "./SeletorAno";
-import { anoInicial, pertenceAoAno } from "../conteudo/periodos";
+// mostra o exercício atual da transparência
+import { anoDoPortal } from "../conteudo/periodos";
 
 // mostra os dados de transparência
 export default function TransparenciaInterativa() {
   // guarda o filtro escolhido
   const [filtro, setFiltro] = useState("todos");
-  const [ano, setAno] = useState(() => anoInicial());
+  const ano = anoDoPortal();
   // busca os movimentos publicados
-  const { dados: todosMovimentos, carregando, erro } = useConteudoPublico("movimentos", []);
+  const { dados: doPeriodo, carregando, erro } = useConteudoPublico("movimentos", []);
   // prepara valores no formato brasileiro
   const formatarDinheiro = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
   // filtra as movimentações pelo tipo
-  const doPeriodo = todosMovimentos.filter((movimento) => pertenceAoAno(movimento.data, ano));
   const movimentos = doPeriodo.filter(
     (movimento) => filtro === "todos" || movimento.tipo === filtro,
   );
@@ -39,8 +37,7 @@ export default function TransparenciaInterativa() {
 
   return (
     <>
-      {/* período consultado sem apagar os anos anteriores */}
-      <SeletorAno id="ano-transparencia" ano={ano} datas={todosMovimentos.map((movimento) => movimento.data)} alterar={setAno} />
+      <p className="exercicio-financeiro">Exercício de <strong>{ano}</strong></p>
       {/* resumo dos valores */}
       <div className="resumo-financeiro">
         <article><small>Saldo do período</small><strong>{formatarDinheiro.format(entradas - saidas)}</strong><span>Entradas menos saídas publicadas</span></article>
@@ -52,7 +49,7 @@ export default function TransparenciaInterativa() {
       <div className="topo-tabela">
         <div>
           <h2>Movimentações financeiras</h2>
-          <p>{ano === "todos" ? "Histórico de todos os anos" : `Registros publicados em ${ano}`}. Os totais consideram entradas e saídas do período selecionado.</p>
+          <p>Registros publicados em {ano}. Os totais consideram entradas e saídas deste exercício.</p>
         </div>
         <label>
           Mostrar

@@ -1,5 +1,5 @@
 // usa o ano local do portal sem confundir com a série do estudante
-import { anoDoPortal } from "../conteudo/periodos";
+import { anoDoPortal, dataDoPortal } from "../conteudo/periodos";
 import {
   formatosCampeonato,
   funcoesRepresentante,
@@ -10,6 +10,7 @@ import {
   tiposFase,
   tiposReuniao,
   turnosEventos,
+  type ContatoRepresentante,
   type FormatoCampeonato,
   type FuncaoRepresentante,
   type SituacaoEvento,
@@ -264,9 +265,8 @@ export function validarRepresentante(valor: unknown) {
   const turno = normalizarTurno(dados.turno);
   if (!turno || !turnosEventos.includes(turno as TurnoEvento)) throw new ErroEventos("Escolha um turno válido.");
   const funcao = enumValor(dados.funcao, funcoesRepresentante, "função") as FuncaoRepresentante;
-  const inicioMandato = data(dados.inicioMandato, "início do mandato");
-  const fimMandato = data(dados.fimMandato, "fim do mandato");
-  validarPeriodo(inicioMandato, fimMandato, "O fim do mandato não pode ser anterior ao início.");
+  const datas = validarDatasMandato(dados);
+  const contatos = validarContatosRepresentante(dados.contatos);
   return {
     ano: Number(dados.ano || anoDoPortal()),
     turmaAtividadeId: idOpcional(dados.turmaAtividadeId, "turma cadastrada"),
@@ -280,14 +280,46 @@ export function validarRepresentante(valor: unknown) {
     turmaNormalizada: normalizarTurma(turma),
     turno: turno as TurnoEvento,
     funcao,
-    inicioMandato,
-    fimMandato,
+    ...datas,
+    contatos,
+    contatosPublicos: contatos.length > 0 && booleano(dados.contatosPublicos, false),
     ordem: inteiro(dados.ordem),
     observacaoPublica: textoLongo(dados.observacaoPublica ?? dados.observacoes, 4000),
     observacaoInterna: textoLongo(dados.observacaoInterna, 4000),
     ativo: booleano(dados.ativo, true),
     publicado: booleano(dados.publicado, false),
   };
+}
+
+// exige as duas datas para encerrar um mandato que já aconteceu
+export function validarDatasMandato(dados: Record<string, unknown>, encerrado = false) {
+  const inicioMandato = data(dados.inicioMandato, "início do mandato");
+  const fimMandato = data(dados.fimMandato, "fim do mandato");
+  validarPeriodo(inicioMandato, fimMandato, "O fim do mandato não pode ser anterior ao início.");
+  if (encerrado && (!inicioMandato || !fimMandato || fimMandato > dataDoPortal())) {
+    throw new ErroEventos("Informe o início e o fim do mandato. O fim deve ser hoje ou uma data anterior.");
+  }
+  return { inicioMandato, fimMandato };
+}
+
+// aceita até duas formas de contato e confere cada endereço antes de salvar
+function validarContatosRepresentante(valor: unknown): ContatoRepresentante[] {
+  if (valor === undefined) return [];
+  if (!Array.isArray(valor) || valor.length > 2) throw new ErroEventos("Cadastre no máximo dois contatos para o representante.");
+  return valor.map((contato) => {
+    const dados = objetoRecebido(contato, "Informe uma forma de contato válida.");
+    const tipo = enumValor(dados.tipo, ["whatsapp", "email", "telefone"] as const, "forma de contato") as ContatoRepresentante["tipo"];
+    const endereco = textoObrigatorio(dados.valor, 254, "contato");
+    if (tipo === "email" && !/^[^\s@<>]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(endereco)) throw new ErroEventos("Informe um e-mail válido.");
+    if (tipo !== "email") {
+      const digitos = endereco.replace(/\D/g, "");
+      const minimo = tipo === "whatsapp" ? 10 : 8;
+      if (!/^\+?[\d ().-]+$/.test(endereco) || digitos.length < minimo || digitos.length > 15) {
+        throw new ErroEventos(tipo === "whatsapp" ? "Informe um número de WhatsApp válido, com DDD." : "Informe um telefone válido.");
+      }
+    }
+    return { tipo, valor: endereco };
+  });
 }
 
 export function validarReuniao(valor: unknown) {

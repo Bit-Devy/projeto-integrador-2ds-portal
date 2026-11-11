@@ -13,7 +13,9 @@ export const metadata: Metadata = {
 };
 
 // monta a página do mapa do colégio
-export default function PaginaMapaDoColegio() {
+export default async function PaginaMapaDoColegio({ searchParams }: { searchParams: Promise<{ turmaId?: string | string[] }> }) {
+  const { turmaId } = await searchParams;
+  const turmaInicial = typeof turmaId === "string" && /^[1-9]\d{0,14}$/.test(turmaId) ? Number(turmaId) : undefined;
   return (
     <main id="conteudo">
       {/* cabeçalho da página */}
@@ -23,7 +25,7 @@ export default function PaginaMapaDoColegio() {
         caminho="Mais / Mapa do Colégio"
       />
       {/* busca e visualização do mapa */}
-      <MapaColegioInterativo />
+      <MapaColegioInterativo turmaInicial={turmaInicial} />
     </main>
   );
 }

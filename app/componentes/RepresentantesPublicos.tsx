@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { ListaPaginada, RepresentantePublico } from "../eventos/tipos";
 import { formatarData, normalizarBusca, temTexto } from "../eventos/modelo-publico";
 import { useConsultaPublica } from "../eventos/useConsultaPublica";
 import CabecalhoPagina from "./CabecalhoPagina";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "./EstadoConsultaPublica";
+import { enderecoContatoRepresentante, nomesContatosRepresentante } from "../eventos/contatos-representante";
 
 function rotuloTurno(valor: string) {
   return ({ manha: "Manhã", tarde: "Tarde", noite: "Noite" } as Record<string, string>)[valor] || valor;
@@ -32,20 +34,21 @@ function periodoMandato(representante: RepresentantePublico) {
   return "Não informado";
 }
 
-type FiltrosRepresentante = { busca: string; turma: string; turno: string; nivel: string; serie: string; funcao: string };
+type FiltrosRepresentante = { busca: string; turma: string; turmaId: string; turno: string; nivel: string; serie: string; funcao: string };
 type Ordenacao = "turma" | "turno" | "nome";
 
 export function PaginaRepresentantes({ filtrosIniciais = {}, abrirTabelaInicial = false }: { filtrosIniciais?: Partial<FiltrosRepresentante>; abrirTabelaInicial?: boolean }) {
-  const [filtros, setFiltros] = useState<FiltrosRepresentante>({ busca: filtrosIniciais.busca || "", turma: filtrosIniciais.turma || "", turno: filtrosIniciais.turno || "", nivel: filtrosIniciais.nivel || "", serie: filtrosIniciais.serie || "", funcao: filtrosIniciais.funcao || "" });
+  const [filtros, setFiltros] = useState<FiltrosRepresentante>({ busca: filtrosIniciais.busca || "", turma: filtrosIniciais.turma || "", turmaId: filtrosIniciais.turmaId || "", turno: filtrosIniciais.turno || "", nivel: filtrosIniciais.nivel || "", serie: filtrosIniciais.serie || "", funcao: filtrosIniciais.funcao || "" });
   // separa os campos digitados dos filtros enviados pelo botão buscar
   const [filtrosAplicados, setFiltrosAplicados] = useState(filtros);
-  const [buscou, setBuscou] = useState(false);
+  const [buscou, setBuscou] = useState(Boolean(filtrosIniciais.turmaId));
+  const [detalhe, setDetalhe] = useState<{ id: number; origem: "cartao" | "tabela" } | null>(null);
   const [pagina, setPagina] = useState(1);
   const [mostrarTabela, setMostrarTabela] = useState(abrirTabelaInicial);
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("turma");
   const [direcao, setDirecao] = useState<"asc" | "desc">("asc");
   // guarda a busca que deve levar a pessoa até o resultado
-  const [envios, setEnvios] = useState(0);
+  const [envios, setEnvios] = useState(filtrosIniciais.turmaId ? 1 : 0);
   const ultimaDescida = useRef(0);
   const url = useMemo(() => {
     const parametros = new URLSearchParams({ pagina: String(pagina), limite: "500", ordenar: ordenacao, direcao });
@@ -82,15 +85,19 @@ export function PaginaRepresentantes({ filtrosIniciais = {}, abrirTabelaInicial 
   }, [buscou, carregando, envios]);
 
   function alterar(campo: keyof FiltrosRepresentante, valor: string) {
-    setFiltros((atuais) => ({ ...atuais, [campo]: valor }));
+    setFiltros((atuais) => ({ ...atuais, ...(campo === "turma" || campo === "turno" ? { turmaId: "" } : {}), [campo]: valor }));
   }
   // só mostra os cartões depois que a pessoa confirma a busca
   function buscar() {
+    setDetalhe(null);
     setFiltrosAplicados({ ...filtros }); setBuscou(true); setPagina(1); setEnvios((valor) => valor + 1); recarregar();
     // fecha o teclado do celular para deixar o resultado visível
     if (window.matchMedia("(max-width: 780px)").matches && document.activeElement instanceof HTMLElement) document.activeElement.blur();
   }
-  function limpar() { const vazios = { busca: "", turma: "", turno: "", nivel: "", serie: "", funcao: "" }; setFiltros(vazios); setFiltrosAplicados(vazios); setBuscou(false); setPagina(1); }
+  function limpar() { const vazios = { busca: "", turma: "", turmaId: "", turno: "", nivel: "", serie: "", funcao: "" }; setFiltros(vazios); setFiltrosAplicados(vazios); setDetalhe(null); setBuscou(false); setPagina(1); }
+  function abrirDetalhe(id: number, origem: "cartao" | "tabela") {
+    setDetalhe((atual) => atual?.id === id && atual.origem === origem ? null : { id, origem });
+  }
   function ordenar(campo: Ordenacao) {
     if (ordenacao === campo) setDirecao((atual) => atual === "asc" ? "desc" : "asc");
     else { setOrdenacao(campo); setDirecao("asc"); setPagina(1); }
@@ -119,12 +126,49 @@ export function PaginaRepresentantes({ filtrosIniciais = {}, abrirTabelaInicial 
         {carregando && <EstadoCarregando texto="Carregando representantes publicados…" />}
         {erro && <EstadoErro mensagem={erro} tentarNovamente={recarregar} />}
         {buscou && !carregando && !erro && !representantes.length && <EstadoVazio titulo="Nenhum representante encontrado" texto="Não há representante publicado que corresponda à busca e aos filtros escolhidos." />}
-        {buscou && !!representantes.length && <div className="grade-representantes">{representantes.map((representante) => <article key={representante.id}><div><span>{representante.turma}</span>{temTexto(representante.serie) && <small>{representante.serie}</small>}</div><h2>{nomeRepresentante(representante)}</h2><strong>{rotuloFuncao(representante.funcao)}</strong><dl><div><dt>Nível</dt><dd>{rotuloNivel(representante.nivelEnsino)}</dd></div><div><dt>Turno</dt><dd>{rotuloTurno(representante.turno)}</dd></div><div><dt>Mandato</dt><dd>{periodoMandato(representante)}</dd></div></dl>{temTexto(representante.observacaoPublica) && <p>{representante.observacaoPublica}</p>}</article>)}</div>}
+        {buscou && !!representantes.length && <div className="grade-representantes">{representantes.map((representante) => {
+          const aberto = detalhe?.id === representante.id && detalhe.origem === "cartao";
+          return <article key={representante.id}>
+            <div><span>{representante.turma}</span>{temTexto(representante.serie) && <small>{representante.serie}</small>}</div>
+            <h2><button className="nome-representante-acao" type="button" aria-expanded={aberto} onClick={() => abrirDetalhe(representante.id, "cartao")}>{nomeRepresentante(representante)} <span aria-hidden="true">{aberto ? "⌃" : "›"}</span></button></h2>
+            <strong>{rotuloFuncao(representante.funcao)} · {rotuloTurno(representante.turno)}</strong>
+            {aberto && <DetalheRepresentante id={representante.id} />}
+          </article>;
+        })}</div>}
 
         {<section className="secao-tabela-representantes" aria-labelledby="titulo-tabela-representantes"><div><h2 id="titulo-tabela-representantes">Tabela completa de representantes</h2><p>Compare e ordene os registros públicos por turma, turno ou nome.</p></div><button type="button" className="botao-secundario" aria-expanded={mostrarTabela} aria-controls="tabela-completa-representantes" onClick={() => setMostrarTabela((valor) => !valor)}>{mostrarTabela ? "Ocultar tabela completa" : "Ver tabela completa de representantes"}</button></section>}
-        {mostrarTabela && <div id="tabela-completa-representantes" className="tabela-responsiva"><table className="tabela-eventos tabela-representantes"><caption>Representantes publicados</caption><thead><tr><th scope="col" aria-sort={ariaOrdenacao("turma")}><button type="button" onClick={() => ordenar("turma")}>Turma <span aria-hidden="true">↕</span></button></th><th scope="col">Ano ou série</th><th scope="col">Nível de ensino</th><th scope="col" aria-sort={ariaOrdenacao("turno")}><button type="button" onClick={() => ordenar("turno")}>Turno <span aria-hidden="true">↕</span></button></th><th scope="col" aria-sort={ariaOrdenacao("nome")}><button type="button" onClick={() => ordenar("nome")}>Representante <span aria-hidden="true">↕</span></button></th><th scope="col">Função</th><th scope="col">Período do mandato</th></tr></thead><tbody>{representantes.map((representante) => <tr key={representante.id}><th scope="row">{representante.turma}</th><td>{representante.serie || "—"}</td><td>{rotuloNivel(representante.nivelEnsino)}</td><td>{rotuloTurno(representante.turno)}</td><td>{nomeRepresentante(representante)}</td><td>{rotuloFuncao(representante.funcao)}</td><td>{periodoMandato(representante)}</td></tr>)}</tbody></table></div>}
+        {mostrarTabela && <div id="tabela-completa-representantes" className="tabela-responsiva"><table className="tabela-eventos tabela-representantes"><caption>Representantes publicados</caption><thead><tr><th scope="col" aria-sort={ariaOrdenacao("turma")}><button type="button" onClick={() => ordenar("turma")}>Turma <span aria-hidden="true">↕</span></button></th><th scope="col">Ano ou série</th><th scope="col">Nível de ensino</th><th scope="col" aria-sort={ariaOrdenacao("turno")}><button type="button" onClick={() => ordenar("turno")}>Turno <span aria-hidden="true">↕</span></button></th><th scope="col" aria-sort={ariaOrdenacao("nome")}><button type="button" onClick={() => ordenar("nome")}>Representante <span aria-hidden="true">↕</span></button></th><th scope="col">Função</th><th scope="col">Período do mandato</th></tr></thead>
+          <tbody>{representantes.map((representante) => {
+            const aberto = detalhe?.id === representante.id && detalhe.origem === "tabela";
+            return <Fragment key={representante.id}>
+              <tr><th scope="row">{representante.turma}</th><td>{representante.serie || "—"}</td><td>{rotuloNivel(representante.nivelEnsino)}</td><td>{rotuloTurno(representante.turno)}</td><td><button type="button" className="nome-representante-acao" aria-expanded={aberto} onClick={() => abrirDetalhe(representante.id, "tabela")}>{nomeRepresentante(representante)} <span aria-hidden="true">{aberto ? "⌃" : "›"}</span></button></td><td>{rotuloFuncao(representante.funcao)}</td><td>{periodoMandato(representante)}</td></tr>
+              {aberto && <tr><td colSpan={7}><DetalheRepresentante id={representante.id} /></td></tr>}
+            </Fragment>;
+          })}</tbody></table></div>}
         {(dados?.paginacao.totalPaginas ?? 1) > 1 && <nav className="paginacao-eventos" aria-label="Páginas de representantes"><button type="button" disabled={pagina <= 1} onClick={() => setPagina((valor) => Math.max(1, valor - 1))}>‹ Página anterior</button><span>Página {dados?.paginacao.pagina} de {dados?.paginacao.totalPaginas}</span><button type="button" disabled={pagina >= (dados?.paginacao.totalPaginas ?? 1)} onClick={() => setPagina((valor) => valor + 1)}>Próxima página ›</button></nav>}
       </div>
     </main>
   );
+}
+
+// abre os contatos autorizados e o ensalamento ao consultar o representante
+function DetalheRepresentante({ id }: { id: number }) {
+  const { dados, carregando, erro, recarregar } = useConsultaPublica<{ item: RepresentantePublico }>(`/api/representantes/${id}`);
+  if (carregando) return <p role="status">Carregando os dados do representante…</p>;
+  if (erro) return <EstadoErro mensagem={erro} tentarNovamente={recarregar} />;
+  if (!dados) return null;
+  const item = dados.item;
+  return <section className="detalhe-representante-publico" aria-label={`Dados de ${nomeRepresentante(item)}`}>
+    <dl className="dados-mandato">
+      <div><dt>Turma</dt><dd>{item.turma} · {item.ano}</dd></div>
+      <div><dt>Nível de ensino</dt><dd>{rotuloNivel(item.nivelEnsino)}</dd></div>
+      <div><dt>Mandato</dt><dd>{periodoMandato(item)}</dd></div>
+      {item.contatos?.map((contato, indice) => <div key={indice}>
+        <dt>{nomesContatosRepresentante[contato.tipo]}</dt>
+        <dd><a href={enderecoContatoRepresentante(contato)} target={contato.tipo === "whatsapp" ? "_blank" : undefined} rel="noreferrer">{contato.valor}</a></dd>
+      </div>)}
+    </dl>
+    {temTexto(item.observacaoPublica) && <p>{item.observacaoPublica}</p>}
+    {item.mapaUrl && <Link className="botao-secundario" href={item.mapaUrl}>Ver ensalamento da turma ›</Link>}
+  </section>;
 }

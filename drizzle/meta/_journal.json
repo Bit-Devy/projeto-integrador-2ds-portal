@@ -127,6 +127,13 @@
       "when": 1794339716735,
       "tag": "0017_first_randall",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1794356866718,
+      "tag": "0018_outgoing_nitro",
+      "breakpoints": true
     }
   ]
 }

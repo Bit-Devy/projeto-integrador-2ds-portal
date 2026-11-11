@@ -66,6 +66,8 @@ export type TurmaMapaValidada = {
   aliases: string;
   aliasesNormalizados: string;
   turno: TurnoMapa;
+  horarioInicial: string;
+  horarioFinal: string;
   tipo: string;
   curso: string;
   serie: string;
@@ -195,6 +197,14 @@ export function validarTurmaMapa(valor: unknown): TurmaMapaValidada {
   if (!Number.isInteger(ano) || ano < 1900 || ano > 2199) throw new ErroMapa("Informe um ano escolar válido.");
   const inicioValidade = dados.ano === undefined ? inicioAntigo : `${ano}-01-01`;
   const fimValidade = dados.ano === undefined ? fimAntigo : `${ano}-12-31`;
+  // turmas de turno inteiro têm os dois horários vazios
+  const parcial = booleano(dados.turnoParcial, Boolean(dados.horarioInicial || dados.horarioFinal));
+  const horarioInicial = parcial ? texto(dados.horarioInicial, 12) : "";
+  const horarioFinal = parcial ? texto(dados.horarioFinal, 12) : "";
+  const horaValida = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+  if (parcial && (!horaValida.test(horarioInicial) || !horaValida.test(horarioFinal) || horarioInicial >= horarioFinal)) {
+    throw new ErroMapa("Informe os horários do turno parcial. O fim deve ser depois do início.");
+  }
   // limita e organiza todos os campos da turma
   return {
     ano,
@@ -204,6 +214,8 @@ export function validarTurmaMapa(valor: unknown): TurmaMapaValidada {
     aliases,
     aliasesNormalizados: aliasesNormalizados(aliases),
     turno,
+    horarioInicial,
+    horarioFinal,
     tipo,
     curso: texto(dados.curso, 160),
     serie: texto(dados.serie, 80),
