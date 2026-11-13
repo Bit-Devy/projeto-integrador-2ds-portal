@@ -19,7 +19,7 @@ export async function prepararAnosEscolares(d1 = getD1()) {
 // adiciona os horários e os dados de mandato nos bancos já usados pelo portal
 export async function prepararDetalhesEscolares(d1 = getD1()) {
   const tabelas = {
-    turmas_atividades: { horario_inicial: "TEXT NOT NULL DEFAULT ''", horario_final: "TEXT NOT NULL DEFAULT ''" },
+    turmas_atividades: { horario_inicial: "TEXT NOT NULL DEFAULT ''", horario_final: "TEXT NOT NULL DEFAULT ''", dias_semana: "INTEGER NOT NULL DEFAULT 127" },
     representantes: { contatos_json: "TEXT NOT NULL DEFAULT '[]'", contatos_publicos: "INTEGER NOT NULL DEFAULT 0", destituido_em: "TEXT" },
   };
   for (const [tabela, campos] of Object.entries(tabelas)) {

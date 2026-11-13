@@ -288,7 +288,6 @@ export async function obterRepresentante(idRecebido: unknown, todos = false) {
 
 export async function criarRepresentante(valor: unknown) {
   const dados = await validarTurmaDoRepresentante(validarRepresentante(valor));
-  if (!dados.ativo) dados.publicado = false;
   if (!dados.inicioMandato && (!dados.fimMandato || dados.fimMandato >= dataDoPortal())) dados.inicioMandato = dataDoPortal();
   const linha = await getD1().prepare(`${sqlInserirRepresentante} RETURNING *`)
     .bind(...valoresRepresentante(dados), ...valoresVagaRepresentante(dados)).first<Linha>();
@@ -310,18 +309,17 @@ export async function atualizarRepresentante(idRecebido: unknown, valor: unknown
   if (existente.ativo && ["inicioMandato", "fimMandato"].some((campo) => Object.hasOwn(recebido, campo) && recebido[campo] !== existente[campo as "inicioMandato" | "fimMandato"])) {
     throw new ErroEventos("Use a ação de destituição para registrar as datas de encerramento deste mandato.");
   }
-  if (existente.destituidoEm && (booleano(recebido.ativo, false) || booleano(recebido.publicado, false))) {
+  if (existente.destituidoEm && booleano(recebido.ativo, false)) {
     throw new ErroEventos("Este mandato foi encerrado. Cadastre um novo representante para preencher a vaga.", 409);
   }
-  const reativando = Boolean(existente.arquivadoEm) && booleano(recebido.ativo, existente.ativo);
-  if (reativando && existente.fimMandato && existente.fimMandato < dataDoPortal()) throw new ErroEventos("O período deste mandato já terminou.", 409);
   const arquivar = booleano(recebido.arquivado, false);
-  const combinado = { ...existente, ...recebido, ...(reativando ? { publicado: false } : {}), ...(arquivar ? { ativo: false, publicado: false } : {}) };
+  const reativando = !arquivar && Boolean(existente.arquivadoEm) && booleano(recebido.ativo, existente.ativo);
+  if (reativando && existente.fimMandato && existente.fimMandato < dataDoPortal()) throw new ErroEventos("O período deste mandato já terminou.", 409);
+  const combinado = { ...existente, ...recebido, ...(arquivar ? { ativo: false } : {}) };
   const validado = validarRepresentante(combinado);
   if (existente.destituidoEm) validarDatasMandato(combinado, true);
-  const historico = !validado.ativo && !validado.publicado && !existente.ativo && validado.turmaAtividadeId === existente.turmaAtividadeId;
+  const historico = !validado.ativo && !existente.ativo;
   const dados = historico ? { ...validado, ano: existente.ano } : await validarTurmaDoRepresentante(validado);
-  if (!dados.ativo) dados.publicado = false;
   const linha = await getD1().prepare(`${sqlAtualizarRepresentante},
       arquivado_em = CASE WHEN ? = 0 THEN COALESCE(arquivado_em, CURRENT_TIMESTAMP) WHEN ? = 1 THEN NULL ELSE arquivado_em END
     WHERE id = ? AND ano = ? AND ativo = ? AND arquivado_em IS ? AND destituido_em IS ?
@@ -355,7 +353,9 @@ function exigirAnoDoMandato(item: RepresentanteAdministrativo) {
 export async function arquivarRepresentante(idRecebido: unknown) {
   const id = idPositivo(idRecebido, "representante");
   exigirAnoDoMandato(await obterRepresentante(id, true) as RepresentanteAdministrativo);
-  await arquivarRegistro("representantes", id);
+  await getD1().prepare(`UPDATE representantes SET ativo = 0, publicado = 0,
+    arquivado_em = COALESCE(arquivado_em, CURRENT_TIMESTAMP), atualizado_em = CURRENT_TIMESTAMP WHERE id = ? AND ano = ?`)
+    .bind(id, anoDoPortal()).run();
   return { arquivado: true, id };
 }
 
@@ -597,7 +597,7 @@ async function exigirExistente(tabela: string, id: number, mensagem: string) {
   if (!linha) throw new ErroEventos(mensagem, 404);
 }
 
-async function arquivarRegistro(tabela: "eventos_internos" | "campeonatos" | "representantes" | "reunioes", id: number) {
+async function arquivarRegistro(tabela: "eventos_internos" | "campeonatos" | "reunioes", id: number) {
   await getD1().prepare(`UPDATE ${tabela} SET ativo = 0, arquivado_em = CURRENT_TIMESTAMP, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?`).bind(id).run();
 }
 

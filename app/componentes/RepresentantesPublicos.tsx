@@ -109,7 +109,7 @@ export function PaginaRepresentantes({ filtrosIniciais = {}, abrirTabelaInicial 
 
   return (
     <main id="conteudo">
-      <CabecalhoPagina titulo="Representantes de turma" resumo="Encontre representantes publicados por nome, turma, turno, nível de ensino, série ou função." caminho="Representantes" />
+      <CabecalhoPagina titulo="Representantes de turma" resumo="Encontre representantes publicados por nome, turma, turno, nível de ensino, série ou função." caminho="Representação / Representantes" />
       <div className="limite pagina-conteudo pagina-eventos">
         <form className="filtros-eventos filtros-representantes" onSubmit={(evento) => { evento.preventDefault(); buscar(); }} aria-label="Busca e filtros de representantes">
           <label className="filtro-busca-largo"><span>Buscar pelo nome</span><input type="search" value={filtros.busca} onChange={(evento) => alterar("busca", evento.target.value)} placeholder="Nome do representante" /></label>

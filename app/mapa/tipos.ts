@@ -1,3 +1,5 @@
+import type { DiaDeAula } from "./dias-de-aula";
+
 // lista os turnos aceitos no mapa
 export const turnosMapa = ["manha", "tarde", "noite"] as const;
 // lista as alas aceitas no mapa
@@ -59,6 +61,7 @@ export type TurmaAtividadeMapa = {
   turnoParcial: boolean;
   horarioInicial: string;
   horarioFinal: string;
+  diasSemana: DiaDeAula[];
   tipo: string;
   curso: string;
   serie: string;

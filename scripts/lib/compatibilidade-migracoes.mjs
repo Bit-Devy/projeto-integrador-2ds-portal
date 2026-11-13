@@ -17,6 +17,7 @@ const migracoesDaPrevia = [
   "0016_high_nico_minoru.sql",
   "0017_first_randall.sql",
   "0018_outgoing_nitro.sql",
+  "0019_dias_de_aula.sql",
 ];
 const identificador = (valor) => `"${valor.replaceAll('"', '""')}"`;
 const normalizarSql = (sql) => sql.match(/'(?:''|[^'])*'|[^']+/g).map((trecho) => trecho.startsWith("'")

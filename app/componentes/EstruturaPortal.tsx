@@ -36,6 +36,7 @@ const itensMenu: ItemMenu[] = [
     destino: "/crt",
     subitens: [
       { nome: "Conselho de Representação de Turma", destino: "/crt" },
+      { nome: "Representantes", destino: "/representantes" },
       { nome: "Como funciona a representação", destino: "/crt#representantes" },
       { nome: "Assembleias", destino: "/crt#assembleias" },
     ],
@@ -68,7 +69,6 @@ const itensMenu: ItemMenu[] = [
     destino: "/mapa-do-colegio",
     subitens: [
       { nome: "Mapa do Colégio", destino: "/mapa-do-colegio" },
-      { nome: "Representantes", destino: "/representantes" },
       { nome: "Cantina", destino: "/cantina" },
     ],
   },

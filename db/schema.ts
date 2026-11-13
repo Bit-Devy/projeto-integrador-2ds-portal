@@ -147,6 +147,7 @@ export const turmasAtividades = sqliteTable(
     turno: text("turno").notNull(),
     horarioInicial: text("horario_inicial").notNull().default(""),
     horarioFinal: text("horario_final").notNull().default(""),
+    diasSemana: integer("dias_semana").notNull().default(127),
     tipo: text("tipo").notNull(),
     curso: text("curso").notNull().default(""),
     serie: text("serie").notNull().default(""),

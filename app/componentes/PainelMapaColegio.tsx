@@ -8,6 +8,7 @@ import { alasMapa, nomesTurnos, type CategoriaMapa, type DadosMapa, type LocalMa
 import { confirmarSaida, useAvisoMudancas, type AoMudarEstadoSujo } from "./painel-eventos-comum";
 import { confirmarNoPainel } from "./confirmacao-painel";
 import { dataDoPortal } from "../conteudo/periodos";
+import { rotuloDiasDeAula } from "../mapa/dias-de-aula";
 type ValorFormulario = string | number | boolean | null;
 type FormularioMapa = Record<string, ValorFormulario>;
 const dadosVazios: DadosMapa = { categorias: [], locais: [], turmas: [], ensalamentos: [] };
@@ -61,7 +62,7 @@ export default function PainelMapaColegio({ aoMudarEstadoSujo }: { aoMudarEstado
         const resposta = await fetch("/api/mapa", { method: idEditando ? "PUT" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ entidade: "locais", id: idEditando, dados: { ...formulario, ...(vincularTurma ? { turmaId: Number(turmaId), substituirOcupacoes: substituicoes } : {}) } }) });
         const resultado = await resposta.json();
         if (resposta.status === 409 && resultado.conflitos?.length) {
-          if (!await confirmarNoPainel("Substituir a ocupação desta sala?", `Esta sala está ocupada por ${resultado.conflitos.map((item: { nome: string }) => item.nome).join(", ")} neste turno e período. Deseja substituir? A ocupação anterior ficará no histórico.`, "Substituir ocupação", "Continuar editando")) return;
+          if (!await confirmarNoPainel("Substituir a ocupação desta sala?", `Os dias e horários coincidem com ${resultado.conflitos.map((item: { nome: string }) => item.nome).join(", ")}. A ocupação anterior ficará no histórico.`, "Substituir ocupação", "Continuar editando")) return;
           substituicoes = resultado.conflitos.map((item: { id: number }) => item.id); continue;
         }
         if (!resposta.ok) throw new Error(resultado.erro || "Não foi possível salvar a sala.");
@@ -108,10 +109,10 @@ export default function PainelMapaColegio({ aoMudarEstadoSujo }: { aoMudarEstado
         {vincularTurma && <div className="grade-campos-painel"><label><span>Turma publicada</span>
           <select required value={turmaId} onChange={(evento) => { setTurmaId(evento.target.value); setMudou(true); }}>
             <option value="">Selecione a turma</option>
-            {turmasDisponiveis.map((item) => <option key={item.id} value={item.id}>{item.nome} · {nomesTurnos[item.turno]}{item.turnoParcial ? ` · ${item.horarioInicial}–${item.horarioFinal}` : ""}</option>)}
+            {turmasDisponiveis.map((item) => <option key={item.id} value={item.id}>{item.nome} · {nomesTurnos[item.turno]}{item.turnoParcial ? ` · ${rotuloDiasDeAula(item.diasSemana, true)} · ${item.horarioInicial}–${item.horarioFinal}` : ""}</option>)}
           </select>
         </label></div>}
-        <p>O vínculo considera o turno, o horário e a validade da turma. Se ela já tiver uma sala, você poderá confirmar a transferência. Para criar uma turma nova, use o menu Turmas.</p>
+        <p>O vínculo considera o turno, os dias de aula, o horário e a validade da turma. Se ela já tiver uma sala, você poderá confirmar a transferência. Para criar uma turma nova, use o menu Turmas.</p>
       </details>
       <div className="acoes-formulario-painel"><button type="button" onClick={fecharFormulario}>Cancelar</button><button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Salvar sala"}</button></div>
     </form> : <>

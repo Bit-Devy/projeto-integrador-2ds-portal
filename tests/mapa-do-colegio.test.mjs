@@ -381,7 +381,8 @@ async function importarValidacao(sufixo) {
   const fonte = (await readFile(caminho, "utf8"))
     .replace('from "./normalizacao"', `from "${normalizacao}"`)
     .replace('from "../conteudo/periodos"', `from "${pathToFileURL(path.join(raiz, "app/conteudo/periodos.ts")).href}"`)
-    .replace('from "./tipos"', `from "${pathToFileURL(path.join(raiz, "app/mapa/tipos.ts")).href}"`);
+    .replace('from "./tipos"', `from "${pathToFileURL(path.join(raiz, "app/mapa/tipos.ts")).href}"`)
+    .replace('from "./dias-de-aula"', `from "${pathToFileURL(path.join(raiz, "app/mapa/dias-de-aula.ts")).href}"`);
   // importa o compilador de typescript
   const moduloTypeScript = await import("typescript");
   // aceita as duas formas de exportação do compilador
@@ -418,6 +419,7 @@ async function importarInterfaceMapa(sufixo) {
   const fonte = (await readFile(caminho, "utf8"))
     .replace('from "react"', `from "${estados}"`)
     .replace('from "next/link"', `from "${import.meta.resolve("next/link.js")}"`)
+    .replace('from "../mapa/dias-de-aula"', `from "${pathToFileURL(path.join(raiz, "app/mapa/dias-de-aula.ts")).href}"`)
     .replace(
       'from "../mapa/busca-publica"',
       `from "${pathToFileURL(path.join(raiz, "app/mapa/busca-publica.ts")).href}"`,

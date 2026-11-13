@@ -9,6 +9,7 @@ import { mandatoVigenteEm } from "../eventos/mandato";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 // importa as turmas que também aparecem no mapa público
 import type { TurmaAtividadeMapaPublica } from "../mapa/tipos";
+import { rotuloDiasDeAula } from "../mapa/dias-de-aula";
 import {
   CabecalhoPainel,
   Campo,
@@ -62,14 +63,14 @@ type Representante = {
   atualizadoEm?: string;
 };
 
-type FormularioRepresentante = Omit<Representante, "id" | "criadoEm" | "atualizadoEm">;
+type FormularioRepresentante = Omit<Representante, "id" | "criadoEm" | "atualizadoEm" | "publicado">;
 type Encerramento = { item: Representante; inicioMandato: string; fimMandato: string };
 type Visao = "todos" | "duplicacoes" | "sem-representante";
 
 const formularioVazio: FormularioRepresentante = {
   ano: anoDoPortal(), turmaAtividadeId: null,
   nome: "", nomeExibicao: "", nivelEnsino: "medio", serie: "", turma: "", turno: "manha",
-  funcao: "titular", inicioMandato: "", fimMandato: "", ativo: true, publicado: false, ordem: 0,
+  funcao: "titular", inicioMandato: "", fimMandato: "", ativo: true, ordem: 0,
   observacaoPublica: "", observacaoInterna: "", contatos: [], contatosPublicos: false, destituidoEm: "",
 };
 
@@ -143,8 +144,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
         && (!filtroAno || item.serie === filtroAno)
         && (!filtroFuncao || item.funcao === filtroFuncao)
         && (filtroEstado !== "ativos" || item.ativo)
-        && (filtroEstado !== "arquivados" || !item.ativo)
-        && (filtroEstado !== "rascunhos" || !item.publicado);
+        && (filtroEstado !== "arquivados" || !item.ativo);
     }).sort((a, b) => compararTurmas(a.turma, b.turma) || a.nome.localeCompare(b.nome, "pt-BR"));
   }, [busca, chavesDuplicadas, filtroAno, filtroEstado, filtroFuncao, filtroNivel, filtroTurno, itens, visao]);
 
@@ -167,10 +167,11 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
   async function editar(item: Representante) {
     if (item.ano !== anoDoPortal()) return;
     if (!await confirmarSaida(mudou)) return;
-    const { id: _id, criadoEm: _criadoEm, atualizadoEm: _atualizadoEm, ...dados } = item;
+    const { id: _id, criadoEm: _criadoEm, atualizadoEm: _atualizadoEm, publicado: _publicado, ...dados } = item;
     void _id;
     void _criadoEm;
     void _atualizadoEm;
+    void _publicado;
     setFormulario(dados);
     setIdEditando(item.id);
     setMudou(false);
@@ -195,7 +196,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
     setErro("");
     setSucesso("");
     try {
-      const dados = { ...formulario, nomeExibicao: formulario.nomeExibicao || formulario.nome, publicado: formulario.ativo && formulario.publicado };
+      const dados = { ...formulario, nomeExibicao: formulario.nomeExibicao || formulario.nome };
       await requisitarPainel("/api/representantes", {
         method: idEditando === null ? "POST" : "PUT",
         ...corpoJson(idEditando === null ? { dados } : { id: idEditando, dados }),
@@ -251,7 +252,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
     setErro("");
     try {
       await requisitarPainel("/api/representantes", { method: "PUT", ...corpoJson({ id: item.id, dados: { ativo: true } }) });
-      setSucesso("Representante reativado como rascunho para revisão.");
+      setSucesso("Representante reativado. O cadastro aparece no portal durante a vigência do mandato.");
       await carregar();
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : "Não foi possível reativar o registro.");
@@ -273,8 +274,8 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
   }
 
   return (
-    <section className="pev-painel" onChangeCapture={() => { if (formulario) setMudou(true); }} aria-labelledby="titulo-painel-representantes">
-      <CabecalhoPainel rotulo="COMUNIDADE ESCOLAR" titulo="Representantes" descricao="Gerencie os mandatos, contatos e publicações dos representantes de turma." acao={formulario || encerramento ? undefined : () => novo()} nomeAcao="+ Cadastrar representante" />
+    <section className="pev-painel painel-representantes" onChangeCapture={() => { if (formulario) setMudou(true); }} aria-label="Representantes">
+      <CabecalhoPainel rotulo="COMUNIDADE ESCOLAR" titulo="Representantes" descricao="Gerencie os mandatos e os contatos dos representantes de turma." acao={formulario || encerramento ? undefined : () => novo()} nomeAcao="+ Cadastrar representante" />
       <MensagensPainel erro={erro} sucesso={sucesso} />
       {arquivoAberto && <ArquivoAnual titulo="Representantes arquivados" itens={itens.filter((item) => !item.ativo || item.ano !== anoDoPortal()).map((item) => ({ id: item.id, ano: item.ano, titulo: item.nomeExibicao || item.nome, descricao: `${item.turma} · ${item.serie} · ${nomeTurno(item.turno)} · ${item.funcao}`, observacao: item.observacaoPublica }))} fechar={() => setArquivoAberto(false)} />}
 
@@ -288,7 +289,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
         <div className="pev-acoes-formulario"><button className="pev-botao" type="button" disabled={salvando} onClick={fechar}>Cancelar</button><button type="submit" className="pev-botao pev-botao--perigoso" disabled={salvando}>{salvando ? "Salvando…" : "Salvar e encerrar mandato"}</button></div>
       </form> : formulario ? (
         <form className="pev-formulario" onSubmit={salvar}>
-          <div className="pev-formulario__topo"><div><small>{idEditando === null ? "NOVO MANDATO" : "EDITANDO MANDATO"}</small><h2 id="titulo-painel-representantes">{idEditando === null ? "Cadastrar representante" : formulario.nome}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>Fechar</button></div>
+          <div className="pev-formulario__topo"><div><small>{idEditando === null ? "NOVO MANDATO" : "EDITANDO MANDATO"}</small><h2>{idEditando === null ? "Cadastrar representante" : formulario.nome}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>Fechar</button></div>
           <fieldset className="pev-bloco"><legend>Identificação pública</legend><div className="pev-grade-campos">
             <Campo rotulo="Nome"><input value={formulario.nome} onChange={(e) => mudar("nome", e.target.value)} readOnly={idEditando !== null} required maxLength={160} autoComplete="off" /></Campo>
             <Campo rotulo="Nome de exibição" dica="Deixe em branco para usar o nome acima."><input value={formulario.nomeExibicao} onChange={(e) => mudar("nomeExibicao", e.target.value)} maxLength={160} /></Campo>
@@ -304,33 +305,42 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
             <Campo rotulo="Função">{idEditando === null ? <select value={formulario.funcao} onChange={(e) => mudar("funcao", e.target.value)} required>{funcoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select> : <input value={nomeFuncao(formulario.funcao)} readOnly />}</Campo>
             <Campo rotulo="Ordem na turma"><input type="number" min={0} value={formulario.ordem} onChange={(e) => mudar("ordem", Number(e.target.value))} /></Campo>
           </div></fieldset>
-          <fieldset className="pev-bloco"><legend>Mandato e visibilidade</legend><div className="pev-grade-campos">
+          <fieldset className="pev-bloco"><legend>Mandato e observações</legend><div className="pev-grade-campos">
             <Campo rotulo="Início do mandato"><input type="date" value={formulario.inicioMandato} readOnly={idEditando !== null && formulario.ativo} required={Boolean(formulario.destituidoEm)} max={formulario.destituidoEm ? dataDoPortal() : undefined} onChange={(e) => mudar("inicioMandato", e.target.value)} /></Campo>
             <Campo rotulo="Fim do mandato"><input type="date" min={formulario.inicioMandato || undefined} max={formulario.destituidoEm ? dataDoPortal() : undefined} value={formulario.fimMandato} readOnly={idEditando !== null && formulario.ativo} required={Boolean(formulario.destituidoEm)} onChange={(e) => mudar("fimMandato", e.target.value)} /></Campo>
             <Campo rotulo="Observação pública" largo><textarea rows={3} value={formulario.observacaoPublica} onChange={(e) => mudar("observacaoPublica", e.target.value)} /></Campo>
             <Campo rotulo="Observação interna" dica="Nunca aparece na página pública." largo><textarea rows={3} value={formulario.observacaoInterna} onChange={(e) => mudar("observacaoInterna", e.target.value)} /></Campo>
           </div>
-          <div className="pev-opcoes">
-            {idEditando === null && <label><CheckboxComAjuda checked={formulario.ativo} onChange={(e) => mudar("ativo", e.target.checked)} explicacao={descricaoCheckbox("mandato")} aria-label="Mandato ativo" /><span>Mandato ativo</span></label>}
-            <label><CheckboxComAjuda checked={formulario.ativo && formulario.publicado} disabled={!formulario.ativo} onChange={(e) => mudar("publicado", e.target.checked)} explicacao={descricaoCheckbox("publicado")} aria-label="Mostrar no portal" /><span>Mostrar no portal</span></label>
-          </div></fieldset>
+          {idEditando === null && <div className="pev-opcoes"><label><CheckboxComAjuda checked={formulario.ativo} onChange={(e) => mudar("ativo", e.target.checked)} explicacao={descricaoCheckbox("mandato")} aria-label="Mandato ativo" /><span>Mandato ativo</span></label></div>}
+          </fieldset>
           <CamposContato contatos={formulario.contatos} publicos={formulario.contatosPublicos} alterar={(contatos) => mudar("contatos", contatos)} publicar={(publicos) => mudar("contatosPublicos", publicos)} />
           {mudou && <p className="pev-alteracoes" role="status">Há mudanças não salvas.</p>}
           <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={fechar}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>{salvando ? "Salvando…" : "Salvar representante"}</button></div>
         </form>
       ) : (
         <>
-          <div className="pev-resumo"><button type="button" className={visao === "todos" ? "ativo" : ""} onClick={() => setVisao("todos")}><strong>{itens.filter((item) => item.ativo && mandatoVigenteEm(item)).length}</strong><span>Mandatos ativos</span></button><button type="button" className={visao === "duplicacoes" ? "ativo" : ""} onClick={() => setVisao("duplicacoes")}><strong>{chavesDuplicadas.size}</strong><span>Possíveis duplicações</span></button><button type="button" className={visao === "sem-representante" ? "ativo" : ""} onClick={() => setVisao("sem-representante")}><strong>{semRepresentante.length}</strong><span>Turmas sem titular</span></button></div>
-          {visao !== "sem-representante" && <div className="pev-filtros pev-filtros--amplos">
+          {/* dá acesso às pendências sem misturar os indicadores com os filtros */}
+          <div className="pev-resumo">
+            <button type="button" aria-pressed={visao === "todos"} onClick={() => setVisao("todos")}><strong>{itens.filter((item) => item.ativo && mandatoVigenteEm(item)).length}</strong><span>Mandatos ativos</span></button>
+            <button type="button" aria-pressed={visao === "duplicacoes"} onClick={() => setVisao("duplicacoes")}><strong>{chavesDuplicadas.size}</strong><span>Possíveis duplicações</span></button>
+            <button type="button" aria-pressed={visao === "sem-representante"} onClick={() => setVisao("sem-representante")}><strong>{semRepresentante.length}</strong><span>Turmas sem titular</span></button>
+          </div>
+          {visao !== "sem-representante" && <div className="pev-filtros filtros-representantes-painel">
             <label className="pev-filtro--busca"><span>Buscar</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome ou turma — 3º J, 3 J ou 3J" /></label>
             <label><span>Turno</span><select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label>
             <label><span>Nível</span><select value={filtroNivel} onChange={(e) => setFiltroNivel(e.target.value)}>{niveisPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label>
             <label><span>Ano / série</span><select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}><option value="">Todos</option>{anos.map((ano) => <option key={ano}>{ano}</option>)}</select></label>
             <label><span>Função</span><select value={filtroFuncao} onChange={(e) => setFiltroFuncao(e.target.value)}><option value="">Todas</option>{funcoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label>
-            <label><span>Estado</span><select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}><option value="ativos">Ativos</option><option value="todos">Todos</option><option value="rascunhos">Rascunhos</option><option value="arquivados">Arquivados</option></select></label>
+            <label><span>Estado</span><select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}><option value="ativos">Ativos</option><option value="todos">Todos</option><option value="arquivados">Arquivados</option></select></label>
           </div>}
           {visao === "sem-representante" ? <ListaTurmasSemRepresentante turmas={semRepresentante} carregando={carregando} cadastrar={novo} /> : <>
-            <div className="pev-barra-resultados"><span>{filtrados.length} registro(s)</span><button type="button" className="pev-botao" onClick={exportarCsv} disabled={!itens.length}>Exportar CSV</button><button type="button" className="pev-botao" onClick={() => setArquivoAberto(true)}>Arquivados</button></div>
+            <div className="pev-barra-resultados barra-representantes">
+              <p aria-live="polite">{filtrados.length} {filtrados.length === 1 ? "registro" : "registros"}</p>
+              <div className="acoes-lista-representantes" role="group" aria-label="Ações da lista de representantes">
+                <button type="button" className="pev-botao" onClick={exportarCsv} disabled={!itens.length}>Exportar CSV</button>
+                <button type="button" className="pev-botao" onClick={() => setArquivoAberto(true)}>Arquivados</button>
+              </div>
+            </div>
             {carregando && <EstadoVazio titulo="Carregando representantes…" texto="Aguarde enquanto consultamos os mandatos." />}
             {!carregando && !filtrados.length && <EstadoVazio titulo={visao === "duplicacoes" ? "Nenhuma duplicação encontrada" : "Nenhum representante encontrado"} texto={itens.length ? "Altere os filtros ou a busca para ver outros registros." : "Cadastre o primeiro mandato pelo botão acima."} />}
             <div className="pev-lista">{filtrados.map((item) => {
@@ -338,9 +348,10 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
               const aberto = selecionado === item.id;
               const anoAtual = item.ano === anoDoPortal();
               const detalheId = `detalhe-mandato-${item.id}`;
+              const vigente = item.ativo && mandatoVigenteEm(item);
               return <article className="pev-cartao cartao-mandato" key={item.id}>
                 <div className="pev-cartao__estados">
-                  <span className={classeStatus(item.ativo ? item.publicado ? "publicado" : "rascunho" : "arquivado")}>{item.ativo ? item.publicado ? "Publicado" : "Rascunho" : item.destituidoEm ? "Mandato encerrado" : "Arquivado"}</span>
+                  <span className={classeStatus(vigente ? "publicado" : item.ativo ? "agendada" : "arquivado")}>{vigente ? "Vigente" : item.ativo ? "Agendado" : item.destituidoEm ? "Mandato encerrado" : "Arquivado"}</span>
                   {duplicado && <span className="pev-status pev-status--atencao">Revisar duplicação</span>}
                 </div>
                 <div className="pev-cartao__conteudo">
@@ -388,7 +399,7 @@ function CamposContato({ contatos, publicos, alterar, publicar }: { contatos: Co
     </div>)}
     <div className="pev-opcoes">
       {contatos.length < 2 && <button className="pev-botao" type="button" onClick={() => alterar([...contatos, { tipo: "whatsapp", valor: "" }])}>+ Adicionar contato</button>}
-      {!!contatos.length && <label><CheckboxComAjuda checked={publicos} onChange={(evento) => publicar(evento.target.checked)} explicacao="Marcado: os contatos aparecem nos detalhes públicos do representante enquanto o mandato estiver publicado e vigente. Desmarcado: os contatos ficam no painel." aria-label="Exibir contatos no portal" /><span>Exibir contatos no portal</span></label>}
+      {!!contatos.length && <label><CheckboxComAjuda checked={publicos} onChange={(evento) => publicar(evento.target.checked)} explicacao="Marcado: os contatos aparecem nos detalhes públicos do representante durante o mandato. Desmarcado: os contatos ficam no painel." aria-label="Exibir contatos no portal" /><span>Exibir contatos no portal</span></label>}
     </div>
   </fieldset>;
 }
@@ -422,9 +433,10 @@ function normalizarRepresentante(registro: Record<string, unknown>): Representan
   };
 }
 
-// distingue turmas de idiomas com o mesmo nome pelo curso e pelo horário
+// distingue turmas de idiomas com o mesmo nome pelo curso e pelos dias e horários
 function rotuloTurmaDisponivel(turma: TurmaAtividadeMapaPublica) {
-  return [turma.nome, turma.curso, nomeTurno(turma.turno), turma.turnoParcial ? `${turma.horarioInicial}–${turma.horarioFinal}` : ""].filter(Boolean).join(" · ");
+  const horario = turma.turnoParcial ? `${rotuloDiasDeAula(turma.diasSemana, true)} · ${turma.horarioInicial}–${turma.horarioFinal}` : "";
+  return [turma.nome, turma.curso, nomeTurno(turma.turno), horario].filter(Boolean).join(" · ");
 }
 
 // copia os dados da turma escolhida para o mandato

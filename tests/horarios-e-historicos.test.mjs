@@ -16,36 +16,67 @@ function sala(chamar, nome) {
 
 const turmaBase = { nivelEnsino: "medio", serie: "2", tipo: "idiomas", turno: "manha", ativo: true, publicado: true };
 
-// permite horários consecutivos e preserva salas substituídas até por edição direta
-test("turnos parciais compartilham a sala somente sem sobreposição", async () => {
+// permite dias diferentes e horários consecutivos e conserva os vínculos anteriores
+test("turnos parciais compartilham a sala sem sobreposição de dias e horários", async () => {
   const portal = await abrirPortalMemoria();
   const { chamar } = portal;
   try {
     const idiomas = await sala(chamar, "Sala fictícia de idiomas");
     const outra = await sala(chamar, "Outra sala fictícia");
     const parcial = { ...turmaBase, salaId: idiomas.id, turnoParcial: true };
-    const alemao = await criarNoMapa(chamar, "turmas", { ...parcial, nome: "2A Alemão", horarioInicial: "08:00", horarioFinal: "10:00" });
-    const japones = await criarNoMapa(chamar, "turmas", { ...parcial, nome: "1B Japonês", horarioInicial: "10:00", horarioFinal: "11:40" });
+    const horario = { horarioInicial: "08:00", horarioFinal: "10:00" };
+    const alemao = await criarNoMapa(chamar, "turmas", { ...parcial, ...horario, nome: "2A Alemão", diasSemana: ["quarta", "segunda"] });
+    const japones = await criarNoMapa(chamar, "turmas", { ...parcial, nome: "1B Japonês", horarioInicial: "10:00", horarioFinal: "11:40", diasSemana: ["segunda"] });
+    const italiano = await criarNoMapa(chamar, "turmas", { ...parcial, ...horario, nome: "1C Italiano", diasSemana: ["terca"] });
     const mapa = await json(chamar("/api/mapa", { jar: new Map() }));
-    assert.equal(mapa.ensalamentos.filter((item) => item.localId === idiomas.id).length, 2);
-    assert.deepEqual(mapa.turmas.filter((item) => [alemao.id, japones.id].includes(item.id)).map((item) => item.horarioInicial).sort(), ["08:00", "10:00"]);
-    for (const dados of [
-      { ...parcial, nome: "Choque entre horários", horarioInicial: "09:50", horarioFinal: "10:15" },
-      { ...turmaBase, nome: "Turno inteiro", salaId: idiomas.id },
+    assert.equal(mapa.ensalamentos.filter((item) => item.localId === idiomas.id).length, 3);
+    assert.deepEqual(mapa.turmas.find((item) => item.id === alemao.id).diasSemana, ["segunda", "quarta"]);
+    assert.deepEqual(mapa.turmas.find((item) => item.id === italiano.id).diasSemana, ["terca"]);
+    for (const [dados, quantidade] of [
+      [{ ...parcial, nome: "Choque entre horários", horarioInicial: "09:50", horarioFinal: "10:15", diasSemana: ["segunda"] }, 2],
+      [{ ...turmaBase, nome: "Turno inteiro", salaId: idiomas.id }, 3],
     ]) {
       const conflito = await json(chamar("/api/mapa", { method: "POST", corpo: { entidade: "turmas", dados }, esperado: 409 }));
-      assert.equal(conflito.conflitos.length, 2);
+      assert.equal(conflito.conflitos.length, quantidade);
+    }
+    for (const diasSemana of [[], ["feriado"], "segunda"]) {
+      await chamar("/api/mapa", { method: "POST", corpo: { entidade: "turmas", dados: { ...parcial, ...horario, nome: "Dias inválidos", diasSemana } }, esperado: 400 });
     }
     await chamar("/api/mapa", { method: "POST", corpo: { entidade: "turmas", dados: { ...parcial, nome: "Horário inválido", horarioInicial: "11:40", horarioFinal: "10:00" } }, esperado: 400 });
     await chamar("/api/mapa", { method: "PUT", corpo: { entidade: "turmas", id: japones.id, dados: { horarioInicial: "09:59" } }, esperado: 409 });
+    const choqueDeDias = await json(chamar("/api/mapa", { method: "PUT", corpo: { entidade: "turmas", id: italiano.id, dados: { diasSemana: ["quarta"] } }, esperado: 409 }));
+    assert.equal(choqueDeDias.conflitos.length, 1);
+    assert.match(choqueDeDias.conflitos[0].nome, /Alemão \(Seg, Qua · 08:00/);
     await chamar("/api/mapa", { method: "PUT", corpo: { entidade: "locais", id: idiomas.id, dados: { turmaId: japones.id } } });
+    // confere a proteção do banco pela rota que grava o vínculo diretamente
+    const teatro = await criarNoMapa(chamar, "turmas", { ...turmaBase, ...horario, nome: "Teatro", turnoParcial: true, diasSemana: ["quarta"] });
+    await chamar("/api/mapa", { method: "POST", corpo: { entidade: "ensalamentos", dados: { turmaAtividadeId: teatro.id, localId: idiomas.id, turno: "manha", tipo: "idiomas", publicado: true } }, esperado: 409 });
     const vinculo = (await json(chamar("/api/mapa"))).ensalamentos.find((item) => item.turmaAtividadeId === alemao.id);
     await chamar("/api/mapa", { method: "PUT", corpo: { entidade: "ensalamentos", id: vinculo.id, dados: { ...vinculo, localId: outra.id } } });
     await chamar("/api/mapa", { method: "PUT", corpo: { entidade: "turmas", id: alemao.id, dados: { ativo: false } } });
     const historico = await json(chamar(`/api/mapa?historico=${alemao.id}`));
+    assert.deepEqual(historico.turma.diasSemana, ["segunda", "quarta"]);
     assert.deepEqual(new Set(historico.salas.map((item) => item.sala)), new Set([idiomas.nome, outra.nome]));
     assert.ok(historico.salas.every((item) => item.encerradoEm));
     await chamar(`/api/mapa?historico=${alemao.id}`, { jar: new Map(), esperado: 401 });
+  } finally { await portal.fechar(); }
+});
+
+// não bloqueia dois períodos cujo único dia comum não tem aula
+test("a sala confere se o dia de aula está dentro da validade comum", async () => {
+  const portal = await abrirPortalMemoria();
+  const { chamar } = portal;
+  try {
+    const local = await sala(chamar, "Sala de cursos com datas limitadas");
+    const primeiroDia = new Date(Date.UTC(anoDoPortal(), 0, 1)).getUTCDay();
+    const segunda = 1 + (8 - primeiroDia) % 7;
+    const dia = (deslocamento) => new Date(Date.UTC(anoDoPortal(), 0, segunda + deslocamento)).toISOString().slice(0, 10);
+    const base = { ...turmaBase, salaId: local.id, turnoParcial: true, horarioInicial: "08:00", horarioFinal: "10:00", diasSemana: ["segunda"] };
+    const primeiro = await criarNoMapa(chamar, "turmas", { ...base, nome: "Primeiro período", inicioValidade: dia(0), fimValidade: dia(2) });
+    await criarNoMapa(chamar, "turmas", { ...base, nome: "Segundo período", inicioValidade: dia(2), fimValidade: dia(7) });
+    const edicao = await json(chamar("/api/mapa", { method: "PUT", corpo: { entidade: "turmas", id: primeiro.id, dados: { diasSemana: ["segunda", "sexta"] } } }));
+    assert.equal(edicao.item.fimValidade, dia(2));
+    await chamar("/api/mapa", { method: "POST", corpo: { entidade: "turmas", dados: { ...base, nome: "Período coincidente", inicioValidade: dia(6), fimValidade: dia(8) } }, esperado: 409 });
   } finally { await portal.fechar(); }
 });
 
@@ -59,21 +90,24 @@ test("destituição fecha a vaga anterior e mantém o histórico da turma", asyn
     const hoje = dataDoPortal();
     const inicio = `${ano}-01-01`;
     const contatos = [{ tipo: "email", valor: "representacao@example.test" }, { tipo: "telefone", valor: "(41) 90000-0000" }];
-    const dados = { nome: "Primeira titular fictícia", turmaAtividadeId: turma.id, turma: turma.nome, nivelEnsino: "medio", serie: "2", turno: "manha", funcao: "titular", inicioMandato: inicio, fimMandato: `${ano}-12-31`, contatos, ativo: true, publicado: true };
+    const dados = { nome: "Primeira titular fictícia", turmaAtividadeId: turma.id, turma: turma.nome, nivelEnsino: "medio", serie: "2", turno: "manha", funcao: "titular", inicioMandato: inicio, fimMandato: `${ano}-12-31`, contatos, observacaoInterna: "anotação interna fictícia", ativo: true };
     const criar = (campos, esperado = 201) => json(chamar("/api/representantes", { method: "POST", corpo: { dados: { ...dados, ...campos } }, esperado }));
     await criar({ contatos: [...contatos, { tipo: "whatsapp", valor: "(41) 90000-0001" }] }, 400);
     await criar({ contatos: [{ tipo: "email", valor: "inválido" }] }, 400);
-    const { item: primeira } = await criar({});
+    const { item: primeira } = await criar({ publicado: false });
+    assert.equal(primeira.publicado, true);
     const rota = `/api/representantes/${primeira.id}`;
     const publico = { jar: new Map() };
-    assert.deepEqual((await json(chamar(rota, publico))).item.contatos, []);
+    const detalhePublico = (await json(chamar(rota, publico))).item;
+    assert.deepEqual(detalhePublico.contatos, []);
+    assert.equal(detalhePublico.observacaoInterna, undefined);
     assert.match((await json(chamar(rota, publico))).item.mapaUrl, new RegExp(`turmaId=${turma.id}#`));
     await criar({ nome: "Vaga ocupada" }, 409);
     const editar = (campos, esperado = 200) => chamar("/api/representantes", { method: "PUT", corpo: { id: primeira.id, dados: campos }, esperado });
     await editar({ turmaAtividadeId: turma.id + 1 }, 400);
     await editar({ funcao: "vice" }, 400);
     await editar({ nome: "Outra pessoa" }, 400);
-    await editar({ contatosPublicos: true });
+    await editar({ contatosPublicos: true, publicado: false });
     assert.deepEqual((await json(chamar(rota, publico))).item.contatos, contatos);
     const lista = await json(chamar(`/api/representantes?turmaId=${turma.id}`, publico));
     assert.equal(lista.itens[0].contatos, undefined);

@@ -6,12 +6,13 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 import type { DadosMapa, TurmaAtividadeMapa } from "../mapa/tipos";
 import { nomesTurnos } from "../mapa/tipos";
+import { diasDeAula, rotuloDiasDeAula, type DiaDeAula } from "../mapa/dias-de-aula";
 import { CabecalhoPainel, Campo, MensagensPainel, confirmarSaida, requisitarPainel, useAvisoMudancas, type AoMudarEstadoSujo } from "./painel-eventos-comum";
 import { confirmarNoPainel } from "./confirmacao-painel";
 import { anoDoPortal } from "../conteudo/periodos";
 import ArquivoAnual from "./ArquivoAnual";
 import HistoricoTurmaPainel from "./HistoricoTurmaPainel";
-const turmaVazia = { ano: anoDoPortal(), nome: "", nivelEnsino: "medio", serie: "", turma: "", turno: "manha", turnoParcial: false, horarioInicial: "", horarioFinal: "", tipo: "aula_regular", curso: "", inicioValidade: "", fimValidade: "", ativo: true, publicado: true };
+const turmaVazia = { ano: anoDoPortal(), nome: "", nivelEnsino: "medio", serie: "", turma: "", turno: "manha", turnoParcial: false, horarioInicial: "", horarioFinal: "", diasSemana: [] as DiaDeAula[], tipo: "aula_regular", curso: "", inicioValidade: "", fimValidade: "", ativo: true, publicado: true };
 
 // organiza a busca e a edição das turmas do colégio
 export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?: AoMudarEstadoSujo }) {
@@ -29,6 +30,7 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
   const [mudou, setMudou] = useState(false);
   const [conflitos, setConflitos] = useState<Array<{ id: number; nome: string }> | null>(null);
   const dialogo = useRef<HTMLDialogElement>(null);
+  const primeiroDia = useRef<HTMLButtonElement>(null);
   useEffect(() => { if (conflitos) dialogo.current?.showModal(); else dialogo.current?.close(); }, [conflitos]);
   useAvisoMudancas(mudou, aoMudarEstadoSujo);
   // carrega os cadastros internos junto com as salas disponíveis
@@ -53,6 +55,11 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
   // publica a turma e seu vínculo na mesma operação do servidor
   async function salvar(substituirOcupacoes: number[] = []) {
     if (salvando || !turma) return;
+    if (turma.turnoParcial && !turma.diasSemana.length) {
+      setErro("Selecione pelo menos um dia da semana para o turno parcial.");
+      primeiroDia.current?.focus();
+      return;
+    }
     setSalvando(true); setErro(""); setSucesso("");
     try {
       // mantém os vínculos existentes quando a sala não foi trocada
@@ -97,7 +104,7 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
     {arquivoAberto && <ArquivoAnual titulo="Turmas arquivadas" itens={dados.turmas.filter((item) => !item.ativo || item.ano !== anoDoPortal()).map((item) => ({ id: item.id, ano: item.ano, titulo: item.nome, descricao: [item.serie, nomesTurnos[item.turno], item.curso].filter(Boolean).join(" · "), observacao: item.observacoes }))} detalhar={(item) => <HistoricoTurmaPainel id={item.id} />} fechar={() => setArquivoAberto(false)} />}
     {/* mostra a ocupação existente antes de trocar uma turma de sala */}
     <dialog ref={dialogo} className="dialogo-anonimato" aria-labelledby="titulo-substituir-sala" onCancel={(evento) => { evento.preventDefault(); setConflitos(null); }}>
-      <h2 id="titulo-substituir-sala">Substituir a ocupação desta sala?</h2><p>Esta sala está ocupada por {conflitos?.map((item) => item.nome).join(", ")} neste turno e período.</p><p>As ocupações anteriores serão desativadas e permanecerão no histórico.</p>
+      <h2 id="titulo-substituir-sala">Substituir a ocupação desta sala?</h2><p>Os dias e horários coincidem com {conflitos?.map((item) => item.nome).join(", ")}.</p><p>As ocupações anteriores serão desativadas e permanecerão no histórico.</p>
       <div className="acoes-dialogo-anonimato"><button className="botao-secundario" type="button" onClick={() => setConflitos(null)}>Cancelar substituição</button><button className="botao-primario" type="button" onClick={() => { const ids = conflitos?.map((item) => item.id) || []; setConflitos(null); void salvar(ids); }}>Sim, substituir ocupação</button></div>
     </dialog>
     {!turma ? <>
@@ -113,7 +120,8 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
           <div>
             <span className={item.ativo && item.publicado ? "estado-publicado" : "estado-rascunho"}>{!item.ativo ? "Arquivada" : item.publicado ? "Publicada" : "Fora do público"}</span>
             <h2>{item.nome}</h2>
-            <p>{nomesTurnos[item.turno]}{item.turnoParcial && ` · ${item.horarioInicial}–${item.horarioFinal}`} · {item.serie || "Série não informada"}{item.curso ? ` · ${item.curso}` : ""} · {item.ano}</p>
+            <p>{nomesTurnos[item.turno]} · {item.serie || "Série não informada"}{item.curso ? ` · ${item.curso}` : ""} · {item.ano}</p>
+            {item.turnoParcial && <p>{rotuloDiasDeAula(item.diasSemana, true)} · {item.horarioInicial}–{item.horarioFinal}</p>}
             <small>{vinculos.length ? vinculos.map((vinculo) => dados.locais.find((local) => local.id === vinculo.localId)?.nome || "Sala cadastrada").join(", ") : "Sem sala vinculada"}</small>
           </div>
           <div className="acoes-turma">
@@ -147,10 +155,23 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
       {<details open={vincularSala || undefined} className="salas-vinculo"><summary>Vincular a uma sala (opcional)</summary><label><CheckboxComAjuda checked={vincularSala} onChange={(e) => { setVincularSala(e.target.checked); setMudou(true); }} explicacao="Marcado: vincula esta turma a uma sala publicada no turno e período escolhidos. Desmarcado: remove o vínculo atual ao salvar, preservando seu histórico." aria-label={"Escolher uma sala para esta turma"} />Escolher uma sala para esta turma</label>{vincularSala && <Campo rotulo={`Sala publicada · turno ${nomesTurnos[turma.turno as keyof typeof nomesTurnos]}`}><select required value={salaId} onChange={(e) => { setSalaId(e.target.value); setMudou(true); }}><option value="">Selecione a sala</option>{salasDisponiveis.map((item) => <option key={item.id} value={item.id}>{item.nome || item.numero}</option>)}</select></Campo>}<p>A ocupação usa o turno e o ano escolar da turma. Alterar esses campos também confere conflitos. Ao desmarcar a escolha, o vínculo atual será retirado quando você salvar.</p></details>}
       <div className="pev-opcoes">
         {(["ativo", "publicado"] as const).map((campo) => <label key={campo}><CheckboxComAjuda disabled={turma.ano !== anoDoPortal()} checked={turma[campo]} onChange={(evento) => { setTurma({ ...turma, [campo]: evento.target.checked }); setMudou(true); }} explicacao={descricaoCheckbox(campo)} aria-label={campo === "ativo" ? "Turma ativa" : "Publicar turma"} />{campo === "ativo" ? "Turma ativa" : "Publicar turma"}</label>)}
-        <label><CheckboxComAjuda checked={turma.turnoParcial} onChange={(evento) => { setTurma({ ...turma, turnoParcial: evento.target.checked }); setMudou(true); }} explicacao="Marcado: você escolhe a hora de início e de fim. A turma pode dividir a sala com outras turmas parciais do mesmo turno, em horários diferentes. Desmarcado: a turma usa a sala durante todo o turno." aria-label="Turno parcial ou extracurricular" />Turno parcial / extracurricular</label>
+        <label><CheckboxComAjuda checked={turma.turnoParcial} onChange={(evento) => { setTurma({ ...turma, turnoParcial: evento.target.checked }); setMudou(true); }} explicacao="Marcado: você escolhe os dias e horários das aulas. A turma pode dividir a sala com outras turmas parciais quando os dias ou os horários não coincidem. Desmarcado: a turma usa a sala durante todo o turno." aria-label="Turno parcial ou extracurricular" />Turno parcial / extracurricular</label>
       </div>
+      {/* limita a ocupação da sala aos dias e horários escolhidos */}
       {turma.turnoParcial && <fieldset className="pev-bloco campos-turno-parcial">
-        <legend>Horário das aulas</legend>
+        <legend>Dias e horários das aulas</legend>
+        <div className="dias-aula-turma" role="group" aria-label="Dias da semana" aria-describedby="dica-dias-aula">
+          {diasDeAula.map((dia, indice) => {
+            const selecionado = turma.diasSemana.includes(dia.chave);
+            return <button key={dia.chave} ref={indice === 0 ? primeiroDia : undefined} className="pev-botao" type="button" aria-label={dia.nome} aria-pressed={selecionado} onClick={() => {
+              const diasSemana = selecionado ? turma.diasSemana.filter((chave) => chave !== dia.chave) : [...turma.diasSemana, dia.chave];
+              setTurma({ ...turma, diasSemana });
+              setErro("");
+              setMudou(true);
+            }}>{dia.curto}</button>;
+          })}
+        </div>
+        <p id="dica-dias-aula">Selecione pelo menos um dia da semana.</p>
         <div className="pev-grade-campos">
           <Campo rotulo="Das"><input type="time" required value={turma.horarioInicial} onChange={(evento) => { setTurma({ ...turma, horarioInicial: evento.target.value }); setMudou(true); }} /></Campo>
           <Campo rotulo="Até"><input type="time" required value={turma.horarioFinal} onChange={(evento) => { setTurma({ ...turma, horarioFinal: evento.target.value }); setMudou(true); }} /></Campo>

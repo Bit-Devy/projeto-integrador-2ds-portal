@@ -253,12 +253,15 @@ async function prepararBanco() {
   await prepararAnosEscolares(d1);
   await prepararDetalhesEscolares(d1);
   await carregarMapa2026(d1);
-  // substitui a regra antiga de turno inteiro e prepara o histórico dos vínculos
+  // atualiza a regra de ocupação e publica os mandatos ativos que já estavam cadastrados
   await d1.batch([
     "DROP TRIGGER IF EXISTS salas_sem_conflito_insert",
     "DROP TRIGGER IF EXISTS salas_sem_conflito_update",
+    "DROP TRIGGER IF EXISTS salas_por_horario_insert",
+    "DROP TRIGGER IF EXISTS salas_por_horario_update",
     ...comandosProtecaoSalas,
     ...comandosHistoricoSalas,
+    "UPDATE representantes SET publicado = 1 WHERE ativo = 1 AND arquivado_em IS NULL AND publicado = 0",
   ].map((comando) => d1.prepare(comando)));
 
   // retira do catálogo antigo a documentação interna que não é publicada no portal

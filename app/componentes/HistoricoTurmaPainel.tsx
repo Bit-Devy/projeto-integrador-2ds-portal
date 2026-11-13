@@ -3,6 +3,7 @@
 // mostra o histórico sem alterar o cadastro da turma ou os mandatos
 import type { HistoricoTurma } from "../mapa/tipos";
 import { nomesTurnos } from "../mapa/tipos";
+import { rotuloDiasDeAula } from "../mapa/dias-de-aula";
 import { useConsultaPublica } from "../eventos/useConsultaPublica";
 import { formatarDataHora } from "../eventos/modelo-publico";
 import { dataLegivel } from "./painel-eventos-comum";
@@ -18,7 +19,7 @@ export default function HistoricoTurmaPainel({ id }: { id: string | number }) {
   const { turma, salas, representantes } = dados;
   return <div className="historico-turma">
     {(turma.turnoParcial || turma.descricao || turma.observacoes) && <div className="resumo-historico-turma">
-      {turma.turnoParcial && <p><strong>Turno parcial</strong> · {turma.horarioInicial} às {turma.horarioFinal}</p>}
+      {turma.turnoParcial && <p><strong>Turno parcial</strong> · {rotuloDiasDeAula(turma.diasSemana)} · {turma.horarioInicial} às {turma.horarioFinal}</p>}
       {turma.descricao && <p>{turma.descricao}</p>}
       {turma.observacoes && <p>{turma.observacoes}</p>}
     </div>}

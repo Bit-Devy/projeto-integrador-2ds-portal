@@ -10,6 +10,7 @@ import {
 } from "./normalizacao";
 // importa as alas e os tipos do mapa
 import { alasMapa, type AlaMapa, type GrupoCategoriaMapa, type TurnoMapa } from "./tipos";
+import { diasDeAula, type DiaDeAula } from "./dias-de-aula";
 
 // define um erro esperado nas operações do mapa
 export class ErroMapa extends Error {
@@ -68,6 +69,7 @@ export type TurmaMapaValidada = {
   turno: TurnoMapa;
   horarioInicial: string;
   horarioFinal: string;
+  diasSemana: DiaDeAula[];
   tipo: string;
   curso: string;
   serie: string;
@@ -177,7 +179,7 @@ export function normalizarAlaMapa(valor: unknown): AlaMapa | "" {
 }
 
 // valida e limpa uma turma ou atividade
-export function validarTurmaMapa(valor: unknown): TurmaMapaValidada {
+export function validarTurmaMapa(valor: unknown, manterValidade = false): TurmaMapaValidada {
   // normaliza os campos principais
   const dados = objetoRecebido(valor);
   const nome = texto(dados.nome, 160);
@@ -195,8 +197,9 @@ export function validarTurmaMapa(valor: unknown): TurmaMapaValidada {
   validarPeriodo(inicioAntigo, fimAntigo);
   const ano = Number(dados.ano ?? (inicioAntigo ? inicioAntigo.slice(0, 4) : anoDoPortal()));
   if (!Number.isInteger(ano) || ano < 1900 || ano > 2199) throw new ErroMapa("Informe um ano escolar válido.");
-  const inicioValidade = dados.ano === undefined ? inicioAntigo : `${ano}-01-01`;
-  const fimValidade = dados.ano === undefined ? fimAntigo : `${ano}-12-31`;
+  const usarDatasInformadas = dados.ano === undefined || manterValidade;
+  const inicioValidade = usarDatasInformadas ? inicioAntigo : `${ano}-01-01`;
+  const fimValidade = usarDatasInformadas ? fimAntigo : `${ano}-12-31`;
   // turmas de turno inteiro têm os dois horários vazios
   const parcial = booleano(dados.turnoParcial, Boolean(dados.horarioInicial || dados.horarioFinal));
   const horarioInicial = parcial ? texto(dados.horarioInicial, 12) : "";
@@ -216,6 +219,7 @@ export function validarTurmaMapa(valor: unknown): TurmaMapaValidada {
     turno,
     horarioInicial,
     horarioFinal,
+    diasSemana: parcial ? validarDiasDeAula(dados.diasSemana) : [],
     tipo,
     curso: texto(dados.curso, 160),
     serie: texto(dados.serie, 80),
@@ -228,6 +232,15 @@ export function validarTurmaMapa(valor: unknown): TurmaMapaValidada {
     ativo: ano === anoDoPortal() && booleano(dados.ativo, true),
     publicado: ano === anoDoPortal() && booleano(dados.publicado, false),
   };
+}
+
+// conserva a ocupação anterior quando um cadastro antigo não informa os dias
+function validarDiasDeAula(valor: unknown): DiaDeAula[] {
+  if (valor === undefined) return diasDeAula.map((dia) => dia.chave);
+  if (!Array.isArray(valor) || !valor.length || valor.length > diasDeAula.length || valor.some((chave) => !diasDeAula.some((dia) => dia.chave === chave))) {
+    throw new ErroMapa("Selecione pelo menos um dia válido da semana para o turno parcial.");
+  }
+  return diasDeAula.filter((dia) => valor.includes(dia.chave)).map((dia) => dia.chave);
 }
 
 // valida e limpa um ensalamento

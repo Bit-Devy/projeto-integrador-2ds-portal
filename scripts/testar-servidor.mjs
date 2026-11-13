@@ -409,7 +409,7 @@ async function testarSistemaEventos(cookie) {
   };
 
   try {
-    // cadastra um representante em rascunho, com uma turma escrita de forma humana
+    // cadastra um representante que aparece no portal durante o mandato
     const nomeRepresentante = `Representante HTTP ${sufixo}`;
     const nomeExibicao = `Representante ${sufixo}`;
     const respostaRepresentante = await requisicaoDominio(cookie, "/api/representantes", "POST", {
@@ -425,23 +425,14 @@ async function testarSistemaEventos(cookie) {
         fimMandato: "2199-12-31",
         observacaoPublica: "Representante criado pelo teste HTTP local.",
         observacaoInterna: `não publicar representante ${sufixo}`,
-        publicado: false,
         ativo: true,
       },
     }, 201);
     criados.representante = respostaRepresentante.item.id;
 
-    // um rascunho não pode ser consultado pela projeção pública
-    await requisicaoPublica(`/api/representantes/${criados.representante}`, 404);
-    let buscaTurma = await requisicaoPublica(`/api/representantes?busca=${encodeURIComponent("3ºJ")}&limite=100`);
-    assert.ok(!buscaTurma.itens.some((item) => item.id === criados.representante));
-
-    // publica e encontra a turma mesmo sem espaço e com o símbolo ordinal
-    await requisicaoDominio(cookie, "/api/representantes", "PUT", {
-      id: criados.representante,
-      dados: { publicado: true },
-    });
-    buscaTurma = await requisicaoPublica(`/api/representantes?busca=${encodeURIComponent("3ºJ")}&limite=100&teste=${sufixo}`);
+    // encontra a turma mesmo sem espaço e com o símbolo ordinal
+    assert.equal(respostaRepresentante.item.publicado, true);
+    const buscaTurma = await requisicaoPublica(`/api/representantes?busca=${encodeURIComponent("3ºJ")}&limite=100&teste=${sufixo}`);
     const representantePublico = buscaTurma.itens.find((item) => item.id === criados.representante);
     assert.ok(representantePublico, "A busca normalizada por 3ºJ deve encontrar 3º J.");
     assert.equal(representantePublico.turma, "3J");
@@ -458,32 +449,23 @@ async function testarSistemaEventos(cookie) {
       await requisicaoDominio(cookie, `/api/representantes/${criados.representante}?todos=1`)
     ).item;
     assert.equal(representanteArquivado.ativo, false);
+    assert.equal(representanteArquivado.publicado, false);
     assert.ok(representanteArquivado.arquivadoEm);
     await requisicaoPublica(`/api/representantes/${criados.representante}?teste=arquivado-${sufixo}`, 404);
 
-    // a reativação limpa o arquivamento, mas sempre volta como rascunho
+    // a reativação limpa o arquivamento e volta a mostrar o mandato vigente
     const representanteReativado = (await requisicaoDominio(cookie, "/api/representantes", "PUT", {
       id: criados.representante,
-      dados: { ativo: true, publicado: true },
+      dados: { ativo: true },
     })).item;
     assert.equal(representanteReativado.ativo, true);
-    assert.equal(representanteReativado.publicado, false);
+    assert.equal(representanteReativado.publicado, true);
     assert.equal(representanteReativado.arquivadoEm, null);
-    await requisicaoPublica(`/api/representantes/${criados.representante}?teste=reativado-${sufixo}`, 404);
-
-    // republica para que o cadastro possa alimentar a lista de presença adiante
-    const representanteRepublicado = (await requisicaoDominio(cookie, "/api/representantes", "PUT", {
-      id: criados.representante,
-      dados: { publicado: true },
-    })).item;
-    assert.equal(representanteRepublicado.publicado, true);
-    assert.equal(representanteRepublicado.ativo, true);
-    assert.equal(representanteRepublicado.arquivadoEm, null);
-    const detalheRepresentanteRepublicado = await requisicaoPublica(
-      `/api/representantes/${criados.representante}?teste=republicado-${sufixo}`,
+    const detalheRepresentanteReativado = await requisicaoPublica(
+      `/api/representantes/${criados.representante}?teste=reativado-${sufixo}`,
     );
-    assert.equal(detalheRepresentanteRepublicado.item.id, criados.representante);
-    afirmarSemCamposPrivados(detalheRepresentanteRepublicado);
+    assert.equal(detalheRepresentanteReativado.item.id, criados.representante);
+    afirmarSemCamposPrivados(detalheRepresentanteReativado);
 
     // cria um evento interno com conteúdo público e uma observação estritamente privada
     const respostaEvento = await requisicaoDominio(cookie, "/api/eventos", "POST", {

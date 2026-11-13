@@ -62,6 +62,27 @@ test("um banco novo recebe todas as migrações e a repetição não reconhece n
   } finally { banco.close(); }
 });
 
+// atualiza horários e mandatos já cadastrados sem perder os dados existentes
+test("a migração dos dias mantém a ocupação antiga e publica apenas os mandatos ativos", () => {
+  const banco = new DatabaseSync(":memory:");
+  try {
+    const indice = migracoes.findIndex((item) => item.nome === "0019_dias_de_aula.sql");
+    for (const item of migracoes.slice(0, indice)) banco.exec(item.sql);
+    const turma = banco.prepare(`INSERT INTO turmas_atividades (nome, nome_normalizado, turno, tipo, horario_inicial, horario_final)
+      VALUES ('Idiomas do teste', 'idiomasdoteste', 'manha', 'idiomas', '08:00', '10:00') RETURNING id`).get();
+    const representante = banco.prepare(`INSERT INTO representantes (turma_atividade_id, nome, nome_normalizado, nivel_ensino, serie, turma, turma_normalizada, turno, funcao, ativo, arquivado_em)
+      VALUES (?, ?, ?, 'medio', '2', 'Idiomas do teste', 'idiomasdoteste', 'manha', 'titular', ?, ?) RETURNING id`);
+    const atual = representante.get(turma.id, "Pessoa do mandato ativo", "pessoaativa", 1, null);
+    const historico = representante.get(turma.id, "Pessoa do arquivo", "pessoaearquivo", 0, "2026-02-01 12:00:00");
+    banco.exec(migracoes[indice].sql);
+    const horario = banco.prepare("SELECT horario_inicial, horario_final, dias_semana FROM turmas_atividades WHERE id = ?").get(turma.id);
+    assert.deepEqual({ ...horario }, { horario_inicial: "08:00", horario_final: "10:00", dias_semana: 127 });
+    const consultar = banco.prepare("SELECT publicado, contatos_publicos, arquivado_em FROM representantes WHERE id = ?");
+    assert.deepEqual({ ...consultar.get(atual.id) }, { publicado: 1, contatos_publicos: 0, arquivado_em: null });
+    assert.deepEqual({ ...consultar.get(historico.id) }, { publicado: 0, contatos_publicos: 0, arquivado_em: "2026-02-01 12:00:00" });
+  } finally { banco.close(); }
+});
+
 test("deixa colunas de versões posteriores para as migrações pendentes", () => {
   const banco = new DatabaseSync(":memory:");
   try {

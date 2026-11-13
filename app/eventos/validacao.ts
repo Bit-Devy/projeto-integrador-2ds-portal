@@ -267,6 +267,7 @@ export function validarRepresentante(valor: unknown) {
   const funcao = enumValor(dados.funcao, funcoesRepresentante, "função") as FuncaoRepresentante;
   const datas = validarDatasMandato(dados);
   const contatos = validarContatosRepresentante(dados.contatos);
+  const ativo = booleano(dados.ativo, true);
   return {
     ano: Number(dados.ano || anoDoPortal()),
     turmaAtividadeId: idOpcional(dados.turmaAtividadeId, "turma cadastrada"),
@@ -286,8 +287,8 @@ export function validarRepresentante(valor: unknown) {
     ordem: inteiro(dados.ordem),
     observacaoPublica: textoLongo(dados.observacaoPublica ?? dados.observacoes, 4000),
     observacaoInterna: textoLongo(dados.observacaoInterna, 4000),
-    ativo: booleano(dados.ativo, true),
-    publicado: booleano(dados.publicado, false),
+    ativo,
+    publicado: ativo,
   };
 }
 

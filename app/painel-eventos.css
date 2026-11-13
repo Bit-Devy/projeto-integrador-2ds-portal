@@ -1296,7 +1296,13 @@
   background: #e2f0f9;
 }
 
+/* reúne a escolha dos dias em botões que cabem em telas pequenas */
 .campos-turno-parcial { margin-top: 1rem; }
+.dias-aula-turma { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.dias-aula-turma .pev-botao { min-width: 3rem; min-height: 2.75rem; padding-inline: 0.6rem; font-size: 0.8125rem; }
+.dias-aula-turma .pev-botao[aria-pressed="true"] { color: #fff; background: var(--azul); border-color: var(--azul); }
+.dias-aula-turma .pev-botao:focus-visible { outline: 2px solid var(--azul-escuro); outline-offset: 2px; }
+.campos-turno-parcial #dica-dias-aula { margin: 0.5rem 0 0.85rem; font-size: 0.8125rem; }
 
 .ferramentas-turmas label,
 .ferramentas-salas label {
@@ -1360,6 +1366,26 @@
   display: grid;
 }
 
+/* alinha os indicadores os filtros e as ações da lista de representantes */
+.painel-representantes .pev-resumo { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+.painel-representantes .pev-resumo button { min-width: 0; padding: 0.75rem; }
+.painel-representantes .pev-resumo span { font-size: 0.75rem; overflow-wrap: anywhere; }
+.painel-representantes .pev-resumo button[aria-pressed="true"] { color: var(--azul-escuro); background: #eaf4fa; border-color: var(--azul); }
+.filtros-representantes-painel { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.filtros-representantes-painel .pev-filtro--busca { grid-column: 1 / -1; }
+.filtros-representantes-painel label > span { font-size: 0.6875rem; }
+.pev-barra-resultados.barra-representantes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.8rem;
+  background: #f5f8fa;
+  border: 1px solid #dbe3e6;
+}
+.barra-representantes p { margin: 0; font-size: 0.8125rem; }
+.barra-representantes .pev-botao { font-size: 0.75rem; min-height: 2.5rem; }
+
 /* mostra os dados e as ações abaixo do representante selecionado */
 .pev-cartao.cartao-mandato { grid-template-columns: minmax(6rem, auto) minmax(0, 1fr); }
 .detalhe-mandato { grid-column: 1 / -1; border-top: 1px solid #dbe3e6; padding-top: 0.85rem; }
@@ -1370,7 +1396,14 @@
 .pev-formulario .pev-acoes-formulario > .pev-botao--perigoso:hover { color: #fff; background: #812020; border-color: #812020; }
 .linha-contato-representante { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr) auto; align-items: end; gap: 0.75rem; margin-top: 1rem; }
 
+@media (max-width: 64rem) {
+  .filtros-representantes-painel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 @media (max-width: 45rem) {
+  .filtros-representantes-painel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pev-barra-resultados.barra-representantes { grid-template-columns: minmax(0, 1fr); }
+  .barra-representantes .acoes-lista-representantes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .ferramentas-turmas,
   .ferramentas-salas {

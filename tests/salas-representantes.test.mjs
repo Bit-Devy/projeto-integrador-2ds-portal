@@ -183,7 +183,9 @@ test("representantes exigem turmas disponíveis e usam os dados oficiais da turm
   assert.equal(renomeados.itens[0].turma, "2DS Novo");
   await atualizarRegistroMapa("turmas", item.id, { ...item, ativo: false });
   assert.equal((await listarRepresentantes(new URLSearchParams())).itens.length, 0);
-  await assert.rejects(atualizarRepresentante(representante.id, { publicado: true }), /turma ativa/);
+  const arquivado = await atualizarRepresentante(representante.id, { publicado: true });
+  assert.equal(arquivado.publicado, false);
+  await assert.rejects(atualizarRepresentante(representante.id, { ativo: true }), /turma ativa/);
   for (const outros of [{ publicado: false }, { fimValidade: "2000-01-01" }, { inicioValidade: "2099-01-01" }]) {
     const indisponivel = await criarRegistroMapa("turmas", turma("Indisponível", outros));
     await assert.rejects(criarRepresentante(pessoa(indisponivel.id)), /turma ativa/);

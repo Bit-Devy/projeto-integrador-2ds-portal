@@ -4,6 +4,7 @@
 // importa tipos, efeitos e controles de estado
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { rotuloDiasDeAula } from "../mapa/dias-de-aula";
 // importa funções de busca por locais especiais
 import { buscarLocaisEspeciaisComoAtividade, localPesquisavelComoAtividade } from "../mapa/busca-publica";
 // importa os tipos dos dados do mapa
@@ -484,7 +485,10 @@ function CartaoResultadoTurma({ resultado, categorias }: { resultado: ResultadoT
       <dl className="detalhes-mapa detalhes-complementares-mapa">
         <DetalheMapa rotulo="Curso" valor={turma.curso} />
         <DetalheMapa rotulo="Série ou ano" valor={turma.serie} />
-        {turma.turnoParcial && <DetalheMapa rotulo="Horário das aulas" valor={`${turma.horarioInicial} às ${turma.horarioFinal}`} />}
+        {turma.turnoParcial && <>
+          <DetalheMapa rotulo="Dias de aula" valor={rotuloDiasDeAula(turma.diasSemana)} />
+          <DetalheMapa rotulo="Horário das aulas" valor={`${turma.horarioInicial} às ${turma.horarioFinal}`} />
+        </>}
         <DetalheMapa rotulo="Acessibilidade do local" valor={local?.acessibilidade} ocultarVazio />
         <DetalheMapa rotulo="Funcionamento" valor={local?.horario} ocultarVazio />
         <DetalheMapa rotulo="Início da validade" valor={formatarData(ensalamento?.inicioValidade || turma.inicioValidade)} ocultarVazio />
@@ -555,7 +559,7 @@ function CartaoResultadoLocal({ resultado, categorias }: { resultado: ResultadoL
               <li key={ensalamento.id}>
                 <div>
                   <strong>{turma.nome}</strong>
-                  <span>{rotuloTurno(ensalamento.turno || turma.turno)} · {nomeCategoria(categorias, "atividade", ensalamento.tipo || turma.tipo)}{turma.turnoParcial && ` · ${turma.horarioInicial} às ${turma.horarioFinal}`}</span>
+                  <span>{rotuloTurno(ensalamento.turno || turma.turno)} · {nomeCategoria(categorias, "atividade", ensalamento.tipo || turma.tipo)}{turma.turnoParcial && ` · ${rotuloDiasDeAula(turma.diasSemana, true)} · ${turma.horarioInicial} às ${turma.horarioFinal}`}</span>
                 </div>
                 {ensalamento.observacoes && <p><b>Observação deste ensalamento:</b> {ensalamento.observacoes}</p>}
               </li>

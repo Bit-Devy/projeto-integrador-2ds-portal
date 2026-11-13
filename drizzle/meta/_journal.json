@@ -134,6 +134,13 @@
       "when": 1794356866718,
       "tag": "0018_outgoing_nitro",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1794397156632,
+      "tag": "0019_dias_de_aula",
+      "breakpoints": true
     }
   ]
 }

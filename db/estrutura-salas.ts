@@ -1,6 +1,24 @@
+// confere os horários e procura um dia de aula dentro da validade comum
+export function condicaoConflitoSala(ocupacao: string, novaOcupacao: string, turma: string, novaTurma: string) {
+  const inicio = `max(COALESCE(NULLIF(${ocupacao}.inicio_validade, ''), '0001-01-01'), COALESCE(NULLIF(${novaOcupacao}.inicio_validade, ''), '0001-01-01'))`;
+  const fim = `min(COALESCE(NULLIF(${ocupacao}.fim_validade, ''), '9999-12-31'), COALESCE(NULLIF(${novaOcupacao}.fim_validade, ''), '9999-12-31'))`;
+  const diasEmComum = `(${turma}.dias_semana & ${novaTurma}.dias_semana)`;
+  // o primeiro bit representa segunda e a busca cobre uma semana a partir do início comum
+  const bitDoDia = `(1 << ((CAST(strftime('%w', periodo.inicio) AS INTEGER) + 6 + dias.value) % 7))`;
+  return `(${turma}.horario_inicial = '' OR ${novaTurma}.horario_inicial = ''
+      OR (${turma}.horario_inicial < ${novaTurma}.horario_final AND ${novaTurma}.horario_inicial < ${turma}.horario_final))
+    AND ${diasEmComum} <> 0
+    AND EXISTS (
+      SELECT 1 FROM (SELECT ${inicio} AS inicio, ${fim} AS fim) periodo
+      CROSS JOIN json_each('[0,1,2,3,4,5,6]') dias
+      WHERE dias.value <= julianday(periodo.fim) - julianday(periodo.inicio)
+        AND (${diasEmComum} & ${bitDoDia}) <> 0
+    )`;
+}
+
 // impede ocupações simultâneas mesmo em gravações que chegam juntas
 export const comandosProtecaoSalas = ["INSERT", "UPDATE"].map((operacao) => `
-  CREATE TRIGGER IF NOT EXISTS salas_por_horario_${operacao.toLowerCase()}
+  CREATE TRIGGER IF NOT EXISTS salas_por_dia_${operacao.toLowerCase()}
   BEFORE ${operacao} ON ensalamentos
   WHEN NEW.ativo = 1 AND NEW.publicado = 1 AND NEW.local_id IS NOT NULL
   BEGIN
@@ -10,10 +28,7 @@ export const comandosProtecaoSalas = ["INSERT", "UPDATE"].map((operacao) => `
       JOIN turmas_atividades nova ON nova.id = NEW.turma_atividade_id
       WHERE e.local_id = NEW.local_id AND e.turno = NEW.turno
         AND e.id <> NEW.id AND e.ativo = 1 AND e.publicado = 1
-        AND COALESCE(NULLIF(e.fim_validade, ''), '9999-12-31') >= COALESCE(NULLIF(NEW.inicio_validade, ''), '0001-01-01')
-        AND COALESCE(NULLIF(NEW.fim_validade, ''), '9999-12-31') >= COALESCE(NULLIF(e.inicio_validade, ''), '0001-01-01')
-        AND (existente.horario_inicial = '' OR nova.horario_inicial = ''
-          OR (existente.horario_inicial < nova.horario_final AND nova.horario_inicial < existente.horario_final))
+        AND ${condicaoConflitoSala("e", "NEW", "existente", "nova").replaceAll("\n", "\n    ")}
     );
   END
 `);

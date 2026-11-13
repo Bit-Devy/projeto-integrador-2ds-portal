@@ -1,8 +1,10 @@
 import { dataSqlDoPortal } from "../conteudo/periodos";
 // importa o acesso direto ao banco
 import { getD1 } from "../../db";
+import { condicaoConflitoSala } from "../../db/estrutura-salas";
 // compartilha a regra de publicação com o cadastro de representantes
 import { condicaoTurmaPublicada } from "./turmas-publicadas";
+import { diasDaMascara, mascaraDiasDeAula, rotuloDiasDeAula, semanaInteira } from "./dias-de-aula";
 // importa as funções de normalização do mapa
 import {
   aliasesNormalizados,
@@ -85,6 +87,7 @@ type LinhaTurma = {
   turno: "manha" | "tarde" | "noite";
   horario_inicial: string;
   horario_final: string;
+  dias_semana: number;
   tipo: string;
   curso: string;
   serie: string;
@@ -301,27 +304,27 @@ export async function atualizarRegistroMapa(entidade: EntidadeMapa, idRecebido: 
 }
 
 // confere o mesmo conflito nos cadastros de salas e de turmas
-async function conferirOcupacoes(salas: number[], dados: Pick<TurmaMapaValidada, "ativo" | "publicado" | "turno" | "inicioValidade" | "fimValidade" | "horarioInicial" | "horarioFinal">, turmaId: number | null, confirmacao: unknown) {
+async function conferirOcupacoes(salas: number[], dados: Pick<TurmaMapaValidada, "ativo" | "publicado" | "turno" | "inicioValidade" | "fimValidade" | "horarioInicial" | "horarioFinal" | "diasSemana">, turmaId: number | null, confirmacao: unknown) {
   const d1 = getD1();
   const ocupacoes = new Map<number, { id: number; nome: string }>();
   if (dados.ativo && dados.publicado) for (const local of salas) {
-    const encontrados = await d1.prepare(`SELECT e.id, t.nome, t.horario_inicial, t.horario_final FROM ensalamentos e
+    const encontrados = await d1.prepare(`WITH nova(inicio_validade, fim_validade, horario_inicial, horario_final, dias_semana) AS (VALUES (?, ?, ?, ?, ?))
+      SELECT e.id, t.nome, t.horario_inicial, t.horario_final, t.dias_semana FROM ensalamentos e
       JOIN turmas_atividades t ON t.id = e.turma_atividade_id
+      CROSS JOIN nova
       WHERE e.local_id = ? AND e.turno = ? AND e.turma_atividade_id <> ?
         AND e.ativo = 1 AND e.publicado = 1
-        AND COALESCE(NULLIF(e.fim_validade, ''), '9999-12-31') >= ?
-        AND COALESCE(NULLIF(e.inicio_validade, ''), '0001-01-01') <= ?
-        AND (t.horario_inicial = '' OR ? = '' OR (t.horario_inicial < ? AND ? < t.horario_final))`)
-      .bind(local, dados.turno, turmaId ?? -1, dados.inicioValidade || "0001-01-01", dados.fimValidade || "9999-12-31", dados.horarioInicial, dados.horarioFinal, dados.horarioInicial)
-      .all<{ id: number; nome: string; horario_inicial: string; horario_final: string }>();
+        AND ${condicaoConflitoSala("e", "nova", "t", "nova")}`)
+      .bind(dados.inicioValidade, dados.fimValidade, dados.horarioInicial, dados.horarioFinal, mascaraDiasDeAula(dados.diasSemana) || semanaInteira, local, dados.turno, turmaId ?? -1)
+      .all<{ id: number; nome: string; horario_inicial: string; horario_final: string; dias_semana: number }>();
     for (const item of encontrados.results) {
-      const horario = item.horario_inicial ? `${item.horario_inicial}–${item.horario_final}` : "turno inteiro";
+      const horario = item.horario_inicial ? `${rotuloDiasDeAula(diasDaMascara(item.dias_semana), true)} · ${item.horario_inicial}–${item.horario_final}` : "turno inteiro";
       ocupacoes.set(item.id, { id: item.id, nome: `${item.nome} (${horario})` });
     }
   }
   const confirmados = Array.isArray(confirmacao) ? confirmacao : [];
   if ([...ocupacoes.values()].some((item) => !confirmados.includes(item.id))) {
-    const erro = new ErroMapa("Esta sala já está ocupada neste turno e período. Deseja substituir a ocupação?", 409);
+    const erro = new ErroMapa("Esta sala já está ocupada no mesmo dia e horário. Deseja substituir a ocupação?", 409);
     erro.conflitos = [...ocupacoes.values()];
     throw erro;
   }
@@ -367,7 +370,10 @@ async function salvarTurmaComSala(id: number | null, valor: unknown) {
   const recebido = objetoRecebido(valor);
   const existente = id ? await buscarTurma(id) : null;
   if (id && !existente) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
-  const dados = validarTurmaMapa({ ...existente, ...recebido, ...(recebido.ano === undefined && ("inicioValidade" in recebido || "fimValidade" in recebido) ? { ano: undefined } : {}) });
+  const diasSemana = "diasSemana" in recebido ? recebido.diasSemana : existente?.turnoParcial ? existente.diasSemana : undefined;
+  // conserva a validade já registrada ao editar os dias dentro do mesmo ano
+  const mesmoAno = existente !== null && Number(recebido.ano ?? existente.ano) === existente.ano;
+  const dados = validarTurmaMapa({ ...existente, ...recebido, diasSemana, ...(recebido.ano === undefined && ("inicioValidade" in recebido || "fimValidade" in recebido) ? { ano: undefined } : {}) }, mesmoAno);
   if (!dados.ativo) dados.publicado = false;
   await exigirCategoria("atividade", dados.tipo);
   const d1 = getD1();
@@ -727,6 +733,7 @@ function formatarTurma(linha: LinhaTurma): TurmaAtividadeMapa {
     turnoParcial: Boolean(linha.horario_inicial && linha.horario_final),
     horarioInicial: linha.horario_inicial,
     horarioFinal: linha.horario_final,
+    diasSemana: linha.horario_inicial ? diasDaMascara(linha.dias_semana) : [],
     tipo: linha.tipo,
     curso: linha.curso,
     serie: linha.serie,
@@ -802,6 +809,7 @@ function valoresTurma(dados: TurmaMapaValidada) {
     dados.turno,
     dados.horarioInicial,
     dados.horarioFinal,
+    mascaraDiasDeAula(dados.diasSemana) || semanaInteira,
     dados.tipo,
     dados.curso,
     dados.serie,
@@ -848,13 +856,13 @@ const sqlAtualizarLocal = `UPDATE locais_colegio SET
   publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
 // define as colunas e consultas usadas pelas turmas
-const colunasTurma = `ano, nivel_ensino, nome, nome_normalizado, aliases, aliases_normalizados, turno, horario_inicial, horario_final, tipo,
+const colunasTurma = `ano, nivel_ensino, nome, nome_normalizado, aliases, aliases_normalizados, turno, horario_inicial, horario_final, dias_semana, tipo,
   curso, serie, turma, descricao, observacoes, inicio_validade, fim_validade, ordem, ativo, publicado`;
 // cria um marcador para cada valor da turma
-const placeholdersTurma = Array.from({ length: 20 }, () => "?").join(", ");
+const placeholdersTurma = Array.from({ length: 21 }, () => "?").join(", ");
 // atualiza todos os campos editáveis da turma
 const sqlAtualizarTurma = `UPDATE turmas_atividades SET
-  ano = ?, nivel_ensino = ?, nome = ?, nome_normalizado = ?, aliases = ?, aliases_normalizados = ?, turno = ?, horario_inicial = ?, horario_final = ?, tipo = ?,
+  ano = ?, nivel_ensino = ?, nome = ?, nome_normalizado = ?, aliases = ?, aliases_normalizados = ?, turno = ?, horario_inicial = ?, horario_final = ?, dias_semana = ?, tipo = ?,
   curso = ?, serie = ?, turma = ?, descricao = ?, observacoes = ?, inicio_validade = ?,
   fim_validade = ?, ordem = ?, ativo = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP`;
 
@@ -892,7 +900,7 @@ function sqlImportarTurma() {
     ON CONFLICT (id) DO UPDATE SET
       ano = excluded.ano, nome = excluded.nome, nome_normalizado = excluded.nome_normalizado,
       aliases = excluded.aliases, aliases_normalizados = excluded.aliases_normalizados,
-      turno = excluded.turno, horario_inicial = excluded.horario_inicial, horario_final = excluded.horario_final, tipo = excluded.tipo, curso = excluded.curso,
+      turno = excluded.turno, horario_inicial = excluded.horario_inicial, horario_final = excluded.horario_final, dias_semana = excluded.dias_semana, tipo = excluded.tipo, curso = excluded.curso,
       serie = excluded.serie, turma = excluded.turma, descricao = excluded.descricao,
       observacoes = excluded.observacoes, inicio_validade = excluded.inicio_validade,
       fim_validade = excluded.fim_validade, ordem = excluded.ordem, ativo = excluded.ativo,

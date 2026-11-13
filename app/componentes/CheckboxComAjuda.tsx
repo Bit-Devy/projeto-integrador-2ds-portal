@@ -20,7 +20,7 @@ export function descricaoCheckbox(chave: string) {
     fundamental: "Marcado: inclui o Ensino Fundamental entre os níveis da reunião. Desmarcado: retira esse nível. Não publica a reunião nem altera as presenças já registradas.",
     medio: "Marcado: inclui o Ensino Médio entre os níveis da reunião. Desmarcado: retira esse nível. Não publica a reunião nem altera as presenças já registradas.",
     selecionada: "Marcado: inclui esta presença na seleção para a atualização em lote. Desmarcado: deixa esta presença fora da seleção. A caixa sozinha não altera a situação nem a publicação da presença.",
-    mandato: "Marcado: mantém o mandato ativo dentro das datas de início e fim. Desmarcado: retira o representante das consultas atuais. Para aparecer no portal, a publicação e a turma também precisam estar válidas.",
+    mandato: "Marcado: o representante aparece no portal durante o mandato, enquanto a turma estiver publicada. Desmarcado: o mandato fica no histórico do painel.",
     fase: "Marcado: permite mostrar esta fase quando a chave e o campeonato estiverem públicos. Desmarcado: mantém esta fase fora da chave pública, sem apagar seus registros.",
     partida: "Marcado: permite mostrar este jogo quando a chave, a fase e o campeonato estiverem públicos. Desmarcado: mantém este jogo em rascunho, sem apagar o placar salvo.",
     presenca: "Marcado: permite mostrar esta presença individual na reunião publicada. Desmarcado: mantém esta presença apenas no painel. A quantidade total de participantes tem uma opção separada.",
