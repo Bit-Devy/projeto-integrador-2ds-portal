@@ -17,7 +17,7 @@
 
 .ic-tela-cheia-barra {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
   padding: 12px 24px;
@@ -216,6 +216,27 @@
   overflow-x: auto;
 }
 
+/* mantém o formato da chave ao lado dos controles de zoom */
+.ic-controles-visualizacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.ic-controles-visualizacao select {
+  min-height: 35px;
+  padding: 6px 9px;
+  border: 1px solid #dce5eb;
+  border-radius: 8px;
+  color: #365c74;
+  background: white;
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
 .ic-atalhos-fases button {
   white-space: nowrap;
   padding: 9px 12px;
@@ -265,9 +286,16 @@
   user-select: none;
 }
 
-.ic-prancheta {
+/* reserva apenas o espaço visível da chave depois do zoom */
+.ic-area-desenho {
   position: relative;
-  margin: 24px;
+  min-width: 100%;
+  overflow: clip;
+}
+
+.ic-prancheta {
+  position: absolute;
+  top: 24px;
   transform-origin: top left;
 }
 
@@ -1071,7 +1099,8 @@ button.ic-equipe {
 
 .ic-chave button:focus-visible,
 .ic-modal button:focus-visible,
-.ic-chave input:focus-visible {
+.ic-chave input:focus-visible,
+.ic-chave select:focus-visible {
   outline: 3px solid #00a9e0;
   outline-offset: 3px;
 }

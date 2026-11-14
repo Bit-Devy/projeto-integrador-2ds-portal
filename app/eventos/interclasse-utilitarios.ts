@@ -49,8 +49,10 @@ export type JogoPosicionado = {
   ordem?: number;
 };
 
+export type ModoChave = "dois-lados" | "um-lado";
+
 // organiza cada grupo de jogos pelo caminho até a final
-export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos: T[] }>) {
+export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos: T[]; nome?: string; tipo?: string }>, modo: ModoChave = "um-lado") {
   // usa cartões iguais e deixa espaço para as linhas
   const alturaJogo = 184;
   const larguraJogo = 280;
@@ -88,38 +90,68 @@ export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos:
     grupo.sort((a, b) => lado(a) - lado(b) || (a.ordem ?? 0) - (b.ordem ?? 0));
   }
 
+  const faseFinal = fases.findIndex((fase) => fase.tipo !== "terceiro_lugar" && normalizarTurma(fase.nome || "") === "final");
+  const colunaFinal = faseFinal >= 0 ? faseFinal : fases.findLastIndex((fase) => fase.jogos.length > 0 && fase.tipo !== "terceiro_lugar");
+  const raizes = jogos.filter((jogo) => !destinos.has(jogo));
+  const espelhada = modo === "dois-lados" && raizes.some((jogo) => colunas.get(jogo) === colunaFinal && origens.has(jogo));
+
+  // deixa as fases posteriores fora do espaço usado pelos dois lados da final
+  const colunaX = (coluna: number) => (espelhada && coluna > colunaFinal ? coluna + colunaFinal : coluna) * passoColuna;
+
   // coloca os jogos iniciais juntos e centraliza seus destinos
   let proximaLinha = 0;
-  function posicionar(jogo: T): number {
-    const existente = posicoes.get(jogo);
-    if (existente) return existente.y;
+  function posicionar(jogo: T, direcao: -1 | 1): number {
     const grupo = origens.get(jogo) ?? [];
-    const linhas = grupo.map(posicionar);
+    const linhas = grupo.map((origem) => posicionar(origem, direcao));
     const y = linhas.length ? (Math.min(...linhas) + Math.max(...linhas)) / 2 : proximaLinha++ * (alturaJogo + intervalo);
-    posicoes.set(jogo, { x: colunas.get(jogo)! * passoColuna, y });
+    const coluna = colunas.get(jogo)!;
+    const x = direcao === 1 ? colunaX(coluna) : (2 * colunaFinal - coluna) * passoColuna;
+    posicoes.set(jogo, { x, y });
     return y;
   }
 
-  // inclui finais e grupos independentes das chaves personalizadas
-  jogos.filter((jogo) => !destinos.has(jogo)).forEach(posicionar);
+  // coloca cada ramo da final no lado da vaga para a qual ele avança
+  for (const jogo of raizes) {
+    const grupo = origens.get(jogo);
+    if (!espelhada || colunas.get(jogo) !== colunaFinal || !grupo?.length) {
+      posicionar(jogo, 1);
+      continue;
+    }
+    const esquerda: T[] = [];
+    const direita: T[] = [];
+    for (const origem of grupo) {
+      const lado = origem.proximaPosicao || (esquerda.length <= direita.length ? "a" : "b");
+      (lado === "a" ? esquerda : direita).push(origem);
+    }
+    const primeiraLinha = proximaLinha;
+    const linhasEsquerda = esquerda.map((origem) => posicionar(origem, 1));
+    const fimEsquerda = proximaLinha;
+    proximaLinha = primeiraLinha;
+    const linhasDireita = direita.map((origem) => posicionar(origem, -1));
+    proximaLinha = Math.max(proximaLinha, fimEsquerda);
+    const linhas = [...linhasEsquerda, ...linhasDireita];
+    posicoes.set(jogo, { x: colunaFinal * passoColuna, y: (Math.min(...linhas) + Math.max(...linhas)) / 2 });
+  }
 
-  // passa as folgas pela linha livre e junta os avanços no espaço entre fases
+  // liga os cartões pelas bordas voltadas para o próximo jogo
   const conexoes = Array.from(destinos, ([origem, destino]) => {
     const inicio = posicoes.get(origem)!;
     const fim = posicoes.get(destino)!;
-    const meio = fim.x - (passoColuna - larguraJogo) / 2;
+    const avancaParaDireita = inicio.x < fim.x;
+    const entrada = fim.x + (avancaParaDireita ? 0 : larguraJogo);
+    const meio = entrada + (passoColuna - larguraJogo) / 2 * (avancaParaDireita ? -1 : 1);
     const pontos = [
-      { x: inicio.x + larguraJogo, y: inicio.y + alturaJogo / 2 },
+      { x: inicio.x + (avancaParaDireita ? larguraJogo : 0), y: inicio.y + alturaJogo / 2 },
       { x: meio, y: inicio.y + alturaJogo / 2 },
       { x: meio, y: fim.y + alturaJogo / 2 },
-      { x: fim.x, y: fim.y + alturaJogo / 2 },
+      { x: entrada, y: fim.y + alturaJogo / 2 },
     ];
     return { origem, destino, pontos, pulaFase: colunas.get(destino)! > colunas.get(origem)! + 1,
       caminho: `M ${pontos[0].x} ${pontos[0].y} H ${meio} V ${pontos[2].y} H ${pontos[3].x}` };
   });
   return {
-    posicoes, conexoes, alturaJogo, larguraJogo, passoColuna, topoFases,
-    largura: Math.max(larguraJogo, fases.length * passoColuna - (passoColuna - larguraJogo)),
+    posicoes, conexoes, alturaJogo, larguraJogo, passoColuna, topoFases, colunaFinal, colunaX, espelhada,
+    largura: Math.max(larguraJogo, colunaX(fases.length - 1) + larguraJogo, espelhada ? 2 * colunaFinal * passoColuna + larguraJogo : 0),
     altura: Math.max(alturaJogo, ...Array.from(posicoes.values(), (ponto) => ponto.y + alturaJogo)),
   };
 }

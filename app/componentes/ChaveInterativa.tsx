@@ -7,7 +7,7 @@ import type { FasePublica, JogoPublico } from "../eventos/modelo-publico";
 // prepara os textos que aparecem nos jogos
 import { formatarData, normalizarBusca, rotuloSituacao, textoParticipante } from "../eventos/modelo-publico";
 // calcula a posição dos cartões e das linhas
-import { posicionarChave } from "../eventos/interclasse-utilitarios";
+import { posicionarChave, type ModoChave } from "../eventos/interclasse-utilitarios";
 
 // guarda o jogo e o lado escolhido para a troca
 export type PosicaoChave = { partidaId: number; posicao: "a" | "b" };
@@ -17,14 +17,19 @@ export function nomeEquipe(jogo: JogoPublico, lado: "a" | "b") {
   return (lado === "a" ? jogo.participanteANome || jogo.nomeParticipanteA || textoParticipante(jogo.participanteA) : jogo.participanteBNome || jogo.nomeParticipanteB || textoParticipante(jogo.participanteB)) || "A definir";
 }
 
+// move o visor para o centro de uma fase
+function rolarParaColuna(visor: HTMLDivElement, x: number, top: number, behavior: ScrollBehavior = "auto") {
+  const margem = visor.querySelector<HTMLElement>(".ic-prancheta")?.offsetLeft ?? 24;
+  visor.scrollTo({ left: margem + x - visor.clientWidth / 2, top, behavior });
+}
+
 // mostra a chave e permite navegar ou editar os confrontos
-export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, desabilitado = false, permitirTelaCheia = false, erro, sucesso }: {
+export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, desabilitado = false, erro, sucesso }: {
   fases: FasePublica[];
   partidas: JogoPublico[];
   abrirJogo?: (jogo: JogoPublico) => void;
   trocar?: (origem: PosicaoChave, destino: PosicaoChave) => void;
   desabilitado?: boolean;
-  permitirTelaCheia?: boolean;
   erro?: string;
   sucesso?: string;
 }) {
@@ -33,6 +38,7 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
   const visor = useRef<HTMLDivElement>(null);
   const arraste = useRef<{ x: number; y: number; esquerda: number; topo: number } | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [modo, setModo] = useState<ModoChave>("dois-lados");
   const [busca, setBusca] = useState("");
   const [selecionada, setSelecionada] = useState<PosicaoChave | null>(null);
   // mantém a mesma chave quando a tela cheia abre ou fecha
@@ -45,39 +51,70 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
   useEffect(() => {
     if (telaCheia) dialogo.current?.showModal();
     else if (estavaEmTelaCheia.current) botaoTelaCheia.current?.focus({ preventScroll: true });
+    const elemento = visor.current;
+    if (elemento && (telaCheia || estavaEmTelaCheia.current)) {
+      elemento.scrollTo({ left: rolagem.current.left - elemento.clientWidth / 2, top: rolagem.current.top });
+    }
     estavaEmTelaCheia.current = telaCheia;
-    visor.current?.scrollTo(rolagem.current);
   }, [telaCheia]);
   // salva a posição antes de mudar o tamanho da tela
   function alternarTelaCheia() {
-    rolagem.current = { left: visor.current?.scrollLeft ?? 0, top: visor.current?.scrollTop ?? 0 };
+    const elemento = visor.current;
+    rolagem.current = { left: elemento ? elemento.scrollLeft + elemento.clientWidth / 2 : 0, top: elemento?.scrollTop ?? 0 };
     setTelaCheia((atual) => !atual);
   }
   // organiza as fases e calcula onde cada jogo aparece
   const colunas = useMemo(() => [...fases].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).map((fase) => ({
     ...fase, jogos: [...(fase.partidas || fase.jogos || partidas.filter((jogo) => jogo.faseId === fase.id))].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)),
   })), [fases, partidas]);
-  const desenho = useMemo(() => posicionarChave(colunas), [colunas]);
+  const desenho = useMemo(() => posicionarChave(colunas, modo), [colunas, modo]);
   // mantém a leitura e o teclado na mesma ordem dos cartões na tela
-  const colunasOrganizadas = useMemo(() => colunas.map((fase) => ({ ...fase,
-    jogos: [...fase.jogos].sort((a, b) => desenho.posicoes.get(a)!.y - desenho.posicoes.get(b)!.y),
-  })), [colunas, desenho]);
+  const colunasOrganizadas = useMemo(() => colunas.flatMap((fase, indiceFase) => {
+    const porPosicao = new Map<number, JogoPublico[]>();
+    for (const jogo of fase.jogos) {
+      const { x } = desenho.posicoes.get(jogo)!;
+      if (!porPosicao.has(x)) porPosicao.set(x, []);
+      porPosicao.get(x)!.push(jogo);
+    }
+    if (!porPosicao.size) porPosicao.set(desenho.colunaX(indiceFase), []);
+    return Array.from(porPosicao, ([x, jogos]) => ({
+      indiceFase, x, nome: fase.nome,
+      rotulo: porPosicao.size > 1 ? `${fase.nome} · ${x > desenho.colunaX(desenho.colunaFinal) ? "direita" : "esquerda"}` : fase.nome,
+      jogos: jogos.sort((a, b) => desenho.posicoes.get(a)!.y - desenho.posicoes.get(b)!.y),
+    }));
+  }).sort((a, b) => a.x - b.x), [colunas, desenho]);
   const jogos = colunas.flatMap((fase) => fase.jogos);
+
+  // enquadra a final na visão dos dois lados ao abrir ou trocar o formato
+  const final = colunasOrganizadas.find((fase) => fase.indiceFase === desenho.colunaFinal)?.jogos[0];
+  const pontoFinal = final && desenho.posicoes.get(final);
+  const centroFinal = desenho.espelhada && pontoFinal ? pontoFinal.x + desenho.larguraJogo / 2 : null;
+  const alturaFinal = pontoFinal ? pontoFinal.y + desenho.topoFases + desenho.alturaJogo / 2 : 0;
+  const largura = desenho.largura;
+  const zoomAtual = useRef(zoom);
+  useEffect(() => {
+    zoomAtual.current = zoom;
+  }, [zoom]);
+  useEffect(() => {
+    const elemento = visor.current;
+    if (!elemento) return;
+    if (centroFinal === null) elemento.scrollTo({ left: 0, top: 0 });
+    else rolarParaColuna(elemento, centroFinal * zoomAtual.current, 24 + alturaFinal * zoomAtual.current - elemento.clientHeight / 2);
+  }, [centroFinal, alturaFinal, largura, modo]);
   // encontra as turmas mesmo com diferenças na escrita
   const termo = normalizarBusca(busca);
   const corresponde = (jogo: JogoPublico) => !termo || normalizarBusca(`${nomeEquipe(jogo, "a")} ${nomeEquipe(jogo, "b")}`).includes(termo);
   const mover = (distancia: number) => visor.current?.scrollBy({ left: distancia, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 
   // mostra o centro da fase escolhida sem deixar os jogos fora da tela
-  function irParaFase(indice: number) {
+  function irParaFase(fase: (typeof colunasOrganizadas)[number]) {
     const elemento = visor.current;
-    const fase = colunasOrganizadas[indice];
     if (!elemento || !fase.jogos.length) return;
     const primeiro = desenho.posicoes.get(fase.jogos[0])!.y;
     const ultimo = desenho.posicoes.get(fase.jogos.at(-1)!)!.y + desenho.alturaJogo;
-    elemento.scrollTo({ left: indice * desenho.passoColuna * zoom,
-      top: Math.max(0, ((primeiro + ultimo) / 2 + desenho.topoFases) * zoom + 24 - elemento.clientHeight / 2),
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    rolarParaColuna(elemento, (fase.x + desenho.larguraJogo / 2) * zoom,
+      Math.max(0, ((primeiro + ultimo) / 2 + desenho.topoFases) * zoom + 24 - elemento.clientHeight / 2),
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
   }
 
   // troca as duas posições escolhidas pelo toque ou teclado
@@ -92,12 +129,35 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
 
   const conteudo = <section className="ic-chave" aria-label="Chave interativa do campeonato">
     {/* abre a mesma chave em tela cheia */}
-    {permitirTelaCheia && <div className="ic-tela-cheia-barra"><span>{telaCheia ? "Edição em tela cheia · As alterações são mantidas ao sair" : "Explore e edite os confrontos"}</span><button ref={botaoTelaCheia} type="button" className="pev-botao" onClick={alternarTelaCheia}>{telaCheia ? "Sair da tela cheia ↙" : "Abrir em tela cheia ↗"}</button></div>}
+    <div className="ic-tela-cheia-barra">
+      <button ref={botaoTelaCheia} type="button" className="pev-botao" onClick={alternarTelaCheia}>{telaCheia ? "Sair da tela cheia ↙" : "Abrir em tela cheia ↗"}</button>
+    </div>
     {telaCheia && (erro || sucesso) && <p className={`ic-chave-aviso ${erro ? "ic-chave-aviso-erro" : ""}`} role={erro ? "alert" : "status"}>{erro || sucesso}</p>}
     {/* mostra a busca e as instruções da chave */}
     <div className="ic-chave-topo"><div><span className="ic-sobretitulo">DO PRIMEIRO JOGO À FINAL</span><h2>Chave do campeonato</h2><p>{trocar ? "Arraste uma turma para trocar posições. No celular ou teclado, selecione duas posições." : "Explore as fases e toque em um jogo para ver os detalhes."}</p></div><label className="ic-busca" htmlFor={filtroId}><span>Encontre sua turma</span><input id={filtroId} type="search" placeholder="Ex.: 2DS" value={busca} onChange={(e) => setBusca(e.target.value)} /></label></div>
     {/* permite pular de fase e ajustar o tamanho dos cartões */}
-    <div className="ic-ferramentas"><div className="ic-atalhos-fases" aria-label="Ir para uma fase">{colunas.map((fase, indice) => <button type="button" key={fase.id ?? indice} onClick={() => irParaFase(indice)}>{fase.nome}</button>)}</div><div className="ic-zoom"><button type="button" aria-label="Diminuir zoom" disabled={zoom <= 0.6} onClick={() => setZoom((atual) => Math.max(0.6, +(atual - 0.1).toFixed(1)))}>−</button><button type="button" aria-label="Restaurar zoom e posição" onClick={() => { setZoom(1); visor.current?.scrollTo({ left: 0, top: 0 }); }}>{Math.round(zoom * 100)}%</button><button type="button" aria-label="Aumentar zoom" disabled={zoom >= 1.4} onClick={() => setZoom((atual) => Math.min(1.4, +(atual + 0.1).toFixed(1)))}>+</button></div></div>
+    <div className="ic-ferramentas">
+      <div className="ic-atalhos-fases" role="group" aria-label="Ir para uma fase">{colunasOrganizadas.filter((fase) => fase.jogos.length).map((fase) => <button type="button" key={`${fase.indiceFase}-${fase.x}`} onClick={() => irParaFase(fase)}>{fase.rotulo}</button>)}</div>
+      <div className="ic-controles-visualizacao">
+        <div className="ic-zoom">
+          <button type="button" aria-label="Diminuir zoom" disabled={zoom <= 0.6} onClick={() => setZoom((atual) => Math.max(0.6, +(atual - 0.1).toFixed(1)))}>−</button>
+          <button type="button" aria-label="Restaurar zoom e posição" onClick={() => {
+            setZoom(1);
+            requestAnimationFrame(() => {
+              const elemento = visor.current;
+              if (!elemento) return;
+              if (centroFinal === null) elemento.scrollTo({ left: 0, top: 0 });
+              else rolarParaColuna(elemento, centroFinal, 24 + alturaFinal - elemento.clientHeight / 2);
+            });
+          }}>{Math.round(zoom * 100)}%</button>
+          <button type="button" aria-label="Aumentar zoom" disabled={zoom >= 1.4} onClick={() => setZoom((atual) => Math.min(1.4, +(atual + 0.1).toFixed(1)))}>+</button>
+        </div>
+        {telaCheia && <select aria-label="Visualização da chave" value={modo} onChange={(evento) => setModo(evento.target.value === "um-lado" ? "um-lado" : "dois-lados")}>
+          <option value="dois-lados">Dois lados</option>
+          <option value="um-lado">Um lado</option>
+        </select>}
+      </div>
+    </div>
     {selecionada && <div className="ic-selecao" role="status">Selecione a posição de destino para trocar as turmas.<button type="button" onClick={() => setSelecionada(null)}>Cancelar troca</button></div>}
     {termo && <p className="ic-resultado-busca" role="status">{jogos.filter(corresponde).length} jogo(s) com “{busca}”</p>}
     {/* move a chave quando a pessoa arrasta o fundo */}
@@ -106,22 +166,22 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
       onPointerMove={(e) => { if (!arraste.current) return; e.currentTarget.scrollLeft = arraste.current.esquerda - (e.clientX - arraste.current.x); e.currentTarget.scrollTop = arraste.current.topo - (e.clientY - arraste.current.y); }}
       onPointerUp={(e) => { arraste.current = null; e.currentTarget.classList.remove("arrastando"); }}
       onPointerCancel={(e) => { arraste.current = null; e.currentTarget.classList.remove("arrastando"); }}>
-      <div style={{ width: desenho.largura * zoom + 48, height: (desenho.altura + desenho.topoFases + 24) * zoom + 48 }}>
-        <div className="ic-prancheta" style={{ width: desenho.largura, height: desenho.altura + desenho.topoFases + 24, transform: `scale(${zoom})` }}>
+      <div className="ic-area-desenho" style={{ width: desenho.largura * zoom + 48, height: (desenho.altura + desenho.topoFases + 24) * zoom + 48 }}>
+        <div className="ic-prancheta" style={{ left: `max(24px, calc((100% - ${desenho.largura * zoom}px) / 2))`, width: desenho.largura, height: desenho.altura + desenho.topoFases + 24, transform: `scale(${zoom})` }}>
           {/* liga cada jogo ao destino do vencedor */}
           <svg className="ic-conexoes" width={desenho.largura} height={desenho.altura + desenho.topoFases + 24} aria-hidden="true"><g transform={`translate(0 ${desenho.topoFases})`}>{desenho.conexoes.map((conexao, indice) =>
             <path key={conexao.origem.id ?? indice} className={`${conexao.pulaFase ? "ic-conexao-folga" : ""} ${termo && corresponde(conexao.origem) ? "ic-conexao-destaque" : ""}`} d={conexao.caminho} />
           )}</g></svg>
-          {colunasOrganizadas.map((fase, indiceFase) => <section key={fase.id ?? indiceFase} aria-label={fase.nome}>
-            <h3 className={`ic-fase-titulo ${indiceFase === colunas.length - 1 ? "ic-fase-final" : ""}`} style={{ left: indiceFase * desenho.passoColuna }}>{indiceFase === colunas.length - 1 && <span aria-hidden="true">🏆 </span>}{fase.nome}<small>{fase.jogos.length} {fase.jogos.length === 1 ? "jogo" : "jogos"}</small></h3>
+          {colunasOrganizadas.map((fase) => <section key={`${fase.indiceFase}-${fase.x}`} aria-label={fase.rotulo}>
+            <h3 className={`ic-fase-titulo ${fase.indiceFase === desenho.colunaFinal ? "ic-fase-final" : ""}`} style={{ left: fase.x }}>{fase.indiceFase === desenho.colunaFinal && <span aria-hidden="true">🏆 </span>}{fase.nome}<small>{fase.jogos.length} {fase.jogos.length === 1 ? "jogo" : "jogos"}</small></h3>
             {fase.jogos.map((jogo, indice) => {
               // destaca o resultado e identifica a folga nas próximas fases
               const ponto = desenho.posicoes.get(jogo)!;
               const indiceDestino = colunas.findIndex((faseDestino) => faseDestino.jogos.some((destino) => destino.id === jogo.proximaPartidaId));
-              const avancaPorFolga = indiceDestino > indiceFase + 1;
+              const avancaPorFolga = indiceDestino > fase.indiceFase + 1;
               const temPlacar = jogo.placarPublicado === true && jogo.placarA !== null && jogo.placarA !== undefined && jogo.placarB !== null && jogo.placarB !== undefined;
               const folga = jogo.formaVitoria === "bye";
-              const editarPosicoes = Boolean(trocar && indiceFase === 0);
+              const editarPosicoes = Boolean(trocar && fase.indiceFase === 0);
               // monta o cartão com turmas, placar e data
               const conteudo = <><div className="ic-jogo-cabecalho"><span>JOGO {jogo.ordem ?? indice + 1}</span><span className={jogo.situacao === "em_andamento" ? "ic-ao-vivo" : ""}>{folga ? "Avanço direto" : rotuloSituacao(jogo.situacao)}</span></div>{(["a", "b"] as const).map((lado) => {
                 const nome = nomeEquipe(jogo, lado);
@@ -144,8 +204,8 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
         </div>
       </div>
     </div>
-    <div className="ic-chave-base"><span><i /> Vencedor / classificado</span><span>Arraste o fundo para explorar</span><div><button type="button" aria-label="Ver fases anteriores" onClick={() => mover(-desenho.passoColuna * zoom)}>←</button><button type="button" aria-label="Ver próximas fases" onClick={() => mover(desenho.passoColuna * zoom)}>→</button></div></div>
+    <div className="ic-chave-base"><span><i /> Vencedor / classificado</span><span>Arraste o fundo para explorar</span><div><button type="button" aria-label="Mover para a esquerda" onClick={() => mover(-desenho.passoColuna * zoom)}>←</button><button type="button" aria-label="Mover para a direita" onClick={() => mover(desenho.passoColuna * zoom)}>→</button></div></div>
   </section>;
   // fecha a tela cheia sem descartar as alterações
-  return telaCheia ? <dialog className="ic-chave-tela-cheia" ref={dialogo} aria-label="Editar chave em tela cheia" onCancel={(e) => { e.preventDefault(); alternarTelaCheia(); }}>{conteudo}</dialog> : conteudo;
+  return telaCheia ? <dialog className="ic-chave-tela-cheia" ref={dialogo} aria-label="Chave do campeonato em tela cheia" onCancel={(e) => { e.preventDefault(); alternarTelaCheia(); }}>{conteudo}</dialog> : conteudo;
 }

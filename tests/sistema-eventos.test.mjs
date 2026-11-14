@@ -236,7 +236,19 @@ test("a chave alinha fases às partidas de origem, inclusive vínculos personali
     colunas.forEach((fase, indice) => fase.jogos.forEach((jogo, ordem) => { const origem = fases[indice].jogos[ordem]; jogo.proximaPartidaId = origem.proximaFaseOrdem === null ? null : colunas[origem.proximaFaseOrdem - 1].jogos[origem.proximaPartidaOrdem - 1].id; jogo.proximaPosicao = origem.proximaPosicao; }));
     const original = structuredClone(colunas);
     const desenho = posicionarChave(colunas);
+    const espelhado = posicionarChave(colunas, "dois-lados");
     assert.deepEqual(colunas, original, "organizar a tela não pode alterar os confrontos cadastrados");
+    const final = colunas.at(-1).jogos[0];
+    const centro = espelhado.posicoes.get(final).x;
+    assert.equal(centro * 2 + espelhado.larguraJogo, espelhado.largura);
+    assert.equal(espelhado.posicoes.size, desenho.posicoes.size);
+    for (const { origem, destino, pontos } of espelhado.conexoes) {
+      const inicio = espelhado.posicoes.get(origem);
+      const fim = espelhado.posicoes.get(destino);
+      if (destino === final && origem.proximaPosicao) assert.equal(inicio.x < centro, origem.proximaPosicao === "a");
+      assert.equal(pontos[0].x, inicio.x < fim.x ? inicio.x + espelhado.larguraJogo : inicio.x);
+      assert.equal(pontos.at(-1).x, inicio.x < fim.x ? fim.x : fim.x + espelhado.larguraJogo);
+    }
     for (const fase of colunas) {
       const linhas = fase.jogos.map((jogo) => desenho.posicoes.get(jogo).y).sort((a, b) => a - b);
       for (let i = 1; i < linhas.length; i++) assert.ok(linhas[i] - linhas[i - 1] > desenho.alturaJogo, "cartões não podem se sobrepor");
@@ -246,11 +258,11 @@ test("a chave alinha fases às partidas de origem, inclusive vínculos personali
       }
     }
     // as linhas das folgas não podem atravessar outros cartões
-    for (const conexao of desenho.conexoes) {
+    for (const layout of [desenho, espelhado]) for (const conexao of layout.conexoes) {
       for (let i = 1; i < conexao.pontos.length; i++) {
         const inicio = conexao.pontos[i - 1];
         const fim = conexao.pontos[i];
-        for (const [jogo, ponto] of desenho.posicoes) {
+        for (const [jogo, ponto] of layout.posicoes) {
           if (jogo === conexao.origem || jogo === conexao.destino) continue;
           const cruza = inicio.y === fim.y
             ? inicio.y > ponto.y && inicio.y < ponto.y + desenho.alturaJogo && Math.max(inicio.x, fim.x) > ponto.x && Math.min(inicio.x, fim.x) < ponto.x + desenho.larguraJogo
@@ -290,6 +302,16 @@ test("organiza vínculos cruzados e folgas em grupos próximos", async () => {
   const independente = posicionarChave([{ jogos: soltos }]);
   assert.equal(independente.posicoes.size, 2);
   assert.equal(independente.conexoes.length, 0);
+
+  const terceiro = { id: 12 };
+  const finalAntesDoTerceiro = posicionarChave([
+    ...fases.slice(0, -1),
+    { nome: "Final", jogos: [final] },
+    { nome: "Terceiro lugar", tipo: "terceiro_lugar", jogos: [terceiro] },
+  ], "dois-lados");
+  assert.equal(finalAntesDoTerceiro.colunaFinal, 3);
+  assert.ok(finalAntesDoTerceiro.posicoes.get(jogos[3]).x > finalAntesDoTerceiro.posicoes.get(final).x);
+  assert.ok(finalAntesDoTerceiro.posicoes.get(terceiro).x > finalAntesDoTerceiro.posicoes.get(jogos[3]).x);
 });
 
 test("possui as páginas públicas e navegação acessível do sistema", async () => {

@@ -502,7 +502,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   async function gerarChave() {
     if (participantes.filter((item) => item.ativo).length < 2) { setErro("Adicione pelo menos duas turmas antes de gerar a chave."); return; }
     const substituir = Boolean(detalhes?.fases.length || detalhes?.partidas.length);
-    if (substituir && !window.confirm("Gerar uma nova chave? A chave anterior e seus resultados serão arquivados. A nova chave precisará ser publicada novamente.")) return;
+    if (substituir && !await confirmarNoPainel("Sortear novamente?", "A chave anterior e seus resultados serão arquivados. A nova chave precisará ser publicada novamente.", "Sortear novamente", "Cancelar")) return;
     const id = await salvarCampeonato(false, true);
     if (id === null) return;
     setSalvando(true); setErro("");
@@ -813,7 +813,7 @@ function EtapaChave({ detalhes, participantes, fase, setFase, salvarFase, partid
 
 function PreviaChave({ fases, partidas, abrirResultado, trocar, salvando, erro, sucesso }: { erro?: string; sucesso?: string; fases: Fase[]; partidas: Partida[]; abrirResultado?: (jogo: Partida) => void; trocar?: (origem: PosicaoChave, destino: PosicaoChave) => void; salvando?: boolean }) {
   const podeTrocar = trocar && !partidas.some((jogo) => jogo.situacao === "em_andamento" || jogo.placarA !== null || jogo.placarB !== null || (jogo.vencedorId !== null && jogo.formaVitoria !== "bye"));
-  return <ChaveInterativa permitirTelaCheia erro={erro} sucesso={sucesso} fases={fases.map((fase) => ({ ...fase, id: Number(fase.id) }))} partidas={partidas.map((jogo) => ({ ...jogo, id: Number(jogo.id), faseId: Number(jogo.faseId), participanteAId: jogo.participanteAId === null ? null : Number(jogo.participanteAId), participanteBId: jogo.participanteBId === null ? null : Number(jogo.participanteBId), vencedorId: jogo.vencedorId === null ? null : Number(jogo.vencedorId), proximaPartidaId: jogo.proximaPartidaId === null ? null : Number(jogo.proximaPartidaId), placarPublicado: true }))} abrirJogo={abrirResultado ? (jogo) => { const original = partidas.find((item) => String(item.id) === String(jogo.id)); if (original) abrirResultado(original); } : undefined} trocar={podeTrocar ? trocar : undefined} desabilitado={salvando} />;
+  return <ChaveInterativa erro={erro} sucesso={sucesso} fases={fases.map((fase) => ({ ...fase, id: Number(fase.id) }))} partidas={partidas.map((jogo) => ({ ...jogo, id: Number(jogo.id), faseId: Number(jogo.faseId), participanteAId: jogo.participanteAId === null ? null : Number(jogo.participanteAId), participanteBId: jogo.participanteBId === null ? null : Number(jogo.participanteBId), vencedorId: jogo.vencedorId === null ? null : Number(jogo.vencedorId), proximaPartidaId: jogo.proximaPartidaId === null ? null : Number(jogo.proximaPartidaId), placarPublicado: true }))} abrirJogo={abrirResultado ? (jogo) => { const original = partidas.find((item) => String(item.id) === String(jogo.id)); if (original) abrirResultado(original); } : undefined} trocar={podeTrocar ? trocar : undefined} desabilitado={salvando} />;
 }
 
 function EntradaTurmas({ texto, setTexto, adicionar, salvando }: { texto: string; setTexto: (valor: string) => void; adicionar: (nomes: string[]) => Promise<boolean>; salvando: boolean }) {
