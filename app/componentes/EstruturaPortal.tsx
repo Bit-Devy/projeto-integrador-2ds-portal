@@ -163,11 +163,7 @@ export default function EstruturaPortal({ children, modulosIniciais }: { childre
 
       {/* barra de cima */}
       <div className="barra-governo">
-        <div className="barra-governo-conteudo">
-          <a href="https://www.parana.pr.gov.br/" target="_blank" rel="noreferrer">
-            GOVERNO DO PARANÁ <span aria-hidden="true">⌄</span>
-          </a>
-        </div>
+        <div className="barra-governo-conteudo" aria-hidden="true" />
         {/* botões de acessibilidade */}
         <div className="atalhos-acessibilidade" role="group" aria-label="Opções de acessibilidade">
           <button type="button" onClick={() => setTextoMaior(true)} aria-pressed={textoMaior} aria-label="Aumentar o texto" title="Aumentar o texto">
