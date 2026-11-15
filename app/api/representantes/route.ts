@@ -1,5 +1,6 @@
 import {
   arquivarRepresentante,
+  excluirRascunhoRepresentante,
   atualizarRepresentante,
   criarRepresentante,
   destituirRepresentante,
@@ -55,7 +56,8 @@ export async function DELETE(request: Request) {
   const bloqueio = await prepararEscrita(request);
   if (bloqueio) return bloqueio;
   try {
-    return Response.json(await arquivarRepresentante(new URL(request.url).searchParams.get("id")));
+    const parametros = new URL(request.url).searchParams;
+    return Response.json(await (parametros.get("acao") === "excluir" ? excluirRascunhoRepresentante : arquivarRepresentante)(parametros.get("id")));
   } catch (erro) {
     return responderErroEventos(erro, "DELETE /api/representantes");
   }

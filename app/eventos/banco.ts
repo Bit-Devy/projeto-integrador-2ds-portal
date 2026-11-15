@@ -361,6 +361,7 @@ export async function arquivarRepresentante(idRecebido: unknown) {
 
 export async function excluirRascunhoRepresentante(idRecebido: unknown) {
   const id = await exigirRascunhoExcluivel("representantes", idRecebido, "Representante não encontrado.");
+  exigirAnoDoMandato(await obterRepresentante(id, true) as RepresentanteAdministrativo);
   const d1 = getD1();
   await d1.batch([
     d1.prepare("UPDATE presencas_reuniao SET representante_id = NULL WHERE representante_id = ?").bind(id),
@@ -410,7 +411,7 @@ function formatarEvento(linha: Linha, anexos: Array<DocumentoPublico | Documento
   if (!todos) return publico;
   return {
     ...publico, areaResponsavel: string(linha.area_responsavel) || "geral",
-    observacoesInternas: string(linha.observacoes_internas), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
+    observacoesInternas: string(linha.observacoes_internas), jaPublicado: bool(linha.ja_publicado) || bool(linha.publicado), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
     arquivadoEm: nuloString(linha.arquivado_em), criadoEm: string(linha.criado_em),
   } satisfies EventoInternoAdministrativo;
 }
@@ -422,7 +423,7 @@ function formatarDocumento(linha: Linha, todos: boolean): DocumentoPublico | Doc
     ordem: numero(linha.ordem), atualizadoEm: string(linha.atualizado_em),
   };
   if (!todos) return publico;
-  return { ...publico, arquivoChave: string(linha.arquivo_chave), publicado: bool(linha.publicado), ativo: bool(linha.ativo), criadoEm: string(linha.criado_em) };
+  return { ...publico, arquivoChave: string(linha.arquivo_chave), jaPublicado: bool(linha.ja_publicado), publicado: bool(linha.publicado), ativo: bool(linha.ativo), criadoEm: string(linha.criado_em) };
 }
 
 function formatarRepresentante(linha: Linha, todos: boolean, detalhe = false) {
@@ -445,7 +446,7 @@ function formatarRepresentante(linha: Linha, todos: boolean, detalhe = false) {
   return {
     ...publico, turmaAtividadeId: nuloNumero(linha.turma_atividade_id), observacaoInterna: string(linha.observacao_interna),
     contatos, contatosPublicos, destituidoEm: nuloString(linha.destituido_em),
-    ativo: bool(linha.ativo), publicado: bool(linha.publicado), arquivadoEm: nuloString(linha.arquivado_em), criadoEm: string(linha.criado_em),
+    ativo: bool(linha.ativo), jaPublicado: bool(linha.ja_publicado) || bool(linha.publicado), publicado: bool(linha.publicado), arquivadoEm: nuloString(linha.arquivado_em), criadoEm: string(linha.criado_em),
   } satisfies RepresentanteAdministrativo;
 }
 
@@ -598,8 +599,23 @@ async function exigirExistente(tabela: string, id: number, mensagem: string) {
 }
 
 async function arquivarRegistro(tabela: "eventos_internos" | "campeonatos" | "reunioes", id: number) {
-  await getD1().prepare(`UPDATE ${tabela} SET ativo = 0, arquivado_em = CURRENT_TIMESTAMP, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?`).bind(id).run();
+  await getD1().prepare(`UPDATE ${tabela} SET ativo = 0, publicado = 0, arquivado_em = CURRENT_TIMESTAMP, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?`).bind(id).run();
 }
+
+// apaga um anexo privado e mantém os anexos que já foram públicos
+export async function excluirRascunhoComplemento(tabela: TabelaComplemento, idRecebido: unknown) {
+  const id = idPositivo(idRecebido, "rascunho");
+  const d1 = getD1();
+  await exigirExistente(tabela, id, "Registro não encontrado.");
+  const comandos = tabela === "votacoes_reuniao"
+    ? [d1.prepare("DELETE FROM opcoes_votacao_reuniao WHERE votacao_id = ?").bind(id)] : [];
+  await d1.batch([...comandos, d1.prepare(`DELETE FROM ${tabela} WHERE id = ?`).bind(id)]);
+  return { excluido: true, id };
+}
+
+type TabelaComplemento =
+  | "documentos_eventos" | "documentos_campeonato" | "atualizacoes_campeonato"
+  | "documentos_reuniao" | "itens_reuniao" | "votacoes_reuniao" | "presencas_reuniao";
 
 async function exigirRascunhoExcluivel(
   tabela: "eventos_internos" | "campeonatos" | "representantes" | "reunioes",
@@ -607,9 +623,9 @@ async function exigirRascunhoExcluivel(
   mensagemNaoEncontrado: string,
 ) {
   const id = idPositivo(idRecebido, "rascunho");
-  const linha = await getD1().prepare(`SELECT id, publicado FROM ${tabela} WHERE id = ?`).bind(id).first<Linha>();
+  const linha = await getD1().prepare(`SELECT id, publicado, ja_publicado FROM ${tabela} WHERE id = ?`).bind(id).first<Linha>();
   if (!linha) throw new ErroEventos(mensagemNaoEncontrado, 404);
-  if (bool(linha.publicado)) throw new ErroEventos("Somente registros que nunca foram publicados podem ser excluídos. Arquive publicações para ocultá-las do portal.", 409);
+  if (bool(linha.publicado) || bool(linha.ja_publicado)) throw new ErroEventos("Somente registros que nunca foram publicados podem ser excluídos. Arquive publicações para ocultá-las do portal.", 409);
   return id;
 }
 
@@ -1890,9 +1906,10 @@ export async function atualizarPresencaReuniao(idRecebido: unknown, valor: unkno
   return formatarPresenca(atualizada!, true);
 }
 
-export async function arquivarSubentidadeReuniao(entidade: "itens" | "documentos" | "votacoes" | "presencas", idRecebido: unknown) {
+export async function arquivarSubentidadeReuniao(entidade: "itens" | "documentos" | "votacoes" | "presencas", idRecebido: unknown, excluirRascunho = false) {
   const id = idPositivo(idRecebido, "registro");
-  const tabela = { itens: "itens_reuniao", documentos: "documentos_reuniao", votacoes: "votacoes_reuniao", presencas: "presencas_reuniao" }[entidade];
+  const tabela = ({ itens: "itens_reuniao", documentos: "documentos_reuniao", votacoes: "votacoes_reuniao", presencas: "presencas_reuniao" } as const)[entidade];
+  if (excluirRascunho) return excluirRascunhoComplemento(tabela, id);
   await exigirExistente(tabela, id, "Registro da reunião não encontrado.");
   await getD1().prepare(`UPDATE ${tabela} SET ativo = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?`).bind(id).run();
   return { arquivado: true, id };
@@ -2027,7 +2044,7 @@ async function formatarCampeonatoCompleto(linha: Linha, todos: boolean): Promise
   };
   if (!todos) return publico;
   return {
-    ...publico, diferencaMaximaAnos: nuloNumero(linha.diferenca_maxima_anos), observacoesInternas: string(linha.observacoes_internas), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
+    ...publico, diferencaMaximaAnos: nuloNumero(linha.diferenca_maxima_anos), observacoesInternas: string(linha.observacoes_internas), jaPublicado: bool(linha.ja_publicado) || bool(linha.publicado), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
     arquivadoEm: nuloString(linha.arquivado_em), criadoEm: string(linha.criado_em),
   } satisfies CampeonatoAdministrativo;
 }
@@ -2456,7 +2473,7 @@ function formatarReuniao(linha: Linha, todos: boolean): ReuniaoPublica | Reuniao
   if (!todos) return publico;
   return {
     ...publico, areaResponsavel: string(linha.area_responsavel) || "geral", pautaInterna: string(linha.pauta_interna), observacoesInternas: string(linha.observacoes_internas),
-    quantidadeParticipantesPublicada: publicaQuantidade, publicado: bool(linha.publicado), ativo: bool(linha.ativo),
+    quantidadeParticipantesPublicada: publicaQuantidade, jaPublicado: bool(linha.ja_publicado) || bool(linha.publicado), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
     arquivadoEm: nuloString(linha.arquivado_em), criadoEm: string(linha.criado_em),
   } satisfies ReuniaoAdministrativa;
 }
@@ -2468,7 +2485,7 @@ function formatarItemReuniao(linha: Linha, todos = false): ItemReuniaoPublico | 
   };
   if (!todos) return publico;
   return {
-    ...publico, reuniaoId: numero(linha.reuniao_id), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
+    ...publico, reuniaoId: numero(linha.reuniao_id), jaPublicado: bool(linha.ja_publicado), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
     criadoEm: string(linha.criado_em),
   } satisfies ItemReuniaoAdministrativo;
 }
@@ -2490,7 +2507,7 @@ function formatarVotacao(linha: Linha, opcoes: OpcaoVotacaoPublica[], todos: boo
   };
   if (!todos) return publica;
   return Object.assign(publica, {
-    observacaoInterna: string(linha.observacao_interna), publicado: bool(linha.publicado), interno: bool(linha.interno),
+    observacaoInterna: string(linha.observacao_interna), jaPublicado: bool(linha.ja_publicado), publicado: bool(linha.publicado), interno: bool(linha.interno),
     ativo: bool(linha.ativo), criadoEm: string(linha.criado_em),
   });
 }
@@ -2510,7 +2527,7 @@ function formatarPresenca(linha: Linha, todos: boolean): PresencaPublica | Prese
   if (!todos) return publica;
   return {
     ...publica, reuniaoId: numero(linha.reuniao_id), representanteId: nuloNumero(linha.representante_id),
-    observacaoInterna: string(linha.observacao_interna), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
+    observacaoInterna: string(linha.observacao_interna), jaPublicado: bool(linha.ja_publicado), publicado: bool(linha.publicado), ativo: bool(linha.ativo),
     criadoEm: string(linha.criado_em),
   } satisfies PresencaAdministrativa;
 }

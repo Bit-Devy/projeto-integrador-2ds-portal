@@ -36,7 +36,7 @@ import { anoDoPortal, dataDoPortal } from "../conteudo/periodos";
 import type { ContatoRepresentante } from "../eventos/tipos";
 import { nomesContatosRepresentante } from "../eventos/contatos-representante";
 import ArquivoAnual from "./ArquivoAnual";
-import { confirmarNoPainel } from "./confirmacao-painel";
+import { confirmarNoPainel, confirmarPublicacao } from "./confirmacao-painel";
 
 type Representante = {
   ano: number;
@@ -53,6 +53,7 @@ type Representante = {
   fimMandato: string;
   ativo: boolean;
   publicado: boolean;
+  jaPublicado?: boolean;
   ordem: number;
   observacaoPublica: string;
   observacaoInterna: string;
@@ -191,7 +192,10 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
 
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    if (!formulario) return;
+    if (!formulario || salvando) return;
+    const anterior = itens.find((item) => item.id === idEditando);
+    const vaiPublicar = formulario.ativo && (!anterior?.publicado || (formulario.contatos.length > 0 && formulario.contatosPublicos && !anterior.contatosPublicos));
+    if (vaiPublicar && !await confirmarPublicacao(formulario.nomeExibicao || formulario.nome)) return;
     setSalvando(true);
     setErro("");
     setSucesso("");
@@ -248,6 +252,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
   }
 
   async function restaurar(item: Representante) {
+    if (!await confirmarPublicacao(item.nomeExibicao || item.nome)) return;
     setSalvando(true);
     setErro("");
     try {
@@ -259,6 +264,19 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
     } finally {
       setSalvando(false);
     }
+  }
+
+  // exclui um cadastro que ainda não apareceu no portal
+  async function excluirRascunho(item: Representante) {
+    if (!await confirmarNoPainel("Excluir rascunho?", `Excluir o cadastro de “${item.nome}” definitivamente?`, "Excluir rascunho", "Cancelar")) return;
+    setSalvando(true); setErro(""); setSucesso("");
+    try {
+      await requisitarPainel(`/api/representantes?id=${encodeURIComponent(String(item.id))}&acao=excluir`, { method: "DELETE" });
+      setSucesso("Rascunho excluído.");
+      await carregar();
+    } catch (falha) {
+      setErro(falha instanceof Error ? falha.message : "Não foi possível excluir o rascunho.");
+    } finally { setSalvando(false); }
   }
 
   function exportarCsv() {
@@ -370,6 +388,7 @@ export default function PainelRepresentantes({ aoMudarEstadoSujo }: { aoMudarEst
                   {anoAtual && <div className="pev-acoes-formulario">
                     <button type="button" className="pev-botao" onClick={() => void editar(item)}>Editar representante</button>
                     {item.ativo && <button type="button" className="pev-botao pev-botao--perigoso" disabled={salvando} onClick={() => void abrirEncerramento(item)}>{acaoDestituir(item.funcao)}</button>}
+                    {!item.jaPublicado && !item.publicado && <button type="button" className="pev-botao pev-botao--perigoso" disabled={salvando} onClick={() => void excluirRascunho(item)}>Excluir rascunho</button>}
                     {!item.ativo && !item.destituidoEm && (!item.fimMandato || item.fimMandato >= dataDoPortal()) && <button type="button" className="pev-botao" disabled={salvando} onClick={() => void restaurar(item)}>Reativar</button>}
                   </div>}
                 </section>}
@@ -424,7 +443,7 @@ function normalizarRepresentante(registro: Record<string, unknown>): Representan
     serie: obterTexto(registro, "serie", "anoSerie", "ano"), turma: obterTexto(registro, "turma"),
     turno: obterTexto(registro, "turno"), funcao: obterTexto(registro, "funcao") || "titular",
     inicioMandato: obterTexto(registro, "inicioMandato"), fimMandato: obterTexto(registro, "fimMandato"),
-    ativo: obterBooleano(registro, "ativo", true), publicado: obterBooleano(registro, "publicado"),
+    ativo: obterBooleano(registro, "ativo", true), publicado: obterBooleano(registro, "publicado"), jaPublicado: obterBooleano(registro, "jaPublicado"),
     ordem: obterNumero(registro, "ordem"), observacaoPublica: obterTexto(registro, "observacaoPublica"),
     contatos: Array.isArray(registro.contatos) ? registro.contatos as ContatoRepresentante[] : [],
     contatosPublicos: obterBooleano(registro, "contatosPublicos"), destituidoEm: obterTexto(registro, "destituidoEm"),

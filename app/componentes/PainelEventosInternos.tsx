@@ -11,7 +11,7 @@ import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 
 // permite reutilizar arquivos já enviados ao painel
 import EscolherArquivo from "./BibliotecaArquivos";
-import { confirmarNoPainel } from "./confirmacao-painel";
+import { confirmarNoPainel, confirmarPublicacao } from "./confirmacao-painel";
 import "./eventos-painel.css";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -66,6 +66,7 @@ type EventoInterno = {
   observacoesInternas: string;
   situacao: string;
   publicado: boolean;
+  jaPublicado?: boolean;
   arquivado: boolean;
   atualizadoEm?: string;
 };
@@ -172,7 +173,8 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
 
   async function salvar(evento: FormEvent<HTMLFormElement>, publicarAgora = false) {
     evento.preventDefault();
-    if (!formulario) return;
+    if (!formulario || salvando) return;
+    if ((publicarAgora || formulario.publicado) && !itens.find((item) => item.id === idEditando)?.publicado && !await confirmarPublicacao(formulario.titulo)) return;
     setSalvando(true);
     setErro("");
     setSucesso("");
@@ -199,6 +201,7 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
   }
 
   async function alterarEstado(item: EventoInterno, alteracoes: Partial<EventoInterno>, mensagem: string) {
+    if (alteracoes.publicado && !item.publicado && !await confirmarPublicacao(item.titulo)) return false;
     setSalvando(true);
     setErro("");
     setSucesso("");
@@ -218,6 +221,19 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
   async function arquivar(item: EventoInterno) {
     if (!await confirmarNoPainel("Arquivar evento?", `“${item.titulo}” e seus anexos deixarão de estar disponíveis no portal. O cadastro será preservado no painel.`, "Arquivar evento", "Cancelar")) return;
     await alterarEstado(item, { arquivado: true }, "Evento arquivado e retirado do acesso público.");
+  }
+
+  // apaga apenas o evento que ainda não foi publicado
+  async function excluirRascunho(item: EventoInterno) {
+    if (!await confirmarNoPainel("Excluir rascunho?", `Excluir “${item.titulo}” definitivamente?`, "Excluir rascunho", "Cancelar")) return;
+    setSalvando(true); setErro(""); setSucesso("");
+    try {
+      await requisitarPainel(`/api/eventos?id=${encodeURIComponent(String(item.id))}&acao=excluir`, { method: "DELETE" });
+      setSucesso("Rascunho excluído.");
+      await carregar();
+    } catch (falha) {
+      setErro(falha instanceof Error ? falha.message : "Não foi possível excluir o rascunho.");
+    } finally { setSalvando(false); }
   }
 
   function abrirSituacao(item: EventoInterno) { setErro(""); setSituacaoNova(item.situacao); setEventoSituacao(item); }
@@ -334,7 +350,7 @@ export default function PainelEventosInternos({ cargo = "geral", aoMudarEstadoSu
                 <button type="button" className="pev-botao" onClick={() => editar(item)}>Editar</button>
                 <button type="button" className="pev-botao" disabled={salvando} onClick={() => abrirSituacao(item)}>Alterar situação</button>
                 {!item.arquivado && <button type="button" className="pev-botao" disabled={salvando} onClick={() => void alterarEstado(item, { publicado: !item.publicado }, item.publicado ? "Evento movido para rascunho." : "Evento publicado com sucesso.")}>{item.publicado ? "Tornar rascunho" : "Publicar"}</button>}
-                {!item.arquivado && <button type="button" className="pev-botao pev-botao--perigoso" disabled={salvando} onClick={() => void arquivar(item)}>Arquivar</button>}
+                {item.jaPublicado || item.publicado ? !item.arquivado && <button type="button" className="pev-botao pev-botao--perigoso" disabled={salvando} onClick={() => void arquivar(item)}>Arquivar</button> : <button type="button" className="pev-botao pev-botao--perigoso" disabled={salvando} onClick={() => void excluirRascunho(item)}>Excluir rascunho</button>}
               </div>
             </article>)}
           </div>
@@ -378,7 +394,7 @@ function normalizarEvento(registro: Record<string, unknown>): EventoInterno {
     orientacoes: obterTexto(registro, "orientacoes"), linkExterno: obterTexto(registro, "linkExterno", "link"),
     documentos: lista("documentos"), imagens: lista("imagens"), observacoesPublicas: obterTexto(registro, "observacoesPublicas", "observacoes"),
     observacoesInternas: obterTexto(registro, "observacoesInternas"),
-    situacao: obterTexto(registro, "situacao", "status") || "proximo", publicado: obterBooleano(registro, "publicado"),
+    situacao: obterTexto(registro, "situacao", "status") || "proximo", publicado: obterBooleano(registro, "publicado"), jaPublicado: obterBooleano(registro, "jaPublicado"),
     arquivado: obterBooleano(registro, "arquivado"), atualizadoEm: obterTexto(registro, "atualizadoEm") || undefined,
   };
 }

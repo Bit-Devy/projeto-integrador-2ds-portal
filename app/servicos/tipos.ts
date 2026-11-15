@@ -7,7 +7,7 @@ export const modalidades = [{ valor: "anual", nome: "Anual · ensino regular" },
 export type ModalidadeCalendario = "anual" | "semestral";
 export const tiposDia = { letivo: "Dia letivo", feriado: "Feriado", recesso: "Recesso escolar", planejamento: "Estudo e planejamento", conselho: "Conselho de classe", ferias: "Férias", sem_aula: "Sem aula" };
 export type DiaEscolar = { data: string; tipo: keyof typeof tiposDia; letivo: boolean; descricao: string };
-export type CalendarioEscolar = { ano: number; modalidade: ModalidadeCalendario; titulo: string; publicado: boolean; aulasDia: number; frequenciaMinima: number; inicioSegundoSemestre: string; inicioSegundoTrimestre: string; inicioTerceiroTrimestre: string; dias: DiaEscolar[]; atualizadoEm?: string };
+export type CalendarioEscolar = { ano: number; modalidade: ModalidadeCalendario; titulo: string; publicado: boolean; aulasDia: number; frequenciaMinima: number; inicioSegundoSemestre: string; inicioSegundoTrimestre: string; inicioTerceiroTrimestre: string; dias: DiaEscolar[]; jaPublicado?: boolean; atualizadoEm?: string };
 
 // guarda os dados dos novos conteúdos sem criar um segundo catálogo de publicações
 export type CompromissoCalendario = { id?: number; titulo: string; data: string; dataFim: string; horario: string; modalidade: "anual" | "semestral" | "ambos"; descricao: string; paginaUrl: string; publicado?: boolean };

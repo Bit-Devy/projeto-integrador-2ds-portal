@@ -80,6 +80,9 @@ export function responderErroEventos(erro: unknown, contexto: string) {
       { status: erro.status },
     );
   }
+  if (erro instanceof Error && erro.message.includes("registro_ja_publicado")) {
+    return Response.json({ erro: "Este registro já foi publicado. Use a opção Arquivar." }, { status: 409 });
+  }
   console.error(`Falha interna em ${contexto}.`, erro);
   return Response.json({ erro: "Não foi possível concluir a operação." }, { status: 500 });
 }

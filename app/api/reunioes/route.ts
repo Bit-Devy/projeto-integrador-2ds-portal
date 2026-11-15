@@ -1,5 +1,6 @@
 import {
   arquivarReuniao,
+  excluirRascunhoReuniao,
   arquivarSubentidadeReuniao,
   atualizarDocumentoReuniao,
   atualizarItemReuniao,
@@ -124,13 +125,13 @@ export async function DELETE(request: Request) {
     const entidade = parametros.get("entidade");
     if (entidade === "itens" || entidade === "documentos" || entidade === "votacoes" || entidade === "presencas") {
       const anterior = entidade === "documentos" ? await obterDocumentoParaSincronizacao("reuniao", id) : null;
-      const resposta = await arquivarSubentidadeReuniao(entidade, id);
+      const resposta = await arquivarSubentidadeReuniao(entidade, id, parametros.get("acao") === "excluir");
       if (anterior) await sincronizarVisibilidadeArquivo(anterior);
       return Response.json(resposta);
     }
     if (entidade) throw new ErroEventos("Escolha uma área válida da reunião.");
     const anterior = await obterReuniao(String(id ?? ""), true);
-    const resposta = await arquivarReuniao(id);
+    const resposta = await (parametros.get("acao") === "excluir" ? excluirRascunhoReuniao : arquivarReuniao)(id);
     await sincronizarArquivosDoEvento({ documentos: anterior.documentos });
     return Response.json(resposta);
   } catch (erro) {

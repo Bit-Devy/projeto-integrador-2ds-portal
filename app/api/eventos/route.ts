@@ -1,6 +1,8 @@
 import {
   arquivarDocumentoEvento,
   arquivarEvento,
+  excluirRascunhoComplemento,
+  excluirRascunhoEvento,
   atualizarDocumentoEvento,
   atualizarEvento,
   criarDocumentoEvento,
@@ -94,12 +96,14 @@ export async function DELETE(request: Request) {
     const id = parametros.get("id");
     if (parametros.get("entidade") === "documentos") {
       const anterior = await obterDocumentoParaSincronizacao("evento", id);
-      const resposta = await arquivarDocumentoEvento(id);
+      const resposta = await (parametros.get("acao") === "excluir"
+        ? excluirRascunhoComplemento("documentos_eventos", id)
+        : arquivarDocumentoEvento(id));
       await sincronizarVisibilidadeArquivo(anterior);
       return Response.json(resposta);
     }
     const anterior = await obterEvento(String(id ?? ""), true);
-    const resposta = await arquivarEvento(id);
+    const resposta = await (parametros.get("acao") === "excluir" ? excluirRascunhoEvento : arquivarEvento)(id);
     await sincronizarArquivosDoEvento(anterior);
     return Response.json(resposta);
   } catch (erro) {

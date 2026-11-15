@@ -34,9 +34,9 @@ test("um upload só fica público enquanto houver um vínculo público real", as
       sqlite.prepare("UPDATE conteudos SET publicado = 1 WHERE id = ?").run(primeiro);
       assert.equal(await possuiReferenciaPublica(chave), true);
       const segundo = sqlite.prepare("INSERT INTO conteudos(tipo,titulo,dados_json,publicado) VALUES ('noticias','Outro teste',?,1)").run(JSON.stringify({ imagemUrl: url })).lastInsertRowid;
-      sqlite.prepare("DELETE FROM conteudos WHERE id = ?").run(primeiro);
+      sqlite.prepare("UPDATE conteudos SET publicado = 0 WHERE id = ?").run(primeiro);
       assert.equal(await possuiReferenciaPublica(chave), true);
-      sqlite.prepare("DELETE FROM conteudos WHERE id = ?").run(segundo);
+      sqlite.prepare("UPDATE conteudos SET publicado = 0 WHERE id = ?").run(segundo);
       sqlite.prepare("INSERT INTO conteudos(tipo,titulo,dados_json,publicado) VALUES ('noticias','Campo interno',?,1)").run(JSON.stringify({ observacoesInternas: url }));
       assert.equal(await possuiReferenciaPublica(chave), false);
       sqlite.prepare("INSERT INTO documentos_oficiais(chave,titulo,arquivo_url) VALUES ('estatuto','Estatuto',?)").run(url);

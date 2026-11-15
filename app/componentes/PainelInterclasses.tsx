@@ -8,7 +8,7 @@ import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 
 // permite reutilizar arquivos já enviados ao painel
 import EscolherArquivo from "./BibliotecaArquivos";
-import { confirmarNoPainel } from "./confirmacao-painel";
+import { confirmarNoPainel, confirmarPublicacao } from "./confirmacao-painel";
 
 import ChaveInterativa, { type PosicaoChave } from "./ChaveInterativa";
 import { esportesInterclasse, separarTurmas, normalizarNomeTurma, padraoTurmaInterclasse } from "../eventos/interclasse-utilitarios";
@@ -52,11 +52,12 @@ type Campeonato = {
   id: Identificador; slug: string; nome: string; edicao: string; ano: number | null; modalidade: string;
   categoria: string; turno: string; descricao: string; premiacao: string; regulamento: string; organizacao: string; locais: string;
   observacoesPublicas: string; observacoesInternas: string; formato: string; situacao: string; faseAtual: string;
-  dataInicial: string; dataFinal: string; imagemCapaUrl: string; chavePublicada: boolean; publicado: boolean;
+  dataInicial: string; dataFinal: string; imagemCapaUrl: string; chavePublicada: boolean; publicado: boolean; jaPublicado?: boolean;
   ativo: boolean; diferencaMaximaAnos: number | null; campeaoNome: string; atualizadoEm?: string;
 };
 type DocumentoCampeonato = {
   id?: Identificador;
+  jaPublicado?: boolean;
   titulo: string;
   tipo: string;
   descricao: string;
@@ -68,6 +69,7 @@ type DocumentoCampeonato = {
 };
 type AtualizacaoCampeonato = {
   id?: Identificador;
+  jaPublicado?: boolean;
   titulo: string;
   texto: string;
   data: string;
@@ -242,7 +244,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     evento.preventDefault();
     if (!documento || idEditando === null) return;
     if (!documento.arquivoUrl && !documento.linkExterno) { setErro("Envie um arquivo ou informe um link autorizado."); return; }
-    if (documento.publicado && !window.confirm(`Publicar o documento “${documento.titulo.trim() || "sem título"}” no portal?`)) return;
+    if (documento.publicado && !await confirmarPublicacao(documento.titulo)) return;
     setSalvando(true);
     setErro("");
     setSucesso("");
@@ -263,26 +265,25 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     }
   }
 
-  async function arquivarDocumento(item: DocumentoCampeonato) {
-    if (item.id === undefined || !window.confirm(`Arquivar o documento “${item.titulo}”? O registro deixará de aparecer no portal e o arquivo interno voltará a ser privado quando não houver outra referência pública.`)) return;
-    setSalvando(true);
-    setErro("");
+  async function removerDocumento(item: DocumentoCampeonato) {
+    const acao = item.jaPublicado ? "arquivar" : "excluir";
+    const botao = item.jaPublicado ? "Arquivar" : "Excluir rascunho";
+    if (item.id === undefined || !await confirmarNoPainel(`${botao}?`, `“${item.titulo}”`, botao, "Cancelar")) return;
+    setSalvando(true); setErro("");
     try {
-      await requisitarPainel(`/api/interclasses?entidade=documentos&id=${encodeURIComponent(String(item.id))}`, { method: "DELETE" });
-      setSucesso("Documento arquivado e acesso público revogado quando aplicável.");
+      await requisitarPainel(`/api/interclasses?entidade=documentos&id=${encodeURIComponent(String(item.id))}&acao=${acao}`, { method: "DELETE" });
+      setSucesso(item.jaPublicado ? "Registro arquivado." : "Rascunho excluído.");
       await atualizarDetalhes();
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : "Não foi possível arquivar o documento.");
-    } finally {
-      setSalvando(false);
-    }
+      setErro(falha instanceof Error ? falha.message : "Não foi possível remover o registro.");
+    } finally { setSalvando(false); }
   }
 
   async function salvarAtualizacao(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!atualizacao || idEditando === null) return;
     if (!atualizacao.titulo.trim()) { setErro("Informe o título da atualização."); return; }
-    if (atualizacao.publicacao === "publicar" && !window.confirm(`Publicar a atualização “${atualizacao.titulo.trim()}” no portal?`)) return;
+    if (atualizacao.publicacao === "publicar" && !await confirmarPublicacao(atualizacao.titulo)) return;
     const { publicacao, id, atualizadoEm: _atualizadoEm, ...campos } = atualizacao as FormularioAtualizacao & { atualizadoEm?: string };
     void _atualizadoEm;
     const dados = { ...campos, ...(publicacao === "manter" ? {} : { publicado: publicacao === "publicar" }) };
@@ -306,19 +307,18 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     }
   }
 
-  async function arquivarAtualizacao(item: AtualizacaoCampeonato) {
-    if (item.id === undefined || !window.confirm(`Arquivar a atualização “${item.titulo}”? Ela deixará de aparecer no portal.`)) return;
-    setSalvando(true);
-    setErro("");
+  async function removerAtualizacao(item: AtualizacaoCampeonato) {
+    const acao = item.jaPublicado ? "arquivar" : "excluir";
+    const botao = item.jaPublicado ? "Arquivar" : "Excluir rascunho";
+    if (item.id === undefined || !await confirmarNoPainel(`${botao}?`, `“${item.titulo}”`, botao, "Cancelar")) return;
+    setSalvando(true); setErro("");
     try {
-      await requisitarPainel(`/api/interclasses?entidade=atualizacoes&id=${encodeURIComponent(String(item.id))}`, { method: "DELETE" });
-      setSucesso("Atualização arquivada.");
+      await requisitarPainel(`/api/interclasses?entidade=atualizacoes&id=${encodeURIComponent(String(item.id))}&acao=${acao}`, { method: "DELETE" });
+      setSucesso(item.jaPublicado ? "Registro arquivado." : "Rascunho excluído.");
       await atualizarDetalhes();
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : "Não foi possível arquivar a atualização.");
-    } finally {
-      setSalvando(false);
-    }
+      setErro(falha instanceof Error ? falha.message : "Não foi possível remover o registro.");
+    } finally { setSalvando(false); }
   }
 
   async function novo() {
@@ -368,12 +368,14 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
 
   async function fechar() { if (salvando || !await confirmarSaida(mudou)) return; voltarVisaoGeral(); }
 
-  async function salvarCampeonato(publicar = false, gerandoChave = false, publicacao?: boolean): Promise<Identificador | null> {
+  async function salvarCampeonato(publicar = false, gerandoChave = false, publicacao?: boolean, confirmarEnvio = false): Promise<Identificador | null> {
     if (!formulario) return null;
     if (turmaPendente) { setErro("Há turmas digitadas que ainda não foram adicionadas. Adicione as turmas ou limpe esses campos antes de salvar."); setEtapa(1); return null; }
     if (!formulario.nome.trim() || !formulario.modalidade.trim()) { setErro("Informe o nome e a modalidade antes de salvar."); setEtapa(0); return null; }
     if (publicar && formulario.chavePublicada && !detalhes?.partidas.length) { setErro("Gere a chave antes de publicar os confrontos."); setEtapa(1); return null; }
     if (participantes.some((item) => !item.nome.trim())) { setErro("Revise os participantes sem nome."); setEtapa(1); return null; }
+    const vaiPublicar = publicar && (confirmarEnvio || !detalhes?.item.publicado || (formulario.chavePublicada && !detalhes.item.chavePublicada));
+    if (vaiPublicar && !await confirmarPublicacao(formulario.nome)) return null;
     setSalvando(true); setErro(""); setSucesso("");
     try {
       const dados = { ...formulario, chavePublicada: gerandoChave ? detalhes?.item.chavePublicada ?? false : formulario.chavePublicada, slug: formulario.slug || criarSlug(formulario.nome), publicado: publicacao ?? (publicar ? true : detalhes?.item.publicado ?? false), participantes: idEditando === null ? participantesLocais.map(({ id: _id, ...item }) => { void _id; return item; }) : undefined };
@@ -394,32 +396,32 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   }
 
   // confirma a gravação e devolve a pessoa para a lista
-  async function salvarEVoltar(publicar: boolean) {
-    // o botão de rascunho não publica uma edição nova
-    const publicado = publicar;
-    if (await salvarCampeonato(publicar, false, publicado) === null) return;
+  async function salvarEVoltar(publicar: boolean, confirmarEnvio = false) {
+    const jaPublicado = Boolean(detalhes?.item.jaPublicado || detalhes?.item.publicado);
+    if (!publicar && detalhes?.item.publicado && !await confirmarNoPainel("Tirar do público?", "A edição ficará guardada no painel com seus jogos e resultados.", "Tirar do público", "Cancelar")) return;
+    if (await salvarCampeonato(publicar, false, publicar, confirmarEnvio) === null) return;
     voltarVisaoGeral();
     setSucesso("");
     setConfirmacaoSalva({
-      tipo: publicado ? "publicado" : "rascunho",
-      titulo: publicado ? "Interclasse publicado!" : "Rascunho salvo!",
-      mensagem: publicado ? "Tudo salvo. O interclasse já está disponível no portal." : "Tudo salvo como rascunho. Você pode continuar a edição quando quiser.",
+      tipo: publicar ? "publicado" : jaPublicado ? "atualizado" : "rascunho",
+      titulo: publicar ? "Interclasse publicado!" : jaPublicado ? "Alterações salvas" : "Rascunho salvo!",
+      mensagem: publicar ? "O interclasse está disponível no portal." : jaPublicado ? "A edição está fora do público e continua disponível no painel." : "Você pode continuar a edição quando quiser.",
     });
   }
 
-  async function duplicar(item: Campeonato) {
-    if (!window.confirm(`Duplicar “${item.nome}” como rascunho? Participantes e estrutura serão copiados, mas nenhum resultado será reaproveitado.`)) return;
+  // mantém o histórico de edições que já foram publicadas
+  async function removerEdicao(item: Campeonato) {
+    const arquivar = item.jaPublicado || item.publicado;
+    const acao = arquivar ? "arquivar" : "excluir";
+    const botao = arquivar ? "Arquivar" : "Excluir rascunho";
+    const mensagem = arquivar ? "Jogos, participantes e resultados estarão disponíveis no painel." : "A exclusão do rascunho é definitiva.";
+    if (!await confirmarNoPainel(`${botao}?`, `“${item.nome}”. ${mensagem}`, botao, "Cancelar")) return;
     setSalvando(true); setErro("");
-    try { await requisitarPainel("/api/interclasses", { method: "POST", ...corpoJson({ acao: "duplicar", id: item.id }) }); setSucesso("Edição duplicada como rascunho, sem resultados."); await carregar(); }
-    catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível duplicar o campeonato."); }
-    finally { setSalvando(false); }
-  }
-
-  async function arquivar(item: Campeonato) {
-    if (!window.confirm(`Arquivar “${item.nome}”? Jogos, participantes e resultados históricos serão preservados.`)) return;
-    setSalvando(true); setErro("");
-    try { await requisitarPainel(`/api/interclasses?id=${encodeURIComponent(String(item.id))}&acao=arquivar`, { method: "DELETE" }); setSucesso("Campeonato arquivado e histórico preservado."); await carregar(); }
-    catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível arquivar o campeonato."); }
+    try {
+      await requisitarPainel(`/api/interclasses?id=${encodeURIComponent(String(item.id))}&acao=${acao}`, { method: "DELETE" });
+      setSucesso(arquivar ? "Campeonato arquivado." : "Rascunho excluído.");
+      await carregar();
+    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível remover o campeonato."); }
     finally { setSalvando(false); }
   }
 
@@ -516,7 +518,9 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   }
 
   async function salvarFase(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault(); if (!fase || idEditando === null) return; setSalvando(true); setErro("");
+    evento.preventDefault(); if (!fase || idEditando === null) return;
+    if (fase.publicado && detalhes?.item.publicado && !detalhes.fases.find((item) => item.id === fase.id)?.publicado && !await confirmarPublicacao(fase.nome)) return;
+    setSalvando(true); setErro("");
     try { await requisitarPainel("/api/interclasses", { method: fase.id === undefined ? "POST" : "PUT", ...corpoJson({ entidade: "fases", campeonatoId: idEditando, ...(fase.id === undefined ? {} : { id: fase.id }), dados: fase }) }); setFase(null); setMudou(false); setSucesso(fase.id === undefined ? "Fase adicionada." : "Fase atualizada."); await atualizarDetalhes(); }
     catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível adicionar a fase."); }
     finally { setSalvando(false); }
@@ -525,6 +529,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   async function salvarPartida(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault(); if (!partida || idEditando === null) return;
     if (partida.participanteAId && partida.participanteBId && String(partida.participanteAId) === String(partida.participanteBId)) { setErro("Uma equipe não pode jogar contra ela mesma."); return; }
+    if (partida.publicado && detalhes?.item.publicado && !await confirmarPublicacao(partida.rodada || "Novo jogo")) return;
     setSalvando(true); setErro("");
     try { await requisitarPainel("/api/interclasses", { method: "POST", ...corpoJson({ entidade: "partidas", campeonatoId: idEditando, dados: partida }) }); setPartida(null); setMudou(false); setSucesso("Jogo adicionado à chave."); await atualizarDetalhes(); }
     catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível adicionar o jogo."); }
@@ -561,6 +566,8 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     if (resultadoFinal && !resultado.vencedorId) { setErro("Escolha o vencedor para concluir a partida."); return; }
     const corrigindo = !folgaAutomatica && (partidaResultado.vencedorId !== null || partidaResultado.placarA !== null || partidaResultado.placarB !== null);
     if (corrigindo && !resultado.motivo.trim()) { setErro("Informe o motivo da correção para preservar o histórico."); return; }
+    const vaiPublicar = resultado.publicado && (!partidaResultado.publicado || (resultado.placarPublicado && (atualizandoJogos || !partidaResultado.placarPublicado)));
+    if (!confirmarImpacto && detalhes?.item.publicado && vaiPublicar && !await confirmarPublicacao(partidaResultado.rodada || "Jogo do interclasse")) return;
     setSalvando(true); setErro("");
     try {
       if (!atualizandoJogos && !resultadoFinal && !corrigindo) {
@@ -596,7 +603,7 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
   async function definirCampeao() {
     if (idEditando === null || !campeaoSelecionado) { setErro("Escolha o campeão antes de encerrar o campeonato."); return; }
     const nome = participantes.find((item) => String(item.id) === campeaoSelecionado)?.nomeExibicao || participantes.find((item) => String(item.id) === campeaoSelecionado)?.nome || "participante escolhido";
-    if (!window.confirm(`Encerrar o campeonato e registrar “${nome}” como campeão? Confira todos os resultados antes de continuar.`)) return;
+    if (!await confirmarNoPainel("Encerrar campeonato?", `Registrar “${nome}” como campeão? Confira os resultados antes de continuar.`, "Registrar campeão", "Cancelar")) return;
     setSalvando(true); setErro("");
     try { await requisitarPainel("/api/interclasses", { method: "PUT", ...corpoJson({ acao: "definir_campeao", id: idEditando, participanteId: Number(campeaoSelecionado) }) }); setSucesso("Campeão registrado e campeonato encerrado."); setFormulario((atual) => atual ? { ...atual, situacao: "encerrado" } : atual); await atualizarDetalhes(); await carregar(); }
     catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível encerrar o campeonato."); }
@@ -644,16 +651,16 @@ export default function PainelInterclasses({ aoMudarEstadoSujo }: { aoMudarEstad
     </div> : <><nav className="pev-etapas" aria-label="Etapas do campeonato">{nomesEtapas.map((nome, indice) => <button type="button" className={etapa === indice ? "ativo" : indice < etapaLiberada ? "concluida" : ""} aria-current={etapa === indice ? "step" : undefined} onClick={() => irEtapa(indice)} disabled={salvando || indice > etapaLiberada} key={nome}><span>{indice + 1}</span>{nome}</button>)}</nav>
       <div className="pev-formulario" ref={editorEtapas}><div className="pev-formulario__topo"><div><small>ETAPA {etapa + 1} DE {nomesEtapas.length}</small><h2 id="titulo-painel-interclasses">{nomesEtapas[etapa]}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>Fechar</button></div>
         {etapa === 0 && !documento && !atualizacao && <EtapaInformacoes formulario={formulario} mudar={mudar} enviarCapa={enviarCapa} enviando={enviando === "capa"} />}
-        {etapa === 0 && <EtapaModalidade formulario={formulario} mudar={mudar} detalhes={detalhes} salvo={idEditando !== null} documento={documento} setDocumento={definirDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} arquivarDocumento={arquivarDocumento} atualizacao={atualizacao} setAtualizacao={definirAtualizacao} salvarAtualizacao={salvarAtualizacao} arquivarAtualizacao={arquivarAtualizacao} salvando={salvando} enviandoDocumento={enviando === "documento"} />}
+        {etapa === 0 && <EtapaModalidade formulario={formulario} mudar={mudar} detalhes={detalhes} salvo={idEditando !== null} documento={documento} setDocumento={definirDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} removerDocumento={removerDocumento} atualizacao={atualizacao} setAtualizacao={definirAtualizacao} salvarAtualizacao={salvarAtualizacao} removerAtualizacao={removerAtualizacao} salvando={salvando} enviandoDocumento={enviando === "documento"} />}
         {etapa === 1 && <EtapaParticipantes textoTurmas={textoTurmas} mudarTextoTurmas={setTextoTurmas} participantes={participantes} novoParticipante={novoParticipante} setNovoParticipante={setNovoParticipante} adicionar={adicionarParticipante} adicionarLote={adicionarLote} renomear={renomearParticipante} remover={removerParticipante} salvando={salvando} />}
         {etapa === 1 && <EtapaFormato formulario={formulario} mudar={mudar} participantes={participantes} gerar={gerarChave} podeGerar={true} salvando={salvando} temChave={Boolean(detalhes?.fases.length)} />}
         {etapa === 2 && <EtapaFormato formulario={formulario} mudar={mudar} participantes={participantes} gerar={gerarChave} podeGerar={true} salvando={salvando || Boolean(fase || partida || resultado)} temChave={Boolean(detalhes?.fases.length)} mostrarFormatos={false} />}
         {etapa === 2 && <EtapaChave detalhes={detalhes} participantes={participantes} fase={fase} setFase={async (valor) => { if (valor && !fase && mudou) { setErro("Salve o campeonato antes de adicionar uma fase."); return; } if (!valor && mudou && !await confirmarSaida(true)) return; setFase(valor); setMudou(Boolean(valor && fase)); }} salvarFase={salvarFase} partida={partida} setPartida={async (valor) => { if (valor && !partida && mudou) { setErro("Salve o campeonato antes de adicionar um jogo."); return; } if (!valor && mudou && !await confirmarSaida(true)) return; setPartida(valor); setMudou(Boolean(valor && partida)); }} salvarPartida={salvarPartida} abrirResultado={abrirResultado} trocar={trocarTurmas} salvando={salvando} erro={erro} sucesso={sucesso} />}
         {etapa === 3 && <EtapaRevisao formulario={formulario} participantes={participantes} detalhes={detalhes} />}
-        {etapa === 3 && <EtapaPublicacao formulario={formulario} mudar={mudar} participantes={participantes} detalhes={detalhes} salvar={() => void salvarEVoltar(true)} salvarRascunho={() => void salvarEVoltar(false)} campeaoSelecionado={campeaoSelecionado} setCampeaoSelecionado={setCampeaoSelecionado} definirCampeao={definirCampeao} salvando={salvando} />}
+        {etapa === 3 && <EtapaPublicacao formulario={formulario} mudar={mudar} participantes={participantes} detalhes={detalhes} salvar={() => void salvarEVoltar(true, true)} salvarRascunho={() => void salvarEVoltar(false)} campeaoSelecionado={campeaoSelecionado} setCampeaoSelecionado={setCampeaoSelecionado} definirCampeao={definirCampeao} salvando={salvando} />}
         {!resultado && !documento && !atualizacao && !fase && !partida && <div className="pev-navegacao-etapas"><button type="button" className="pev-botao" onClick={() => etapa === 0 ? fechar() : irEtapa(etapa - 1)}>{etapa === 0 ? "Cancelar" : "Voltar"}</button><div><button type="button" className="pev-botao" onClick={() => void salvarEVoltar(Boolean(detalhes?.item.publicado))} disabled={salvando}>{salvando ? "Salvando…" : detalhes?.item.publicado ? "Salvar alterações" : "Salvar rascunho"}</button>{etapa < nomesEtapas.length - 1 && <button type="button" className="pev-botao pev-botao--primario" onClick={() => void continuarEtapa()} disabled={salvando}>Continuar</button>}</div></div>}
       </div></>}
-    </div> : <><div className="pev-filtros ic-filtros-admin"><label className="pev-filtro--busca"><span>Buscar campeonato</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, edição, modalidade ou categoria" /></label><label><span>Exibir</span><select value={filtroArquivo} onChange={(e) => { setFiltroArquivo(e.target.value); setFiltroAno(e.target.value === "arquivados" ? "" : String(anoDoPortal())); }}><option value="ativos">Ativos</option><option value="arquivados">Arquivados</option><option value="todos">Todos</option></select></label><label><span>Situação</span><select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}><option value="">Todas</option>{situacoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label><label><span>Modalidade</span><select value={filtroModalidade} onChange={(e) => setFiltroModalidade(e.target.value)}><option value="">Todas</option>{modalidades.map((nome) => <option key={nome}>{nome}</option>)}</select></label><label><span>Ano</span><select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}><option value="">Todos</option>{anos.map((ano) => <option key={ano}>{ano}</option>)}</select></label></div>{carregando && <EstadoVazio titulo="Carregando campeonatos…" texto="Aguarde enquanto consultamos chaves e resultados." />}{!carregando && !filtrados.length && <EstadoVazio titulo={itens.length ? "Nenhum campeonato encontrado" : "Nenhum campeonato cadastrado"} texto={itens.length ? "Altere os filtros ou a busca." : "Use “Novo campeonato” para iniciar uma edição."} />}<div className="pev-lista">{filtrados.map((item) => <article className="pev-cartao" key={item.id}><div className="pev-cartao__estados"><span className={classeStatus((!item.ativo || item.ano !== anoDoPortal()) ? "arquivado" : item.publicado ? "publicado" : "rascunho")}>{(!item.ativo || item.ano !== anoDoPortal()) ? "Arquivado" : item.publicado ? "Publicado" : "Rascunho"}</span><span className={classeStatus(item.situacao)}>{statusLegivel(item.situacao)}</span></div><div className="pev-cartao__conteudo"><h2>{item.nome}</h2><p>{[item.edicao || item.ano, item.modalidade, item.categoria].filter(Boolean).join(" · ")}</p><small>{item.situacao === "encerrado" && item.campeaoNome ? `Campeão: ${item.campeaoNome}` : item.faseAtual ? `Fase atual: ${item.faseAtual}` : item.chavePublicada ? "Chave publicada" : "Chave ainda oculta"}</small></div><div className="pev-cartao__acoes">{item.ativo && item.publicado && <button type="button" className="pev-botao pev-botao--primario" onClick={() => void editar(item, 2, true)} disabled={carregando || salvando}>Atualizar interclasse</button>}<button type="button" className="pev-botao" onClick={() => void editar(item)} disabled={carregando || salvando}>Editar</button><button type="button" className="pev-botao" onClick={() => void editar(item, 2)}>Chave e jogos</button><button type="button" className="pev-botao" onClick={() => void duplicar(item)}>Duplicar edição</button>{item.ativo && <button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void arquivar(item)}>Arquivar</button>}</div></article>)}</div></>}
+    </div> : <><div className="pev-filtros ic-filtros-admin"><label className="pev-filtro--busca"><span>Buscar campeonato</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, edição, modalidade ou categoria" /></label><label><span>Exibir</span><select value={filtroArquivo} onChange={(e) => { setFiltroArquivo(e.target.value); setFiltroAno(e.target.value === "arquivados" ? "" : String(anoDoPortal())); }}><option value="ativos">Ativos</option><option value="arquivados">Arquivados</option><option value="todos">Todos</option></select></label><label><span>Situação</span><select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}><option value="">Todas</option>{situacoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label><label><span>Modalidade</span><select value={filtroModalidade} onChange={(e) => setFiltroModalidade(e.target.value)}><option value="">Todas</option>{modalidades.map((nome) => <option key={nome}>{nome}</option>)}</select></label><label><span>Ano</span><select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}><option value="">Todos</option>{anos.map((ano) => <option key={ano}>{ano}</option>)}</select></label></div>{carregando && <EstadoVazio titulo="Carregando campeonatos…" texto="Aguarde enquanto consultamos chaves e resultados." />}{!carregando && !filtrados.length && <EstadoVazio titulo={itens.length ? "Nenhum campeonato encontrado" : "Nenhum campeonato cadastrado"} texto={itens.length ? "Altere os filtros ou a busca." : "Use “Novo campeonato” para iniciar uma edição."} />}<div className="pev-lista">{filtrados.map((item) => <article className="pev-cartao" key={item.id}><div className="pev-cartao__estados"><span className={classeStatus((!item.ativo || item.ano !== anoDoPortal()) ? "arquivado" : item.publicado ? "publicado" : "rascunho")}>{(!item.ativo || item.ano !== anoDoPortal()) ? "Arquivado" : item.publicado ? "Publicado" : item.jaPublicado ? "Fora do público" : "Rascunho"}</span><span className={classeStatus(item.situacao)}>{statusLegivel(item.situacao)}</span></div><div className="pev-cartao__conteudo"><h2>{item.nome}</h2><p>{[item.edicao || item.ano, item.modalidade, item.categoria].filter(Boolean).join(" · ")}</p><small>{item.situacao === "encerrado" && item.campeaoNome ? `Campeão: ${item.campeaoNome}` : item.faseAtual ? `Fase atual: ${item.faseAtual}` : item.chavePublicada ? "Chave publicada" : "Chave ainda oculta"}</small></div><div className="pev-cartao__acoes">{item.ativo && item.publicado && <button type="button" className="pev-botao pev-botao--primario" onClick={() => void editar(item, 2, true)} disabled={carregando || salvando}>Atualizar interclasse</button>}<button type="button" className="pev-botao" onClick={() => void editar(item)} disabled={carregando || salvando}>Editar</button><button type="button" className="pev-botao" onClick={() => void editar(item, 2)}>Chave e jogos</button>{(item.ativo || (!item.jaPublicado && !item.publicado)) && <button type="button" className="pev-botao pev-botao--perigoso" disabled={salvando} onClick={() => void removerEdicao(item)}>{item.jaPublicado || item.publicado ? "Arquivar" : "Excluir rascunho"}</button>}</div></article>)}</div></>}
     {resultado && partidaResultado && (atualizandoJogos
       ? <FormularioResultadoRapido jogo={partidaResultado} resultado={resultado} setResultado={(valor) => { setResultado(valor); setMudou(true); }} salvar={registrarResultado} fechar={fecharResultado} salvando={salvando} erro={erro} />
       : <FormularioResultado jogo={partidaResultado} fases={detalhes?.fases ?? []} partidas={detalhes?.partidas ?? []} participantes={participantes} resultado={resultado} setResultado={(valor) => { setResultado(valor); setMudou(true); }} salvar={registrarResultado} fechar={fecharResultado} salvando={salvando} erro={erro} />)}
@@ -665,7 +672,7 @@ function EtapaInformacoes({ formulario, mudar, enviarCapa, enviando }: { formula
   return <><p className="pev-introducao">Comece pela identificação pública. Você poderá salvar o rascunho a qualquer momento.</p><div className="pev-grade-campos"><Campo rotulo="Nome do campeonato"><input value={formulario.nome} onChange={(e) => mudar("nome", e.target.value)} required /></Campo><Campo rotulo="Edição"><input value={formulario.edicao} onChange={(e) => mudar("edicao", e.target.value)} placeholder="Ex.: 2026 ou 12ª edição" /></Campo><Campo rotulo="Ano"><input type="number" min={2000} max={2100} value={formulario.ano ?? ""} onChange={(e) => mudar("ano", e.target.value ? Number(e.target.value) : null)} /></Campo><Campo rotulo="Situação"><select value={formulario.situacao} onChange={(e) => mudar("situacao", e.target.value)}>{situacoes.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><Campo rotulo="Data inicial"><input type="date" value={formulario.dataInicial} onChange={(e) => mudar("dataInicial", e.target.value)} /></Campo><Campo rotulo="Data prevista para encerramento"><input type="date" min={formulario.dataInicial || undefined} value={formulario.dataFinal} onChange={(e) => mudar("dataFinal", e.target.value)} /></Campo><Campo rotulo="Descrição completa" largo><textarea rows={7} value={formulario.descricao} onChange={(e) => mudar("descricao", e.target.value)} /></Campo><Campo rotulo="Premiação" dica="Informe os prêmios e as colocações. Esta informação aparece acima da chave pública." largo><textarea rows={3} value={formulario.premiacao} onChange={(e) => mudar("premiacao", e.target.value)} placeholder="1º lugar: troféu e medalhas&#10;2º lugar: medalhas" /></Campo><Campo rotulo="Organização"><input value={formulario.organizacao} onChange={(e) => mudar("organizacao", e.target.value)} /></Campo><Campo rotulo="Local ou locais"><input value={formulario.locais} onChange={(e) => mudar("locais", e.target.value)} /></Campo><Campo rotulo="Endereço da imagem de capa" dica="Aceita endereço HTTPS ou arquivo interno."><input type="text" value={formulario.imagemCapaUrl} onChange={(e) => mudar("imagemCapaUrl", e.target.value)} placeholder="https:// ou /api/arquivos/…" />{formulario.imagemCapaUrl && <span className="pev-arquivo-salvo"><a href={formulario.imagemCapaUrl} target="_blank" rel="noreferrer">Abrir imagem atual</a><button type="button" onClick={() => mudar("imagemCapaUrl", "")}>Remover</button></span>}</Campo><Campo rotulo="Enviar nova imagem" dica="O upload sempre começa privado e só é associado depois de salvar."><input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void enviarCapa(e.target.files?.[0])} disabled={enviando} /><EscolherArquivo aceitar="imagem" selecionar={(arquivo) => mudar("imagemCapaUrl", arquivo.url)} /></Campo></div></>;
 }
 
-function EtapaModalidade({ formulario, mudar, detalhes, salvo, documento, setDocumento, salvarDocumento, enviarDocumento, arquivarDocumento, atualizacao, setAtualizacao, salvarAtualizacao, arquivarAtualizacao, salvando, enviandoDocumento }: {
+function EtapaModalidade({ formulario, mudar, detalhes, salvo, documento, setDocumento, salvarDocumento, enviarDocumento, removerDocumento, atualizacao, setAtualizacao, salvarAtualizacao, removerAtualizacao, salvando, enviandoDocumento }: {
   formulario: FormularioCampeonato;
   mudar: <K extends keyof FormularioCampeonato>(chave: K, valor: FormularioCampeonato[K]) => void;
   detalhes: DetalhesCampeonato | null;
@@ -674,29 +681,29 @@ function EtapaModalidade({ formulario, mudar, detalhes, salvo, documento, setDoc
   setDocumento: (valor: DocumentoCampeonato | null) => void;
   salvarDocumento: (evento: FormEvent<HTMLFormElement>) => void;
   enviarDocumento: (arquivo?: File) => void;
-  arquivarDocumento: (item: DocumentoCampeonato) => void;
+  removerDocumento: (item: DocumentoCampeonato) => void;
   atualizacao: FormularioAtualizacao | null;
   setAtualizacao: (valor: FormularioAtualizacao | null) => void;
   salvarAtualizacao: (evento: FormEvent<HTMLFormElement>) => void;
-  arquivarAtualizacao: (item: AtualizacaoCampeonato) => void;
+  removerAtualizacao: (item: AtualizacaoCampeonato) => void;
   salvando: boolean;
   enviandoDocumento: boolean;
 }) {
-  if ((documento || atualizacao) && detalhes) return <GestaoConteudoInterclasse detalhes={detalhes} documento={documento} setDocumento={setDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} arquivarDocumento={arquivarDocumento} atualizacao={atualizacao} setAtualizacao={setAtualizacao} salvarAtualizacao={salvarAtualizacao} arquivarAtualizacao={arquivarAtualizacao} salvando={salvando} enviandoDocumento={enviandoDocumento} />;
-  return <><div className="pev-grade-campos"><Campo rotulo="Esporte"><select value={formulario.modalidade} onChange={(e) => mudar("modalidade", e.target.value)} required><option value="">Selecione o esporte</option>{esportesInterclasse.map((esporte) => <option key={esporte.nome} value={esporte.nome}>{esporte.simbolo} {esporte.nome}</option>)}{formulario.modalidade && !esportesInterclasse.some((item) => item.nome === formulario.modalidade) && <option value={formulario.modalidade}>{formulario.modalidade}</option>}</select></Campo><Campo rotulo="Categoria"><input value={formulario.categoria} onChange={(e) => mudar("categoria", e.target.value)} placeholder="Ex.: feminino, masculino ou mista" /></Campo><Campo rotulo="Turno"><select value={formulario.turno} onChange={(e) => mudar("turno", e.target.value)}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><Campo rotulo="Fase atual"><input value={formulario.faseAtual} onChange={(e) => mudar("faseAtual", e.target.value)} placeholder="Ex.: quartas de final" /></Campo><Campo rotulo="Regulamento" largo><textarea rows={8} value={formulario.regulamento} onChange={(e) => mudar("regulamento", e.target.value)} /></Campo><Campo rotulo="Observações públicas"><textarea rows={4} value={formulario.observacoesPublicas} onChange={(e) => mudar("observacoesPublicas", e.target.value)} /></Campo><Campo rotulo="Observações internas" dica="Não aparecem no portal."><textarea rows={4} value={formulario.observacoesInternas} onChange={(e) => mudar("observacoesInternas", e.target.value)} /></Campo></div>{salvo && detalhes ? <GestaoConteudoInterclasse detalhes={detalhes} documento={documento} setDocumento={setDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} arquivarDocumento={arquivarDocumento} atualizacao={atualizacao} setAtualizacao={setAtualizacao} salvarAtualizacao={salvarAtualizacao} arquivarAtualizacao={arquivarAtualizacao} salvando={salvando} enviandoDocumento={enviandoDocumento} /> : <p className="pev-aviso pev-aviso--atencao">Salve o campeonato como rascunho para adicionar documentos e atualizações.</p>}</>;
+  if ((documento || atualizacao) && detalhes) return <GestaoConteudoInterclasse detalhes={detalhes} documento={documento} setDocumento={setDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} removerDocumento={removerDocumento} atualizacao={atualizacao} setAtualizacao={setAtualizacao} salvarAtualizacao={salvarAtualizacao} removerAtualizacao={removerAtualizacao} salvando={salvando} enviandoDocumento={enviandoDocumento} />;
+  return <><div className="pev-grade-campos"><Campo rotulo="Esporte"><select value={formulario.modalidade} onChange={(e) => mudar("modalidade", e.target.value)} required><option value="">Selecione o esporte</option>{esportesInterclasse.map((esporte) => <option key={esporte.nome} value={esporte.nome}>{esporte.simbolo} {esporte.nome}</option>)}{formulario.modalidade && !esportesInterclasse.some((item) => item.nome === formulario.modalidade) && <option value={formulario.modalidade}>{formulario.modalidade}</option>}</select></Campo><Campo rotulo="Categoria"><input value={formulario.categoria} onChange={(e) => mudar("categoria", e.target.value)} placeholder="Ex.: feminino, masculino ou mista" /></Campo><Campo rotulo="Turno"><select value={formulario.turno} onChange={(e) => mudar("turno", e.target.value)}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><Campo rotulo="Fase atual"><input value={formulario.faseAtual} onChange={(e) => mudar("faseAtual", e.target.value)} placeholder="Ex.: quartas de final" /></Campo><Campo rotulo="Regulamento" largo><textarea rows={8} value={formulario.regulamento} onChange={(e) => mudar("regulamento", e.target.value)} /></Campo><Campo rotulo="Observações públicas"><textarea rows={4} value={formulario.observacoesPublicas} onChange={(e) => mudar("observacoesPublicas", e.target.value)} /></Campo><Campo rotulo="Observações internas" dica="Não aparecem no portal."><textarea rows={4} value={formulario.observacoesInternas} onChange={(e) => mudar("observacoesInternas", e.target.value)} /></Campo></div>{salvo && detalhes ? <GestaoConteudoInterclasse detalhes={detalhes} documento={documento} setDocumento={setDocumento} salvarDocumento={salvarDocumento} enviarDocumento={enviarDocumento} removerDocumento={removerDocumento} atualizacao={atualizacao} setAtualizacao={setAtualizacao} salvarAtualizacao={salvarAtualizacao} removerAtualizacao={removerAtualizacao} salvando={salvando} enviandoDocumento={enviandoDocumento} /> : <p className="pev-aviso pev-aviso--atencao">Salve o campeonato como rascunho para adicionar documentos e atualizações.</p>}</>;
 }
 
-function GestaoConteudoInterclasse({ detalhes, documento, setDocumento, salvarDocumento, enviarDocumento, arquivarDocumento, atualizacao, setAtualizacao, salvarAtualizacao, arquivarAtualizacao, salvando, enviandoDocumento }: {
+function GestaoConteudoInterclasse({ detalhes, documento, setDocumento, salvarDocumento, enviarDocumento, removerDocumento, atualizacao, setAtualizacao, salvarAtualizacao, removerAtualizacao, salvando, enviandoDocumento }: {
   detalhes: DetalhesCampeonato;
   documento: DocumentoCampeonato | null;
   setDocumento: (valor: DocumentoCampeonato | null) => void;
   salvarDocumento: (evento: FormEvent<HTMLFormElement>) => void;
   enviarDocumento: (arquivo?: File) => void;
-  arquivarDocumento: (item: DocumentoCampeonato) => void;
+  removerDocumento: (item: DocumentoCampeonato) => void;
   atualizacao: FormularioAtualizacao | null;
   setAtualizacao: (valor: FormularioAtualizacao | null) => void;
   salvarAtualizacao: (evento: FormEvent<HTMLFormElement>) => void;
-  arquivarAtualizacao: (item: AtualizacaoCampeonato) => void;
+  removerAtualizacao: (item: AtualizacaoCampeonato) => void;
   salvando: boolean;
   enviandoDocumento: boolean;
 }) {
@@ -710,7 +717,7 @@ function GestaoConteudoInterclasse({ detalhes, documento, setDocumento, salvarDo
 
   if (atualizacao) return <form className="pev-formulario-inline" onSubmit={salvarAtualizacao}><div className="pev-formulario__topo"><div><small>NOTÍCIA OU ATUALIZAÇÃO</small><h3>{atualizacao.id === undefined ? "Adicionar atualização" : "Editar atualização"}</h3></div><button type="button" className="pev-botao pev-botao--texto" onClick={() => setAtualizacao(null)}>Fechar</button></div><div className="pev-grade-campos pev-grade-campos--tres"><Campo rotulo="Título"><input value={atualizacao.titulo} onChange={(e) => setAtualizacao({ ...atualizacao, titulo: e.target.value })} required /></Campo><Campo rotulo="Data"><input type="date" value={atualizacao.data} onChange={(e) => setAtualizacao({ ...atualizacao, data: e.target.value })} /></Campo><Campo rotulo="Ordem"><input type="number" min={0} value={atualizacao.ordem} onChange={(e) => setAtualizacao({ ...atualizacao, ordem: Number(e.target.value) })} /></Campo><Campo rotulo="Texto da atualização" largo><textarea rows={6} value={atualizacao.texto} onChange={(e) => setAtualizacao({ ...atualizacao, texto: e.target.value })} /></Campo><Campo rotulo="Visibilidade"><select value={atualizacao.publicacao} onChange={(e) => setAtualizacao({ ...atualizacao, publicacao: e.target.value as FormularioAtualizacao["publicacao"] })}>{atualizacao.id !== undefined && <option value="manter">Manter visibilidade atual</option>}<option value="ocultar">Rascunho / oculta</option><option value="publicar">Publicar no portal</option></select></Campo></div>{atualizacao.id !== undefined && atualizacao.publicacao === "manter" && <p className="pev-aviso pev-aviso--atencao">A API administrativa ainda não informa a visibilidade atual desta atualização. “Manter” evita alterar esse estado por engano.</p>}<div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={() => setAtualizacao(null)}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>{salvando ? "Salvando…" : "Salvar atualização"}</button></div></form>;
 
-  return <div className="pev-grade-campos"><section className="pev-subpainel"><div className="pev-subpainel__topo"><div><h2>Documentos</h2><p>Publique regulamentos, tabelas, comunicados e anexos autorizados.</p></div><button type="button" className="pev-botao pev-botao--primario" onClick={() => setDocumento({ ...documentoVazio, ordem: detalhes.documentos.length })}>+ Adicionar documento</button></div>{!detalhes.documentos.length && <EstadoVazio titulo="Nenhum documento" texto="Adicione somente arquivos e links reais deste campeonato." />}<div className="pev-grade-subitens">{detalhes.documentos.map((item, indice) => <article key={item.id ?? indice}><span className={classeStatus(item.publicado ? "publicado" : "rascunho")}>{item.publicado ? "Público" : "Privado"}</span><h3>{item.titulo}</h3><p>{item.tipo.replaceAll("_", " ")}</p><div>{(item.arquivoUrl || item.linkExterno) && <a className="pev-botao" href={item.arquivoUrl || item.linkExterno} target="_blank" rel="noreferrer">Abrir</a>}<button type="button" className="pev-botao" onClick={() => setDocumento({ ...item })}>Editar</button><button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void arquivarDocumento(item)} disabled={salvando}>Arquivar</button></div></article>)}</div></section><section className="pev-subpainel"><div className="pev-subpainel__topo"><div><h2>Notícias e atualizações</h2><p>Registre mudanças de fase, comunicados e informações públicas do campeonato.</p></div><button type="button" className="pev-botao pev-botao--primario" onClick={() => setAtualizacao({ ...atualizacaoVazia, ordem: detalhes.atualizacoes.length })}>+ Adicionar atualização</button></div>{!detalhes.atualizacoes.length && <EstadoVazio titulo="Nenhuma atualização" texto="Use esta área quando houver uma informação real para registrar." />}<div className="pev-grade-subitens">{detalhes.atualizacoes.map((item, indice) => <article key={item.id ?? indice}><span className={classeStatus(item.publicado === true ? "publicado" : "rascunho")}>{item.publicado === true ? "Pública" : item.publicado === false ? "Rascunho" : "Visibilidade não informada"}</span><h3>{item.titulo}</h3><p>{item.data ? dataLegivel(item.data) : "Sem data informada"}</p><div><button type="button" className="pev-botao" onClick={() => editarAtualizacao(item)}>Editar</button><button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void arquivarAtualizacao(item)} disabled={salvando}>Arquivar</button></div></article>)}</div></section></div>;
+  return <div className="pev-grade-campos"><section className="pev-subpainel"><div className="pev-subpainel__topo"><div><h2>Documentos</h2><p>Publique regulamentos, tabelas, comunicados e anexos autorizados.</p></div><button type="button" className="pev-botao pev-botao--primario" onClick={() => setDocumento({ ...documentoVazio, ordem: detalhes.documentos.length })}>+ Adicionar documento</button></div>{!detalhes.documentos.length && <EstadoVazio titulo="Nenhum documento" texto="Adicione somente arquivos e links reais deste campeonato." />}<div className="pev-grade-subitens">{detalhes.documentos.map((item, indice) => <article key={item.id ?? indice}><span className={classeStatus(item.publicado ? "publicado" : "rascunho")}>{item.publicado ? "Público" : "Privado"}</span><h3>{item.titulo}</h3><p>{item.tipo.replaceAll("_", " ")}</p><div>{(item.arquivoUrl || item.linkExterno) && <a className="pev-botao" href={item.arquivoUrl || item.linkExterno} target="_blank" rel="noreferrer">Abrir</a>}<button type="button" className="pev-botao" onClick={() => setDocumento({ ...item })}>Editar</button><button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void removerDocumento(item)} disabled={salvando}>{item.jaPublicado ? "Arquivar" : "Excluir rascunho"}</button></div></article>)}</div></section><section className="pev-subpainel"><div className="pev-subpainel__topo"><div><h2>Notícias e atualizações</h2><p>Registre mudanças de fase, comunicados e informações públicas do campeonato.</p></div><button type="button" className="pev-botao pev-botao--primario" onClick={() => setAtualizacao({ ...atualizacaoVazia, ordem: detalhes.atualizacoes.length })}>+ Adicionar atualização</button></div>{!detalhes.atualizacoes.length && <EstadoVazio titulo="Nenhuma atualização" texto="Use esta área quando houver uma informação real para registrar." />}<div className="pev-grade-subitens">{detalhes.atualizacoes.map((item, indice) => <article key={item.id ?? indice}><span className={classeStatus(item.publicado === true ? "publicado" : "rascunho")}>{item.publicado === true ? "Pública" : item.publicado === false ? "Rascunho" : "Visibilidade não informada"}</span><h3>{item.titulo}</h3><p>{item.data ? dataLegivel(item.data) : "Sem data informada"}</p><div><button type="button" className="pev-botao" onClick={() => editarAtualizacao(item)}>Editar</button><button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void removerAtualizacao(item)} disabled={salvando}>{item.jaPublicado ? "Arquivar" : "Excluir rascunho"}</button></div></article>)}</div></section></div>;
 }
 function EtapaParticipantes({ textoTurmas, mudarTextoTurmas, participantes, novoParticipante, setNovoParticipante, adicionar, adicionarLote, renomear, remover, salvando }: {
   textoTurmas: string;
@@ -851,8 +858,8 @@ function EtapaPublicacao({ formulario, mudar, participantes, detalhes, salvar, s
   return <div className="pev-publicar-campeonato">
     <h3>Publicar no portal</h3>
     <label><CheckboxComAjuda checked={formulario.chavePublicada} onChange={(evento) => mudar("chavePublicada", evento.target.checked)} explicacao={descricaoCheckbox("chavePublicada")} aria-label={"Publicar a chave e os jogos A página poderá mostrar fases, confrontos e placares marcados como públicos."} /><span><strong>Publicar a chave e os jogos</strong><small>A página poderá mostrar fases, confrontos e placares marcados como públicos.</small></span></label>
-    <div className="pev-resumo-publicacao"><strong>{detalhes?.partidas.length ?? 0} jogos · {participantes.length} participantes</strong><p>{pronto ? "Confira os dados e escolha como salvar. Publicar disponibiliza esta edição no portal; salvar rascunho mantém a edição apenas no painel." : "Complete nome, modalidade e ao menos dois participantes."}</p></div>
-    <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={salvarRascunho} disabled={salvando}>{salvando ? "Salvando…" : "Salvar rascunho"}</button><button type="button" className="pev-botao pev-botao--primario" onClick={salvar} disabled={!pronto || salvando}>{salvando ? "Salvando…" : "Salvar e publicar campeonato"}</button></div>
+    <div className="pev-resumo-publicacao"><strong>{detalhes?.partidas.length ?? 0} jogos · {participantes.length} participantes</strong><p>{pronto ? "Confira os dados e escolha como salvar. Publicar disponibiliza esta edição no portal. A opção ao lado mantém a edição no painel." : "Complete nome, modalidade e ao menos dois participantes."}</p></div>
+    <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={salvarRascunho} disabled={salvando}>{salvando ? "Salvando…" : detalhes?.item.publicado ? "Tirar do público" : detalhes?.item.jaPublicado ? "Salvar fora do público" : "Salvar rascunho"}</button><button type="button" className="pev-botao pev-botao--primario" onClick={salvar} disabled={!pronto || salvando}>{salvando ? "Salvando…" : "Salvar e publicar campeonato"}</button></div>
     <div className="pev-encerrar-campeonato"><h3>Encerrar campeonato</h3><p>Use somente depois de conferir todos os resultados. Esta ação registra o campeão e muda a situação para encerrado.</p><label><span>Campeão</span><select value={campeaoSelecionado} onChange={(evento) => setCampeaoSelecionado(evento.target.value)}><option value="">Escolha o participante</option>{participantes.filter((item) => item.ativo && item.id !== undefined).map((item) => <option key={item.id} value={String(item.id)}>{item.nomeExibicao || item.nome}</option>)}</select></label><button type="button" className="pev-botao pev-botao--perigoso" onClick={definirCampeao} disabled={!campeaoSelecionado || salvando}>Registrar campeão e encerrar</button></div>
   </div>;
 }
@@ -1011,8 +1018,8 @@ function FormularioResultado({ jogo, fases, partidas, participantes, resultado, 
   </form></dialog>;
 }
 
-function normalizarCampeonato(item: Record<string, unknown>): Campeonato { const campeao = item.campeao && typeof item.campeao === "object" ? item.campeao as Record<string, unknown> : {}; return { id: (item.id as Identificador) ?? crypto.randomUUID(), slug: obterTexto(item, "slug"), nome: obterTexto(item, "nome", "titulo"), edicao: obterTexto(item, "edicao"), ano: item.ano === null || item.ano === undefined ? null : obterNumero(item, "ano"), modalidade: obterTexto(item, "modalidade"), categoria: obterTexto(item, "categoria"), turno: obterTexto(item, "turno"), descricao: obterTexto(item, "descricao"), premiacao: obterTexto(item, "premiacao"), regulamento: obterTexto(item, "regulamento"), organizacao: obterTexto(item, "organizacao"), locais: obterTexto(item, "locais", "local"), observacoesPublicas: obterTexto(item, "observacoesPublicas"), observacoesInternas: obterTexto(item, "observacoesInternas"), formato: obterTexto(item, "formato") || "mata_mata", situacao: obterTexto(item, "situacao") || "proximo", faseAtual: obterTexto(item, "faseAtual"), dataInicial: obterTexto(item, "dataInicial"), dataFinal: obterTexto(item, "dataFinal"), imagemCapaUrl: obterTexto(item, "imagemCapaUrl"), chavePublicada: obterBooleano(item, "chavePublicada"), publicado: obterBooleano(item, "publicado"), ativo: obterBooleano(item, "ativo", true), diferencaMaximaAnos: item.diferencaMaximaAnos == null ? null : obterNumero(item, "diferencaMaximaAnos"), campeaoNome: obterTexto(campeao, "nome") || obterTexto(item, "campeaoNome"), atualizadoEm: obterTexto(item, "atualizadoEm") || undefined }; }
+function normalizarCampeonato(item: Record<string, unknown>): Campeonato { const campeao = item.campeao && typeof item.campeao === "object" ? item.campeao as Record<string, unknown> : {}; return { id: (item.id as Identificador) ?? crypto.randomUUID(), slug: obterTexto(item, "slug"), nome: obterTexto(item, "nome", "titulo"), edicao: obterTexto(item, "edicao"), ano: item.ano === null || item.ano === undefined ? null : obterNumero(item, "ano"), modalidade: obterTexto(item, "modalidade"), categoria: obterTexto(item, "categoria"), turno: obterTexto(item, "turno"), descricao: obterTexto(item, "descricao"), premiacao: obterTexto(item, "premiacao"), regulamento: obterTexto(item, "regulamento"), organizacao: obterTexto(item, "organizacao"), locais: obterTexto(item, "locais", "local"), observacoesPublicas: obterTexto(item, "observacoesPublicas"), observacoesInternas: obterTexto(item, "observacoesInternas"), formato: obterTexto(item, "formato") || "mata_mata", situacao: obterTexto(item, "situacao") || "proximo", faseAtual: obterTexto(item, "faseAtual"), dataInicial: obterTexto(item, "dataInicial"), dataFinal: obterTexto(item, "dataFinal"), imagemCapaUrl: obterTexto(item, "imagemCapaUrl"), chavePublicada: obterBooleano(item, "chavePublicada"), publicado: obterBooleano(item, "publicado"), jaPublicado: obterBooleano(item, "jaPublicado"), ativo: obterBooleano(item, "ativo", true), diferencaMaximaAnos: item.diferencaMaximaAnos == null ? null : obterNumero(item, "diferencaMaximaAnos"), campeaoNome: obterTexto(campeao, "nome") || obterTexto(item, "campeaoNome"), atualizadoEm: obterTexto(item, "atualizadoEm") || undefined }; }
 function normalizarDetalhes(resposta: Record<string, unknown>): DetalhesCampeonato { const item = resposta.item && typeof resposta.item === "object" ? resposta.item as Record<string, unknown> : resposta; return { item: normalizarCampeonato(item), participantes: (Array.isArray(resposta.participantes) ? resposta.participantes as Record<string, unknown>[] : []).map((p) => ({ id: p.id as Identificador, nome: obterTexto(p, "nome"), nomeExibicao: obterTexto(p, "nomeExibicao"), apelido: obterTexto(p, "apelido"), posicaoInicial: obterNumero(p, "posicaoInicial"), ativo: obterBooleano(p, "ativo", true) })), fases: (Array.isArray(resposta.fases) ? resposta.fases as Record<string, unknown>[] : []).map((f) => ({ id: f.id as Identificador, nome: obterTexto(f, "nome"), ordem: obterNumero(f, "ordem"), tipo: obterTexto(f, "tipo"), quantidadeJogos: obterNumero(f, "quantidadeJogos"), publicado: obterBooleano(f, "publicado"), ativo: obterBooleano(f, "ativo", true) })), partidas: (Array.isArray(resposta.partidas) ? resposta.partidas as Record<string, unknown>[] : []).map(normalizarPartida), documentos: (Array.isArray(resposta.documentos) ? resposta.documentos as Record<string, unknown>[] : []).map(normalizarDocumentoCampeonato), atualizacoes: (Array.isArray(resposta.atualizacoes) ? resposta.atualizacoes as Record<string, unknown>[] : []).map(normalizarAtualizacaoCampeonato) }; }
 function normalizarPartida(p: Record<string, unknown>): Partida { const numeroOuNulo = (chave: string) => p[chave] === null || p[chave] === undefined ? null : Number(p[chave]); return { id: p.id as Identificador, faseId: p.faseId as Identificador, rodada: obterTexto(p, "rodada"), ordem: obterNumero(p, "ordem"), participanteAId: p.participanteAId as Identificador | null, participanteBId: p.participanteBId as Identificador | null, participanteANome: obterTexto(p, "participanteANome"), participanteBNome: obterTexto(p, "participanteBNome"), placarA: numeroOuNulo("placarA"), placarB: numeroOuNulo("placarB"), vencedorId: p.vencedorId as Identificador | null, vencedorNome: obterTexto(p, "vencedorNome"), formaVitoria: obterTexto(p, "formaVitoria"), data: obterTexto(p, "data"), horario: obterTexto(p, "horario"), local: obterTexto(p, "local"), situacao: obterTexto(p, "situacao") || "agendada", placarPublicado: obterBooleano(p, "placarPublicado"), resumo: obterTexto(p, "resumo"), destaques: obterTexto(p, "destaques"), observacoesPublicas: obterTexto(p, "observacoesPublicas"), observacoesInternas: obterTexto(p, "observacoesInternas"), proximaPartidaId: p.proximaPartidaId as Identificador | null, proximaPosicao: (obterTexto(p, "proximaPosicao") as "" | "a" | "b") || "", publicado: obterBooleano(p, "publicado") }; }
-function normalizarDocumentoCampeonato(item: Record<string, unknown>): DocumentoCampeonato { return { id: item.id as Identificador | undefined, titulo: obterTexto(item, "titulo"), tipo: obterTexto(item, "tipo") || "anexo", descricao: obterTexto(item, "descricao"), arquivoUrl: obterTexto(item, "arquivoUrl", "url"), linkExterno: obterTexto(item, "linkExterno", "link"), ordem: obterNumero(item, "ordem"), publicado: obterBooleano(item, "publicado"), ativo: obterBooleano(item, "ativo", true) }; }
-function normalizarAtualizacaoCampeonato(item: Record<string, unknown>): AtualizacaoCampeonato { return { id: item.id as Identificador | undefined, titulo: obterTexto(item, "titulo"), texto: obterTexto(item, "texto", "descricao"), data: obterTexto(item, "data"), ordem: obterNumero(item, "ordem"), publicado: Object.hasOwn(item, "publicado") ? obterBooleano(item, "publicado") : undefined, ativo: Object.hasOwn(item, "ativo") ? obterBooleano(item, "ativo", true) : undefined, atualizadoEm: obterTexto(item, "atualizadoEm") || undefined }; }
+function normalizarDocumentoCampeonato(item: Record<string, unknown>): DocumentoCampeonato { return { jaPublicado: obterBooleano(item, "jaPublicado"), id: item.id as Identificador | undefined, titulo: obterTexto(item, "titulo"), tipo: obterTexto(item, "tipo") || "anexo", descricao: obterTexto(item, "descricao"), arquivoUrl: obterTexto(item, "arquivoUrl", "url"), linkExterno: obterTexto(item, "linkExterno", "link"), ordem: obterNumero(item, "ordem"), publicado: obterBooleano(item, "publicado"), ativo: obterBooleano(item, "ativo", true) }; }
+function normalizarAtualizacaoCampeonato(item: Record<string, unknown>): AtualizacaoCampeonato { return { jaPublicado: obterBooleano(item, "jaPublicado"), id: item.id as Identificador | undefined, titulo: obterTexto(item, "titulo"), texto: obterTexto(item, "texto", "descricao"), data: obterTexto(item, "data"), ordem: obterNumero(item, "ordem"), publicado: Object.hasOwn(item, "publicado") ? obterBooleano(item, "publicado") : undefined, ativo: Object.hasOwn(item, "ativo") ? obterBooleano(item, "ativo", true) : undefined, atualizadoEm: obterTexto(item, "atualizadoEm") || undefined }; }

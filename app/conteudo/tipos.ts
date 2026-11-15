@@ -14,6 +14,9 @@ export type TipoConteudo =
   | "oportunidades"
   | "movimentos";
 
+// permite retirar cadastros operacionais que podem ser substituídos
+export const tiposConteudoRemoviveis: readonly TipoConteudo[] = ["cardapios", "membros", "canais"];
+
 // define os campos comuns dos registros
 export type RegistroBase = {
   ano?: number;
@@ -135,6 +138,7 @@ export type RegistroConteudo<T extends TipoConteudo = TipoConteudo> = {
   arquivadoAno?: boolean;
   dados: DadosPorTipo[T];
   publicado: boolean;
+  jaPublicado?: boolean;
   criadoEm?: string;
   atualizadoEm?: string;
 };

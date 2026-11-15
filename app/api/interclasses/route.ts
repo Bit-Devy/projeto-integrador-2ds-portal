@@ -2,6 +2,8 @@ import {
   adicionarTurmasCampeonato,
   trocarTurmasChave,
   arquivarCampeonato,
+  excluirRascunhoComplemento,
+  excluirRascunhoCampeonato,
   arquivarAtualizacaoCampeonato,
   arquivarDocumentoCampeonato,
   arquivarFaseCampeonato,
@@ -21,7 +23,6 @@ import {
   criarParticipanteCampeonato,
   criarPartidaCampeonato,
   definirCampeaoCampeonato,
-  duplicarCampeonato,
   gerarChaveCampeonato,
   listarCampeonatos,
   obterCampeonato,
@@ -56,11 +57,7 @@ export async function POST(request: Request) {
   try {
     const corpo = await lerObjeto(request);
     if (corpo.acao === "adicionar_turmas") return Response.json(await adicionarTurmasCampeonato(corpo.id, corpo.turmas), { status: 201 });
-    if (corpo.acao === "duplicar") {
-      const item = await duplicarCampeonato(corpo.id);
-      await sincronizarArquivosDoEvento(item.item, { documentos: item.documentos });
-      return Response.json({ item }, { status: 201 });
-    }
+    if (corpo.acao === "duplicar") throw new ErroEventos("A duplicação de edições foi desativada.");
     const entidade = String(corpo.entidade ?? "");
     const campeonatoId = corpo.campeonatoId ?? corpo.id;
     if (entidade === "participantes") return Response.json({ item: await criarParticipanteCampeonato(campeonatoId, corpo.dados) }, { status: 201 });
@@ -182,14 +179,17 @@ export async function DELETE(request: Request) {
     if (entidade === "partidas") return Response.json(await arquivarPartidaCampeonato(id));
     if (entidade === "documentos") {
       const anterior = await obterDocumentoParaSincronizacao("campeonato", id);
-      const resposta = await arquivarDocumentoCampeonato(id);
+      const resposta = await (parametros.get("acao") === "excluir"
+        ? excluirRascunhoComplemento("documentos_campeonato", id)
+        : arquivarDocumentoCampeonato(id));
       await sincronizarVisibilidadeArquivo(anterior);
       return Response.json(resposta);
     }
-    if (entidade === "atualizacoes") return Response.json(await arquivarAtualizacaoCampeonato(id));
+    if (entidade === "atualizacoes") return Response.json(await (parametros.get("acao") === "excluir"
+      ? excluirRascunhoComplemento("atualizacoes_campeonato", id) : arquivarAtualizacaoCampeonato(id)));
     if (entidade) throw new ErroEventos("Escolha uma área válida do campeonato.");
     const anterior = await obterCampeonato(String(id ?? ""), true);
-    const resposta = await arquivarCampeonato(id);
+    const resposta = await (parametros.get("acao") === "excluir" ? excluirRascunhoCampeonato : arquivarCampeonato)(id);
     await sincronizarArquivosDoEvento(anterior.item, { documentos: anterior.documentos });
     return Response.json(resposta);
   } catch (erro) {

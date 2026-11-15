@@ -52,6 +52,7 @@ export type LocalMapa = {
 // define os dados de uma turma ou atividade
 export type TurmaAtividadeMapa = {
   ano: number;
+  jaPublicado?: boolean;
   id: number;
   nome: string;
   nivelEnsino: string;
@@ -112,7 +113,7 @@ export type DadosMapa = {
 // define as versões públicas sem campos internos
 export type CategoriaMapaPublica = Omit<CategoriaMapa, "ativo" | "criadoEm" | "atualizadoEm">;
 export type LocalMapaPublico = Omit<LocalMapa, "ativo" | "publicado" | "criadoEm">;
-export type TurmaAtividadeMapaPublica = Omit<TurmaAtividadeMapa, "ativo" | "publicado" | "criadoEm">;
+export type TurmaAtividadeMapaPublica = Omit<TurmaAtividadeMapa, "ativo" | "publicado" | "jaPublicado" | "criadoEm">;
 export type EnsalamentoMapaPublico = Omit<EnsalamentoMapa, "ativo" | "publicado" | "criadoEm">;
 
 // reúne todos os dados públicos do mapa

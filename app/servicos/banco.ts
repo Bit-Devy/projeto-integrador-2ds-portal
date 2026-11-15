@@ -15,6 +15,6 @@ export function moduloAtivo(modulos: ModulosPortal, chave: ModuloPortal) {
 }
 export async function obterCalendarios(todos = false) {
   await garantirBanco();
-  const linhas = await getD1().prepare(`SELECT dados_json, atualizado_em FROM calendarios_escolares ${todos ? "" : "WHERE publicado = 1"} ORDER BY ano DESC, modalidade`).all<{ dados_json: string; atualizado_em: string }>();
-  return linhas.results.map((linha) => completarCalendario({ ...JSON.parse(linha.dados_json), atualizadoEm: linha.atualizado_em } as CalendarioEscolar));
+  const linhas = await getD1().prepare(`SELECT dados_json, atualizado_em, ja_publicado FROM calendarios_escolares ${todos ? "" : "WHERE publicado = 1"} ORDER BY ano DESC, modalidade`).all<{ dados_json: string; atualizado_em: string; ja_publicado: number }>();
+  return linhas.results.map((linha) => completarCalendario({ ...JSON.parse(linha.dados_json), ...(todos ? { jaPublicado: Boolean(linha.ja_publicado) } : {}), atualizadoEm: linha.atualizado_em } as CalendarioEscolar));
 }

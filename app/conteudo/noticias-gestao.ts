@@ -16,8 +16,8 @@ export async function consultarNoticiasPainel(parametros: URLSearchParams) {
     valores.push(String(anoDoPortal()), new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date()));
   }
   else if (visao === "ativas") filtros.push("publicado = 1");
-  else if (visao === "arquivadas") filtros.push("publicado = 0 AND json_extract(dados_json, '$.jaPublicada') = 1");
-  else if (visao === "rascunhos") filtros.push("publicado = 0 AND COALESCE(json_extract(dados_json, '$.jaPublicada'), 0) = 0");
+  else if (visao === "arquivadas") filtros.push("publicado = 0 AND ja_publicado = 1");
+  else if (visao === "rascunhos") filtros.push("publicado = 0 AND ja_publicado = 0");
   else throw new Error("Visão inválida.");
   if (visao !== "destaques") {
     if (!/^(19|20|21)\d{2}$/.test(ano)) throw new Error("Ano inválido.");

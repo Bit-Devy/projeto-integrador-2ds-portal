@@ -26,3 +26,8 @@ export function confirmarNoPainel(titulo: string, mensagem: string, confirmar = 
     dialogo.showModal(); voltar.focus();
   });
 }
+
+// revisa a publicação antes de enviar o registro ao portal
+export function confirmarPublicacao(titulo: string) {
+  return confirmarNoPainel("Publicar no portal?", `“${titulo.trim() || "Registro sem título"}” ficará disponível no portal. Você poderá retirá-lo do público pelo painel.`, "Publicar", "Cancelar");
+}

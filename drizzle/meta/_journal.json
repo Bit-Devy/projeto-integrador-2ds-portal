@@ -141,6 +141,13 @@
       "when": 1794397156632,
       "tag": "0019_dias_de_aula",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1794700229841,
+      "tag": "0020_historico_publicacao",
+      "breakpoints": true
     }
   ]
 }

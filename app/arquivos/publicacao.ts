@@ -1,6 +1,7 @@
 // importa o banco que guarda os vínculos das publicações
 import { getD1 } from "../../db";
 import { anoDoPortal } from "../conteudo/periodos";
+import { tiposConteudoRemoviveis } from "../conteudo/tipos";
 
 // procura um uso público real sem confiar na opção enviada durante o upload
 export function consultaReferenciaPublica(chave: string, recebido = `/api/arquivos/${encodeURIComponent(chave)}`) {
@@ -20,17 +21,17 @@ export function consultaReferenciaPublica(chave: string, recebido = `/api/arquiv
       SELECT l.id FROM locais_colegio l WHERE l.ativo = 1 AND l.publicado = 1 AND l.imagem_url IN (a.endereco, a.recebido)
     ) OR EXISTS (
       SELECT e.id FROM eventos_internos e
-        WHERE e.publicado = 1 AND (e.ativo = 1 OR e.arquivado_em IS NOT NULL) AND e.imagem_capa_url IN (a.endereco, a.recebido)
+        WHERE e.publicado = 1 AND e.ativo = 1 AND e.arquivado_em IS NULL AND e.imagem_capa_url IN (a.endereco, a.recebido)
     ) OR EXISTS (
       SELECT d.id FROM documentos_eventos d INNER JOIN eventos_internos e ON e.id = d.evento_id
-        WHERE e.publicado = 1 AND (e.ativo = 1 OR e.arquivado_em IS NOT NULL) AND d.publicado = 1 AND d.ativo = 1
+        WHERE e.publicado = 1 AND e.ativo = 1 AND e.arquivado_em IS NULL AND d.publicado = 1 AND d.ativo = 1
           AND (d.arquivo_chave = a.chave OR d.arquivo_url IN (a.endereco, a.recebido))
     ) OR EXISTS (
       SELECT c.id FROM campeonatos c
-        WHERE c.publicado = 1 AND (c.ativo = 1 OR c.arquivado_em IS NOT NULL) AND c.imagem_capa_url IN (a.endereco, a.recebido)
+        WHERE c.publicado = 1 AND c.ativo = 1 AND c.arquivado_em IS NULL AND c.imagem_capa_url IN (a.endereco, a.recebido)
     ) OR EXISTS (
       SELECT d.id FROM documentos_campeonato d INNER JOIN campeonatos c ON c.id = d.campeonato_id
-        WHERE c.publicado = 1 AND (c.ativo = 1 OR c.arquivado_em IS NOT NULL) AND d.publicado = 1 AND d.ativo = 1
+        WHERE c.publicado = 1 AND c.ativo = 1 AND c.arquivado_em IS NULL AND d.publicado = 1 AND d.ativo = 1
           AND (d.arquivo_chave = a.chave OR d.arquivo_url IN (a.endereco, a.recebido))
     ) OR EXISTS (
       SELECT d.id FROM documentos_reuniao d INNER JOIN reunioes r ON r.id = d.reuniao_id
@@ -51,4 +52,28 @@ export async function possuiComprovanteArquivado(chave: string) {
     AND substr(json_extract(dados_json, '$.data'), 1, 4) <> ?
     AND json_extract(dados_json, '$.comprovanteUrl') = ? LIMIT 1`).bind(String(anoDoPortal()), endereco).first();
   return Boolean(linha);
+}
+
+
+// conserva os arquivos que ainda pertencem a uma publicação arquivada
+export async function possuiReferenciaHistorica(chave: string) {
+  const endereco = `/api/arquivos/${encodeURIComponent(chave)}`;
+  const tipos = tiposConteudoRemoviveis.map(() => "?").join(", ");
+  const registro = await getD1().prepare(`WITH alvo(chave, endereco) AS (VALUES (?, ?))
+    SELECT 1 FROM alvo a WHERE EXISTS (
+      SELECT 1 FROM conteudos c, json_each(c.dados_json) j
+        WHERE c.ja_publicado = 1 AND c.tipo NOT IN (${tipos})
+          AND j.key IN ('imagemUrl', 'fotoUrl', 'comprovanteUrl', 'link', 'arquivoUrl') AND j.value = a.endereco
+    ) OR EXISTS (
+      SELECT 1 FROM eventos_internos WHERE ja_publicado = 1 AND imagem_capa_url = a.endereco
+    ) OR EXISTS (
+      SELECT 1 FROM campeonatos WHERE ja_publicado = 1 AND imagem_capa_url = a.endereco
+    ) OR EXISTS (
+      SELECT 1 FROM documentos_eventos WHERE ja_publicado = 1 AND (arquivo_chave = a.chave OR arquivo_url = a.endereco)
+    ) OR EXISTS (
+      SELECT 1 FROM documentos_campeonato WHERE ja_publicado = 1 AND (arquivo_chave = a.chave OR arquivo_url = a.endereco)
+    ) OR EXISTS (
+      SELECT 1 FROM documentos_reuniao WHERE ja_publicado = 1 AND (arquivo_chave = a.chave OR arquivo_url = a.endereco)
+    )`).bind(chave, endereco, ...tiposConteudoRemoviveis).first();
+  return Boolean(registro);
 }

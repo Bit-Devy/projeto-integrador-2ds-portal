@@ -27,7 +27,8 @@ import NoticiasPainel from "./NoticiasPainel";
 // acrescenta as páginas modulares e a edição dos dias escolares
 import PainelCalendarioEscolar from "./PainelCalendarioEscolar";
 import PainelModulos from "./PainelModulos";
-import { confirmarNoPainel } from "./confirmacao-painel";
+import { tiposConteudoRemoviveis } from "../conteudo/tipos";
+import { confirmarNoPainel, confirmarPublicacao } from "./confirmacao-painel";
 import PainelSenhas from "./PainelSenhas";
 import PainelCargos from "./PainelCargos";
 import PainelHistoricoAcessos from "./PainelHistoricoAcessos";
@@ -226,7 +227,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     setFormulario((atual) => atual ? { ...atual, ...(tipo === "membros" ? { cargoChave: obterCargoEquipe(dados)?.chave || "", vaga: String(dados.vaga || ""), turno: String(dados.turno || "") } : {}), areaResponsavel: String(dados.areaResponsavel || "geral") } : atual);
     setPublicado(item.publicado);
     setNoticiaOriginal(item.tipo === "noticias" ? item.dados as NoticiaGecep : null);
-    setNoticiaJaPublicada(item.publicado || Boolean((item.dados as { jaPublicada?: boolean }).jaPublicada));
+    setNoticiaJaPublicada(item.publicado || item.jaPublicado || Boolean((item.dados as { jaPublicada?: boolean }).jaPublicada));
     setIdEditando(item.id);
     setConteudoSujo(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -235,8 +236,12 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
   // salva um registro novo ou editado
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    if (!formulario) return;
+    if (!formulario || salvando) return;
     const rascunho = tipo === "noticias" && (evento.nativeEvent as SubmitEvent).submitter?.getAttribute("value") === "rascunho";
+    const vaiPublicar = tipo === "noticias" ? !rascunho : publicado;
+    const estavaPublicado = tipo === "noticias" ? idEditando !== null && publicado : itens.find((item) => item.id === idEditando)?.publicado;
+    const titulo = String(formulario.titulo || formulario.nome || formulario.descricao || configuracao.nome);
+    if (vaiPublicar && !estavaPublicado && !await confirmarPublicacao(titulo)) return;
     setSalvando(true);
     setErro("");
 
@@ -245,7 +250,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
       const resposta = await fetch("/api/conteudo", {
         method: idEditando ? "PUT" : "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: idEditando, tipo, dados: formulario, publicado: tipo === "noticias" ? !rascunho : publicado }),
+        body: JSON.stringify({ id: idEditando, tipo, dados: formulario, publicado: vaiPublicar }),
       });
       // lê o registro salvo
       const resultado = await resposta.json() as { item?: RegistroConteudo; erro?: string };
@@ -271,6 +276,24 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     const resposta = await fetch(`/api/conteudo?id=${item.id}`, { method: "DELETE" });
     if (resposta.ok) setItens((atuais) => atuais.filter((registro) => registro.id !== item.id));
     else setErro("Não foi possível excluir o registro.");
+  }
+
+  // retira a publicação do portal e mantém o registro na lista
+  async function arquivar(item: RegistroConteudo) {
+    if (!await confirmarNoPainel("Tirar do público?", `“${item.titulo}” continuará guardado no painel.`, "Tirar do público", "Cancelar")) return;
+    setErro("");
+    try {
+      const resposta = await fetch("/api/conteudo", {
+        method: "PUT", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: item.id, acao: "arquivar" }),
+      });
+      const resultado = await resposta.json() as { item?: RegistroConteudo; erro?: string };
+      if (!resposta.ok || !resultado.item) throw new Error(resultado.erro || "Não foi possível tirar o registro do público.");
+      const atualizado = resultado.item;
+      setItens((atuais) => atuais.map((registro) => registro.id === atualizado.id ? atualizado : registro));
+    } catch (falha) {
+      setErro(falha instanceof Error ? falha.message : "Não foi possível tirar o registro do público.");
+    }
   }
 
   // envia um arquivo e guarda seu endereço
@@ -422,7 +445,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
                 {!carregando && !itensDoPeriodo.length && <div className="vazio-painel"><strong>Nenhum registro</strong><p>{tiposComAno.includes(tipo) && anoConteudo !== String(anoAtual) ? "Não há registros neste período." : "Use o botão acima para adicionar o primeiro item."}</p></div>}
                 {/* registros da seção */}
                 {itensDoPeriodo.filter((item) => !(tipo === "documentos" && "documentoOficial" in item.dados)).map((item) => (
-                  <article key={item.id}><span className={item.publicado ? "estado-publicado" : "estado-rascunho"}>{item.arquivadoAno ? `Arquivo · ${item.ano}` : item.publicado ? "Publicado" : "Rascunho"}</span><div><h2>{item.titulo}</h2><p>Atualizado em {formatarData(item.atualizadoEm)}</p></div><div className="acoes-item-painel"><button type="button" onClick={() => editarRegistro(item)}>Editar</button><button type="button" onClick={() => excluir(item)}>Excluir</button></div></article>
+                  <article key={item.id}><span className={item.publicado ? "estado-publicado" : "estado-rascunho"}>{item.arquivadoAno ? `Arquivo · ${item.ano}` : item.publicado ? "Publicado" : item.jaPublicado ? "Arquivado" : "Rascunho"}</span><div><h2>{item.titulo}</h2><p>Atualizado em {formatarData(item.atualizadoEm)}</p></div><div className="acoes-item-painel"><button type="button" onClick={() => editarRegistro(item)}>Editar</button>{item.publicado && <button type="button" onClick={() => void arquivar(item)}>Tirar do público</button>}{((!item.jaPublicado && !item.publicado) || tiposConteudoRemoviveis.includes(item.tipo)) && <button type="button" onClick={() => void excluir(item)}>{item.jaPublicado || item.publicado ? "Excluir" : "Excluir rascunho"}</button>}</div></article>
                 ))}
               </div>
             )}

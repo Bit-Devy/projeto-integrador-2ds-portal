@@ -42,6 +42,7 @@ export type DocumentoPublico = {
 
 export type DocumentoAdministrativo = DocumentoPublico & {
   arquivoChave: string;
+  jaPublicado?: boolean;
   publicado: boolean;
   ativo: boolean;
   criadoEm: string;
@@ -80,6 +81,7 @@ export type EventoInternoPublico = {
 export type EventoInternoAdministrativo = EventoInternoPublico & {
   areaResponsavel: string;
   observacoesInternas: string;
+  jaPublicado?: boolean;
   publicado: boolean;
   ativo: boolean;
   arquivadoEm: string | null;
@@ -144,6 +146,7 @@ export type PartidaPublica = {
 
 export type PartidaAdministrativa = PartidaPublica & {
   observacoesInternas: string;
+  jaPublicado?: boolean;
   publicado: boolean;
   ativo: boolean;
   arquivadoEm: string | null;
@@ -181,6 +184,7 @@ export type AtualizacaoCampeonato = {
 
 export type AtualizacaoCampeonatoAdministrativa = AtualizacaoCampeonato & {
   campeonatoId: number;
+  jaPublicado?: boolean;
   publicado: boolean;
   ativo: boolean;
   criadoEm: string;
@@ -219,6 +223,7 @@ export type CampeonatoPublico = {
 export type CampeonatoAdministrativo = CampeonatoPublico & {
   diferencaMaximaAnos: number | null;
   observacoesInternas: string;
+  jaPublicado?: boolean;
   publicado: boolean;
   ativo: boolean;
   arquivadoEm: string | null;
@@ -247,6 +252,7 @@ export type ItemReuniaoPublico = {
 
 export type ItemReuniaoAdministrativo = ItemReuniaoPublico & {
   reuniaoId: number;
+  jaPublicado?: boolean;
   publicado: boolean;
   ativo: boolean;
   criadoEm: string;
@@ -290,6 +296,7 @@ export type PresencaAdministrativa = PresencaPublica & {
   reuniaoId: number;
   representanteId: number | null;
   observacaoInterna: string;
+  jaPublicado?: boolean;
   publicado: boolean;
   ativo: boolean;
   criadoEm: string;
@@ -330,6 +337,7 @@ export type ReuniaoAdministrativa = ReuniaoPublica & {
   pautaInterna: string;
   observacoesInternas: string;
   quantidadeParticipantesPublicada: boolean;
+  jaPublicado?: boolean;
   publicado: boolean;
   ativo: boolean;
   arquivadoEm: string | null;
@@ -372,6 +380,7 @@ export type RepresentanteAdministrativo = RepresentantePublico & {
   contatosPublicos: boolean;
   destituidoEm: string | null;
   ativo: boolean;
+  jaPublicado?: boolean;
   publicado: boolean;
   arquivadoEm: string | null;
   criadoEm: string;

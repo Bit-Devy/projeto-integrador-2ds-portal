@@ -19,8 +19,6 @@ import { validarArquivosDoCargo } from "../../arquivos/acesso";
 import { areaRestrita, recursoConteudo } from "../../lib/cargos";
 import { areaPermitida, escolherArea, erroArea } from "../../lib/areas-registros";
 import { obterUsuarioPainel } from "../../lib/sessao";
-import { validarSenhaAdministrativa } from "../../lib/sessao";
-import { consumirTentativa, identificarNavegador, guardarNavegador, limparTentativasLogin } from "../../lib/limites";
 // mantém as vagas publicadas da equipe ligadas aos cargos do estatuto
 import { condicaoVagaLivre, prepararMembroEquipe } from "../../conteudo/equipe";
 // valida e protege as publicações das páginas modulares
@@ -61,6 +59,7 @@ type LinhaConteudo = {
   titulo: string;
   dados_json: string;
   publicado: number;
+  ja_publicado: number;
   criado_em: string;
   atualizado_em: string;
 };
@@ -181,6 +180,24 @@ export async function PUT(request: Request) {
     const dadosRecebidos = await lerObjetoJson(request);
     const id = Number(dadosRecebidos.id);
     if (!Number.isInteger(id) || id <= 0) throw new Error("Registro inválido.");
+    // retira do portal sem revalidar os campos de um cadastro antigo
+    if (dadosRecebidos.acao === "arquivar") {
+      const registro = await getD1().prepare("SELECT * FROM conteudos WHERE id = ?").bind(id).first<LinhaConteudo>();
+      if (!registro) return Response.json({ erro: "Registro não encontrado." }, { status: 404 });
+      const { resposta } = await exigirAdministradorApi(recursoConteudo(registro.tipo));
+      if (resposta) return resposta;
+      if (registro.tipo === "movimentos" && !movimentoDoAnoAtual(registro)) return erroMovimentoArquivado();
+      if (registro.tipo !== "movimentos" && !areaPermitida(usuario, JSON.parse(registro.dados_json).areaResponsavel || "geral")) return erroArea();
+      await protegerDocumentoOficial(id);
+      const item = await getD1().prepare(`UPDATE conteudos SET publicado = 0,
+        dados_json = CASE WHEN tipo = 'noticias' AND ja_publicado = 1 THEN
+          json_set(dados_json, '$.jaPublicada', json('true'), '$.arquivada', json('true')) ELSE dados_json END,
+        atualizado_em = CURRENT_TIMESTAMP
+        WHERE id = ? AND (tipo <> 'movimentos' OR substr(json_extract(dados_json, '$.data'), 1, 4) = ?)
+        RETURNING *`).bind(id, String(anoDoPortal())).first<LinhaConteudo>();
+      if (!item && registro.tipo === "movimentos") return erroMovimentoArquivado();
+      return item ? Response.json({ item: formatarLinha(item) }) : Response.json({ erro: "Registro não encontrado." }, { status: 404 });
+    }
     // valida o restante do conteúdo
     const corpo = validarCorpo(dadosRecebidos);
     const anterior = await getD1().prepare("SELECT * FROM conteudos WHERE id = ?").bind(id).first<LinhaConteudo>();
@@ -202,7 +219,7 @@ export async function PUT(request: Request) {
     const resultado = await getD1()
       .prepare(`UPDATE conteudos
         SET tipo = ?, titulo = ?, dados_json = CASE WHEN tipo = 'noticias' THEN
-          json_set(?, '$.jaPublicada', json(CASE WHEN publicado = 1 OR json_extract(dados_json, '$.jaPublicada') = 1 OR ? = 1 THEN 'true' ELSE 'false' END)) ELSE ? END,
+          json_set(?, '$.jaPublicada', json(CASE WHEN publicado = 1 OR ja_publicado = 1 OR json_extract(dados_json, '$.jaPublicada') = 1 OR ? = 1 THEN 'true' ELSE 'false' END)) ELSE ? END,
           publicado = ?, atualizado_em = CURRENT_TIMESTAMP
         WHERE id = ? AND (tipo <> 'movimentos' OR substr(json_extract(dados_json, '$.data'), 1, 4) = ?)
           AND ${condicaoVagaLivre} RETURNING *`)
@@ -230,8 +247,6 @@ export async function DELETE(request: Request) {
     await garantirBanco();
     const id = Number(new URL(request.url).searchParams.get("id"));
     if (!Number.isInteger(id) || id <= 0) throw new Error("Registro inválido.");
-    // exige novamente a senha se a notícia já passou pelo portal
-    let senhaConfirmada = false;
     const registro = await getD1().prepare("SELECT * FROM conteudos WHERE id = ?").bind(id).first<LinhaConteudo>();
     if (registro) {
       const { resposta: bloqueio } = await exigirAdministradorApi(recursoConteudo(registro.tipo));
@@ -239,23 +254,12 @@ export async function DELETE(request: Request) {
       if (registro.tipo === "movimentos" && !movimentoDoAnoAtual(registro)) return erroMovimentoArquivado();
       if (registro.tipo !== "movimentos" && !areaPermitida(usuario, JSON.parse(registro.dados_json).areaResponsavel || "geral")) return erroArea();
     }
-    if (registro?.tipo === "noticias" && (registro.publicado || JSON.parse(registro.dados_json).jaPublicada)) {
-      const corpo = await lerObjetoJson(request);
-      const navegador = identificarNavegador(request);
-      const tentativa = await consumirTentativa("login", navegador);
-      if (!tentativa.permitido) return guardarNavegador(Response.json({ erro: "Aguarde antes de tentar confirmar a senha novamente." }, { status: 429 }), request, navegador);
-      if (!await validarSenhaAdministrativa(String(corpo.senha || ""))) return guardarNavegador(Response.json({ erro: "Senha incorreta. A notícia foi mantida." }, { status: 403 }), request, navegador);
-      await limparTentativasLogin(navegador);
-      senhaConfirmada = true;
-    }
-    // remove o registro pelo identificador
+    // o banco conserva os registros que já passaram pelo portal
     await protegerDocumentoOficial(id);
     const removido = await getD1().prepare(`DELETE FROM conteudos WHERE id = ?
-      AND (tipo <> 'movimentos' OR substr(json_extract(dados_json, '$.data'), 1, 4) = ?)
-      AND (tipo <> 'noticias' OR (publicado = 0 AND COALESCE(json_extract(dados_json, '$.jaPublicada'), 0) = 0) OR ? = 1)`)
-      .bind(id, String(anoDoPortal()), senhaConfirmada ? 1 : 0).run();
-    if (registro?.tipo === "movimentos" && !removido.meta.changes) return erroMovimentoArquivado();
-    if (registro && !removido.meta.changes) return Response.json({ erro: "A notícia mudou durante a operação. Recarregue e confirme a exclusão novamente." }, { status: 409 });
+      AND (tipo <> 'movimentos' OR substr(json_extract(dados_json, '$.data'), 1, 4) = ?) RETURNING id`)
+      .bind(id, String(anoDoPortal())).first();
+    if (!removido && registro?.tipo === "movimentos") return erroMovimentoArquivado();
     return Response.json({ removido: true });
   } catch (erro) {
     return respostaErro(erro);
@@ -403,6 +407,7 @@ function formatarLinha(linha: LinhaConteudo) {
     titulo: linha.titulo,
     dados,
     publicado: Boolean(linha.publicado),
+    jaPublicado: Boolean(linha.ja_publicado || linha.publicado),
     criadoEm: linha.criado_em,
     atualizadoEm: linha.atualizado_em,
   };
@@ -417,6 +422,9 @@ const ordemMaisRecente = `ORDER BY COALESCE(
 
 // transforma erros em respostas da api
 function respostaErro(erro: unknown) {
+  if (erro instanceof Error && erro.message.includes("registro_ja_publicado")) {
+    return Response.json({ erro: "Este registro já foi publicado. Use a opção Arquivar para retirá-lo do portal." }, { status: 409 });
+  }
   if (erro instanceof ErroJsonInvalido) return Response.json({ erro: erro.message }, { status: 400 });
   // usa erro de entrada ou erro interno conforme a mensagem
   const mensagem = erro instanceof Error ? erro.message : "Não foi possível concluir a operação.";

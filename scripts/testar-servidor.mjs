@@ -1610,7 +1610,7 @@ async function testarPublicacoes2027(cookie) {
     }
     console.log("Notícias com foto, canais editáveis e publicações de 2027: OK");
   } finally {
-    for (const id of criados) await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE");
+    for (const id of criados) await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, acao: "arquivar" });
   }
 }
 
@@ -1859,7 +1859,7 @@ async function testarBiblioteca(cookie) {
     criados.push(segundo.id);
     await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: primeiro.id, tipo: "noticias", publicado: false, dados });
     assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 200);
-    await requisicaoDominio(cookie, `/api/conteudo?id=${segundo.id}`, "DELETE");
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: segundo.id, acao: "arquivar" });
     assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 401);
     const biblioteca = await requisicaoDominio(cookie, "/api/arquivos");
     assert.ok(biblioteca.itens.some((item) => item.chave === arquivo.chave && item.publico === false));
@@ -1874,8 +1874,8 @@ async function testarBiblioteca(cookie) {
     assert.match(await leitor.text(), /src="\/api\/documentos-oficiais\/estatuto"/);
     console.log("Biblioteca privada, publicação compartilhada, PDFs protegidos e botões de notícias: OK");
   } finally {
-    for (const id of criados) await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE");
-    await requisicaoDominio(cookie, arquivo.url, "DELETE");
+    for (const id of criados) await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, acao: "arquivar" });
+    await requisicaoDominio(cookie, arquivo.url, "DELETE", undefined, 409);
   }
 }
 
@@ -2027,16 +2027,16 @@ async function testarGestaoNoticias(cookie) {
     await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "noticias", publicado: true, dados: { ...publicada.dados, destaque: false } });
     assert.ok(!(await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1&visao=destaques")).itens.some((item) => item.id === id));
     assert.ok((await requisicaoPublica("/api/conteudo?tipo=noticias")).itens.some((item) => item.id === id));
-    await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE", { senha: "senha errada do teste" }, 403);
+    await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE", { senha: "senha errada do teste" }, 409);
     const arquivada = (await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "noticias", publicado: false, dados: { ...publicada.dados, jaPublicada: false, destaque: false } })).item;
     assert.equal(arquivada.dados.jaPublicada, true);
     assert.ok((await requisicaoDominio(cookie, `/api/conteudo?tipo=noticias&todos=1&visao=arquivadas&ano=${ano}`)).itens.some((item) => item.id === id));
     assert.ok(!(await requisicaoPublica("/api/conteudo?tipo=noticias")).itens.some((item) => item.id === id));
-    await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE", {}, 403);
+    await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE", {}, 409);
     await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "projetos", dados: { titulo, categoria: "Teste", estado: "Planejado", texto: "Teste" } }, 400);
     const outro = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados: { titulo: `${titulo} rascunho` } }, 201)).item;
     const exclusao = await fetch(`${endereco}/api/conteudo?id=${outro.id}`, { method: "DELETE", headers: { cookie } });
     assert.equal(exclusao.status, 200);
-    console.log("Gestão de notícias: rascunhos, destaque, arquivo e confirmação de senha: OK");
-  } finally { await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE"); }
+    console.log("Gestão de notícias: rascunhos, destaque, arquivo e proteção do histórico: OK");
+  } finally { await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, acao: "arquivar" }); }
 }

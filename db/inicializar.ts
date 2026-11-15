@@ -24,6 +24,7 @@ import { comandosEstruturaHistorico } from "./estrutura-historico";
 import { comandosEstruturaServicos } from "./estrutura-servicos";
 import { calendarioInicial2026 } from "../app/servicos/calendarios-2026";
 import { prepararAnosEscolares, prepararDetalhesEscolares, arquivarCiclosEscolares } from "./ciclos-anuais";
+import { prepararHistoricoPublicacao } from "./estrutura-publicacao";
 
 // guarda uma única inicialização em andamento
 let tarefaInicializacao: Promise<void> | null = null;
@@ -252,6 +253,7 @@ async function prepararBanco() {
   }
   await prepararAnosEscolares(d1);
   await prepararDetalhesEscolares(d1);
+  await prepararHistoricoPublicacao(d1);
   await carregarMapa2026(d1);
   // atualiza a regra de ocupação e publica os mandatos ativos que já estavam cadastrados
   await d1.batch([
@@ -266,6 +268,7 @@ async function prepararBanco() {
 
   // retira do catálogo antigo a documentação interna que não é publicada no portal
   await d1.prepare(`DELETE FROM conteudos WHERE tipo = 'documentos'
+    AND ja_publicado = 0 AND publicado = 0
     AND json_valid(dados_json) = 1 AND json_extract(dados_json, '$.link') LIKE '/documentacao/%'`).run();
 
   // guarda os dois documentos atuais sem trocar uma versão já enviada pela gestão

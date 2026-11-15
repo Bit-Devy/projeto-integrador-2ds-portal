@@ -8,7 +8,7 @@ import type { DadosMapa, TurmaAtividadeMapa } from "../mapa/tipos";
 import { nomesTurnos } from "../mapa/tipos";
 import { diasDeAula, rotuloDiasDeAula, type DiaDeAula } from "../mapa/dias-de-aula";
 import { CabecalhoPainel, Campo, MensagensPainel, confirmarSaida, requisitarPainel, useAvisoMudancas, type AoMudarEstadoSujo } from "./painel-eventos-comum";
-import { confirmarNoPainel } from "./confirmacao-painel";
+import { confirmarNoPainel, confirmarPublicacao } from "./confirmacao-painel";
 import { anoDoPortal } from "../conteudo/periodos";
 import ArquivoAnual from "./ArquivoAnual";
 import HistoricoTurmaPainel from "./HistoricoTurmaPainel";
@@ -60,6 +60,8 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
       primeiroDia.current?.focus();
       return;
     }
+    const vaiPublicar = turma.ativo && turma.publicado && turma.ano === anoDoPortal() && !dados.turmas.some((item) => item.id === turma.id && item.publicado);
+    if (vaiPublicar && !substituirOcupacoes.length && !await confirmarPublicacao(turma.nome)) return;
     setSalvando(true); setErro(""); setSucesso("");
     try {
       // mantém os vínculos existentes quando a sala não foi trocada
@@ -81,7 +83,7 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
       ocultar: `Retirar a turma “${item.nome}” do público? Ela continuará cadastrada, mas não aparecerá como turma pública.`,
       arquivar: `Arquivar a turma “${item.nome}”? Ela sairá do público e sua ocupação de sala será liberada.`,
       restaurar: `Restaurar a turma “${item.nome}” como rascunho? Confira sua sala antes de publicar novamente.`,
-      excluir: `Excluir definitivamente a turma arquivada “${item.nome}”? Os vínculos de sala serão removidos. Os representantes e os registros de campeonatos e reuniões serão preservados.`,
+      excluir: `Excluir definitivamente o rascunho da turma “${item.nome}”? Os vínculos de sala serão removidos. Os representantes e os registros de campeonatos e reuniões serão preservados.`,
     };
     if (!await confirmarNoPainel("Confirmar alteração da turma", perguntas[acao], "Confirmar", "Cancelar")) return;
     setSalvando(true); setErro(""); setSucesso("");
@@ -131,8 +133,8 @@ export default function PainelTurmas({ aoMudarEstadoSujo }: { aoMudarEstadoSujo?
               <button className="pev-botao" type="button" disabled={salvando} onClick={() => void alterarEstado(item, "arquivar")}>Arquivar</button>
             </> : <>
               <button className="pev-botao" type="button" onClick={() => void alterarEstado(item, "restaurar")} disabled={salvando || item.ano !== anoDoPortal()}>Restaurar</button>
-              <button className="pev-botao" type="button" disabled={salvando} onClick={() => void alterarEstado(item, "excluir")}>Excluir</button>
             </>}
+            {!item.jaPublicado && !item.publicado && <button className="pev-botao pev-botao--perigoso" type="button" disabled={salvando} onClick={() => void alterarEstado(item, "excluir")}>Excluir rascunho</button>}
           </div>
         </article>;
       })}</div>

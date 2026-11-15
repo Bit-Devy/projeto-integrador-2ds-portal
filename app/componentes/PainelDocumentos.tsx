@@ -1,6 +1,7 @@
 "use client";
 
 // importa a biblioteca e os controles do painel
+import { confirmarPublicacao } from "./confirmacao-painel";
 import { useEffect, useState } from "react";
 import EscolherArquivo, { ListaBiblioteca } from "./BibliotecaArquivos";
 import type { DocumentoOficial } from "../arquivos/documentos-oficiais";
@@ -39,6 +40,7 @@ export default function PainelDocumentos({ aba, aoMudarEstadoSujo }: { aba: "arq
     finally { setEnviando(false); }
   }
   async function salvar(item: DocumentoOficial) {
+    if (!await confirmarPublicacao(item.titulo)) return;
     setEnviando(true); setErro(""); setSucesso("");
     try {
       const resultado = await requisitarPainel<{ itens: DocumentoOficial[] }>("/api/documentos-oficiais", { method: "PUT", ...corpoJson(item) });

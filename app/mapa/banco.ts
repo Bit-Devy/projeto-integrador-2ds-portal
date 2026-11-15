@@ -78,6 +78,7 @@ type LinhaLocal = {
 
 // define uma linha de turma do banco
 type LinhaTurma = {
+  ja_publicado: number;
   ano: number;
   nivel_ensino: string;
   id: number;
@@ -457,19 +458,19 @@ export async function excluirRegistroMapa(entidade: EntidadeMapa, idRecebido: un
       throw new ErroMapa("O local possui ensalamentos. Troque ou exclua esses vínculos antes.", 409);
     }
     await d1.prepare("DELETE FROM locais_colegio WHERE id = ?").bind(id).run();
-  // só exclui turmas arquivadas e conserva os nomes usados nos registros históricos
+  // só exclui turmas que nunca foram publicadas e conserva os registros relacionados
   } else if (entidade === "turmas") {
     const turma = await buscarTurma(id);
     if (!turma) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
-    if (turma.ativo || turma.publicado) throw new ErroMapa("Arquive a turma antes de excluí-la.", 409);
-    const arquivada = "EXISTS (SELECT 1 FROM turmas_atividades WHERE id = ? AND ativo = 0 AND publicado = 0)";
+    if (turma.jaPublicado || turma.publicado) throw new ErroMapa("Esta turma já foi publicada. Use a opção Arquivar para preservar o histórico.", 409);
+    const rascunho = "EXISTS (SELECT 1 FROM turmas_atividades WHERE id = ? AND ja_publicado = 0 AND publicado = 0)";
     const resultado = await d1.batch([
       d1.prepare(`UPDATE representantes SET turma_atividade_id = NULL, ativo = 0, publicado = 0,
         arquivado_em = COALESCE(arquivado_em, CURRENT_TIMESTAMP), atualizado_em = CURRENT_TIMESTAMP
-        WHERE turma_atividade_id = ? AND ${arquivada}`).bind(id, id),
-      d1.prepare(`UPDATE participantes_campeonato SET turma_atividade_id = NULL WHERE turma_atividade_id = ? AND ${arquivada}`).bind(id, id),
-      d1.prepare(`DELETE FROM ensalamentos WHERE turma_atividade_id = ? AND ${arquivada}`).bind(id, id),
-      d1.prepare("DELETE FROM turmas_atividades WHERE id = ? AND ativo = 0 AND publicado = 0 RETURNING id").bind(id),
+        WHERE turma_atividade_id = ? AND ${rascunho}`).bind(id, id),
+      d1.prepare(`UPDATE participantes_campeonato SET turma_atividade_id = NULL WHERE turma_atividade_id = ? AND ${rascunho}`).bind(id, id),
+      d1.prepare(`DELETE FROM ensalamentos WHERE turma_atividade_id = ? AND ${rascunho}`).bind(id, id),
+      d1.prepare("DELETE FROM turmas_atividades WHERE id = ? AND ja_publicado = 0 AND publicado = 0 RETURNING id").bind(id),
     ]);
     if (!resultado[3].results.length) throw new ErroMapa("A turma mudou durante a exclusão. Recarregue a lista e tente novamente.", 409);
   // exclui um ensalamento
@@ -725,6 +726,7 @@ function formatarTurma(linha: LinhaTurma): TurmaAtividadeMapa {
   return {
     id: linha.id,
     ano: linha.ano,
+    jaPublicado: Boolean(linha.ja_publicado),
     nivelEnsino: linha.nivel_ensino || "medio",
     nome: linha.nome,
     nomeNormalizado: linha.nome_normalizado,

@@ -6,7 +6,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import CheckboxComAjuda, { descricaoCheckbox } from "./CheckboxComAjuda";
 import { alasMapa, nomesTurnos, type CategoriaMapa, type DadosMapa, type LocalMapa } from "../mapa/tipos";
 import { confirmarSaida, useAvisoMudancas, type AoMudarEstadoSujo } from "./painel-eventos-comum";
-import { confirmarNoPainel } from "./confirmacao-painel";
+import { confirmarNoPainel, confirmarPublicacao } from "./confirmacao-painel";
 import { dataDoPortal } from "../conteudo/periodos";
 import { rotuloDiasDeAula } from "../mapa/dias-de-aula";
 type ValorFormulario = string | number | boolean | null;
@@ -54,6 +54,7 @@ export default function PainelMapaColegio({ aoMudarEstadoSujo }: { aoMudarEstado
     const turma = dados.turmas.find((item) => item.id === Number(turmaId));
     const outrosLocais = vincularTurma ? dados.ensalamentos.filter((item) => item.turmaAtividadeId === turma?.id && item.ativo && item.localId && item.localId !== idEditando) : [];
     if (outrosLocais.length && !await confirmarNoPainel("Transferir a turma para esta sala?", `A turma “${turma?.nome}” já possui uma sala vinculada. Ao salvar, ela será transferida para esta sala no turno ${nomesTurnos[turma!.turno]}. A ocupação anterior ficará no histórico.`, "Transferir turma", "Continuar editando")) return;
+    if (formulario.ativo && formulario.publicado && !dados.locais.some((item) => item.id === idEditando && item.ativo && item.publicado) && !await confirmarPublicacao(String(formulario.nome))) return;
     setSalvando(true); setErro(""); setSucesso("");
     try {
       // revisa conflitos antes de salvar a sala e a ocupação juntas

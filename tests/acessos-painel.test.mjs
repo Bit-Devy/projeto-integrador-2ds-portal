@@ -178,9 +178,10 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
     assert.equal(listaEsportes.total, 1); assert.equal(listaEsportes.itens[0].id, propria.id);
     await chamar("/api/conteudo", { jar: esportes, method: "PUT", corpo: { ...noticia, id: idSocial }, esperado: 403 });
     await chamar(`/api/conteudo?id=${idSocial}`, { jar: esportes, method: "DELETE", corpo: { senha: esportes1.senha }, esperado: 403 });
-    // a senha de outro cargo não confirma a exclusão de uma notícia
-    await chamar(`/api/conteudo?id=${propria.id}`, { jar: esportes, method: "DELETE", corpo: { senha: senhaInicial }, esperado: 403 });
-    await chamar(`/api/conteudo?id=${propria.id}`, { jar: esportes, method: "DELETE", corpo: { senha: esportes1.senha } });
+    // uma notícia publicada continua protegida mesmo depois de arquivada
+    await chamar(`/api/conteudo?id=${propria.id}`, { jar: esportes, method: "DELETE", corpo: { senha: senhaInicial }, esperado: 409 });
+    await chamar("/api/conteudo", { jar: esportes, method: "PUT", corpo: { id: propria.id, acao: "arquivar" } });
+    await chamar(`/api/conteudo?id=${propria.id}`, { jar: esportes, method: "DELETE", corpo: { senha: esportes1.senha }, esperado: 409 });
     const evento = { dados: { titulo: "Evento social teste", categoria: "Social", dataInicial: "2026-11-03", areaResponsavel: "social" } };
     const eventoSocial = (await (await chamar("/api/eventos", { jar: geral, method: "POST", corpo: evento, esperado: 201 })).json()).item;
     const eventoEsportes = (await (await chamar("/api/eventos", { jar: esportes, method: "POST", corpo: { dados: { ...evento.dados, titulo: "Evento esportivo teste" } }, esperado: 201 })).json()).item;
@@ -229,7 +230,8 @@ test("o painel protege os cargos, as vagas e as sessões em todo o ciclo de senh
     const tesouraria = await criar("primeiro-tesoureiro"); const tesourariaJar = (await entrar(tesouraria.senha)).jar;
     await chamar("/api/conteudo?tipo=movimentos&todos=1", { jar: tesourariaJar });
     const movimentoTeste = (await (await chamar("/api/conteudo", { jar: tesourariaJar, method: "POST", corpo: { tipo: "movimentos", dados: { descricao: "Teste financeiro", data: "2026-11-03", tipo: "entrada", categoria: "Teste", valor: 1 } }, esperado: 201 })).json()).item;
-    await chamar(`/api/conteudo?id=${movimentoTeste.id}`, { jar: tesourariaJar, method: "DELETE" });
+    await chamar(`/api/conteudo?id=${movimentoTeste.id}`, { jar: tesourariaJar, method: "DELETE", esperado: 409 });
+    await chamar("/api/conteudo", { jar: tesourariaJar, method: "PUT", corpo: { id: movimentoTeste.id, acao: "arquivar" } });
     const documentoSocial = (await (await chamar("/api/conteudo", { jar: geral, method: "POST", corpo: { tipo: "documentos", dados: { titulo: "Documento social de teste", categoria: "Social", tipo: "pdf", texto: "Teste", link: "https://example.org/doc.pdf", areaResponsavel: "social" } }, esperado: 201 })).json()).item;
     await chamar(`/api/conteudo?id=${documentoSocial.id}`, { jar: tesourariaJar, method: "DELETE", esperado: 403 });
     const apoio = await criar("apoio"); const apoioJar = (await entrar(apoio.senha)).jar;

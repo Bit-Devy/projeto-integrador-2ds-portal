@@ -148,27 +148,21 @@ test("desvincular e arquivar liberam a sala e restaurar não reativa vínculos a
 }));
 
 // a exclusão exige arquivamento e conserva os nomes nos registros anteriores
-test("só exclui turmas arquivadas e preserva representantes e participantes de campeonatos", () => comBanco(async (sqlite, sala) => {
+test("só exclui turmas que nunca foram publicadas e mantém vínculos das arquivadas", () => comBanco(async (sqlite, sala) => {
   const item = await criarRegistroMapa("turmas", turma("2DS", { salaId: sala.id }));
   const representante = await criarRepresentante(pessoa(item.id));
   sqlite.prepare("INSERT INTO campeonatos (slug, nome, modalidade) VALUES ('campeonato-ficticio', 'Campeonato fictício', 'futsal')").run();
   sqlite.prepare("INSERT INTO participantes_campeonato (campeonato_id, turma_atividade_id, nome, nome_normalizado) VALUES (1, ?, '2DS', '2ds')").run(item.id);
-  await assert.rejects(excluirRegistroMapa("turmas", item.id), /Arquive a turma/);
-  await atualizarRegistroMapa("turmas", item.id, { publicado: false });
-  await assert.rejects(excluirRegistroMapa("turmas", item.id), /Arquive a turma/);
-  await atualizarRegistroMapa("turmas", item.id, { ativo: false });
-  await excluirRegistroMapa("turmas", item.id);
-  assert.equal(sqlite.prepare("SELECT id FROM turmas_atividades WHERE id = ?").get(item.id), undefined);
-  assert.equal(sqlite.prepare("SELECT COUNT(*) AS total FROM ensalamentos WHERE turma_atividade_id = ?").get(item.id).total, 0);
-  const pessoaPreservada = sqlite.prepare("SELECT turma, turma_atividade_id, ativo, publicado, arquivado_em FROM representantes WHERE id = ?").get(representante.id);
-  assert.equal(pessoaPreservada.turma, "2DS");
-  assert.equal(pessoaPreservada.turma_atividade_id, null);
-  assert.equal(pessoaPreservada.ativo, 0);
-  assert.equal(pessoaPreservada.publicado, 0);
-  assert.ok(pessoaPreservada.arquivado_em);
-  const participante = sqlite.prepare("SELECT nome, turma_atividade_id FROM participantes_campeonato").get();
-  assert.equal(participante.nome, "2DS");
-  assert.equal(participante.turma_atividade_id, null);
+  await assert.rejects(excluirRegistroMapa("turmas", item.id), /já foi publicada/);
+  await atualizarRegistroMapa("turmas", item.id, { publicado: false, ativo: false });
+  await assert.rejects(excluirRegistroMapa("turmas", item.id), /já foi publicada/);
+  assert.equal(sqlite.prepare("SELECT ja_publicado FROM turmas_atividades WHERE id = ?").get(item.id).ja_publicado, 1);
+  assert.equal(sqlite.prepare("SELECT turma_atividade_id FROM representantes WHERE id = ?").get(representante.id).turma_atividade_id, item.id);
+  assert.equal(sqlite.prepare("SELECT turma_atividade_id FROM participantes_campeonato").get().turma_atividade_id, item.id);
+  assert.ok(sqlite.prepare("SELECT COUNT(*) AS total FROM ensalamentos WHERE turma_atividade_id = ?").get(item.id).total);
+  const rascunho = await criarRegistroMapa("turmas", turma("Rascunho 2DS", { publicado: false }));
+  await excluirRegistroMapa("turmas", rascunho.id);
+  assert.equal(sqlite.prepare("SELECT id FROM turmas_atividades WHERE id = ?").get(rascunho.id), undefined);
   assert.deepEqual(sqlite.prepare("PRAGMA foreign_key_check").all(), []);
 }));
 
