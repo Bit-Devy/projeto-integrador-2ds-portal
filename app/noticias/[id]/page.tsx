@@ -10,6 +10,7 @@ import { getD1 } from "../../../db";
 import { garantirBanco } from "../../../db/inicializar";
 // importa o tipo de uma notícia
 import type { NoticiaGecep } from "../../conteudo/tipos";
+import { destinoDaCentralRemovida } from "../../conteudo/paginas";
 // importa o cabeçalho da página
 import CabecalhoPagina from "../../componentes/CabecalhoPagina";
 // importa os botões e o aviso de saída
@@ -71,7 +72,12 @@ async function buscarNoticia(idTexto: string) {
     // encerra quando a notícia não existe
     if (!linha) return null;
     // junta o código com os dados salvos
-    return { ...(JSON.parse(linha.dados_json) as NoticiaGecep), id: linha.id };
+    const noticia = JSON.parse(linha.dados_json) as NoticiaGecep;
+    if (destinoDaCentralRemovida(noticia.botaoInternoUrl)) {
+      noticia.botaoInternoAtivo = false;
+      noticia.botaoInternoUrl = "";
+    }
+    return { ...noticia, id: linha.id };
   } catch {
     // evita quebrar a página quando o banco falha
     return null;

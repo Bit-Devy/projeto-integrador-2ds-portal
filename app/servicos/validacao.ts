@@ -4,7 +4,7 @@ import { dataValida } from "./calendario";
 
 export function validarServico(tipo: string, dados: Record<string, unknown>) {
   const falhar = (mensagem: string): never => { throw new ErroJsonInvalido(mensagem); };
-  if (["agenda", "cardapios", "oportunidades"].includes(tipo) && !dataValida(String(dados.data || ""))) falhar("Informe uma data válida.");
+  if (["agenda", "cardapios"].includes(tipo) && !dataValida(String(dados.data || ""))) falhar("Informe uma data válida.");
   if (["agenda", "cardapios"].includes(tipo)) {
     dados.dataFim ||= dados.data;
     if (!dataValida(String(dados.dataFim)) || String(dados.dataFim) < String(dados.data) || Date.parse(String(dados.dataFim)) - Date.parse(String(dados.data)) > 366 * 86400000) falhar("Informe um período de até um ano, com o fim depois do início.");
@@ -19,11 +19,5 @@ export function validarServico(tipo: string, dados: Record<string, unknown>) {
     if (!["todos", "manha", "tarde", "noite"].includes(String(dados.turno))) falhar("Escolha um turno válido.");
     if (dados.preco && (!/^\d{1,5}([.,]\d{1,2})?$/.test(String(dados.preco)) || Number(String(dados.preco).replace(",", ".")) < 0)) falhar("Informe um preço válido ou deixe vazio.");
     if (dados.categoria === "merenda") dados.preco = "";
-  }
-  if (tipo === "oportunidades") {
-    if (!["estagio", "emprego", "aprendiz", "concurso"].includes(String(dados.categoria)) || !["aberta", "encerrada", "suspensa"].includes(String(dados.situacao))) falhar("Escolha o tipo e a situação da oportunidade.");
-    if (dados.prazo && (!dataValida(String(dados.prazo)) || String(dados.prazo) < String(dados.data))) falhar("O prazo precisa ser uma data igual ou posterior à publicação.");
-    try { if (!["http:", "https:"].includes(new URL(String(dados.link)).protocol)) falhar("Informe o endereço completo para candidatura ou edital."); }
-    catch { falhar("Informe o endereço completo para candidatura ou edital."); }
   }
 }

@@ -47,7 +47,7 @@ test("a virada para o próximo ano arquiva turmas e mantém salas e retratos ant
   } finally { await portal.fechar(); }
 });
 
-test("projetos e oportunidades começam no ano atual e o arquivo continua consultável", async () => {
+test("projetos começam no ano atual e o arquivo continua consultável", async () => {
   const portal = await abrirPortalMemoria(); const { chamar } = portal; const ano = anoDoPortal();
   try {
     const projeto = { titulo: "Projeto fictício anual", categoria: "Teste", estado: "Planejado", texto: "Descrição fictícia", ano: ano - 1 };
@@ -56,13 +56,6 @@ test("projetos e oportunidades começam no ano atual e o arquivo continua consul
     assert.equal((await (await chamar("/api/conteudo?tipo=projetos", { jar: new Map() })).json()).itens.some((item) => item.id === antigo.id), false);
     assert.equal((await (await chamar(`/api/conteudo?tipo=projetos&ano=${ano-1}`, { jar: new Map() })).json()).itens.some((item) => item.id === antigo.id), true);
     assert.equal((await (await chamar("/api/conteudo?tipo=projetos&todos=1")).json()).itens.some((item) => item.id === antigo.id), true);
-    const vaga = { titulo: "Vaga fictícia antiga", categoria: "estagio", organizacao: "Instituição fictícia", local: "Curitiba", modalidade: "Presencial", escolaridade: "Ensino médio", requisitos: "Matrícula ativa", descricao: "Descrição fictícia", data: `${ano - 1}-11-10`, situacao: "encerrada", fonte: "Teste fictício", link: "https://example.org/edital" };
-    const oportunidade = (await (await chamar("/api/conteudo", { method: "POST", corpo: { tipo: "oportunidades", dados: vaga, publicado: true }, esperado: 201 })).json()).item;
-    assert.equal(oportunidade.ano, ano - 1); assert.equal(oportunidade.arquivadoAno, true);
-    assert.equal((await (await chamar("/api/conteudo?tipo=oportunidades", { jar: new Map() })).json()).itens.length, 0);
-    assert.equal((await (await chamar(`/api/conteudo?tipo=oportunidades&ano=${ano - 1}`, { jar: new Map() })).json()).itens[0].id, oportunidade.id);
-    const mudada = (await (await chamar("/api/conteudo", { method: "PUT", corpo: { id: oportunidade.id, tipo: "oportunidades", dados: { ...oportunidade.dados, data: `${ano}-11-10` }, publicado: true } })).json()).item;
-    assert.equal(mudada.ano, ano); assert.equal(mudada.arquivadoAno, false);
   } finally { await portal.fechar(); }
 });
 

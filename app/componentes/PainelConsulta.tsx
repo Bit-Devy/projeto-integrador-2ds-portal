@@ -13,9 +13,9 @@ import "./painel-consulta.css";
 
 type Registro = Record<string, unknown>;
 type Filtros = { busca: string; estado: string; ano: string };
-const tiposConteudo = ["noticias", "projetos", "membros", "movimentos", "documentos", "canais", "calendario", "cantina", "estagios"];
+const tiposConteudo = ["noticias", "projetos", "membros", "movimentos", "documentos", "canais", "calendario", "cantina"];
 const porPagina = 20;
-const recursosAnuais = ["noticias", "projetos", "membros", "calendario", "cantina", "estagios", "turmas", "representantes", "eventos", "interclasses", "reunioes"];
+const recursosAnuais = ["noticias", "projetos", "membros", "calendario", "cantina", "turmas", "representantes", "eventos", "interclasses", "reunioes"];
 
 // organiza a leitura dos mesmos cadastros usados pelos editores
 export default function PainelConsulta({ recurso, publicos = false }: { recurso: RecursoPainel; publicos?: boolean }) {
@@ -53,7 +53,7 @@ export default function PainelConsulta({ recurso, publicos = false }: { recurso:
       let caminho: string;
       if (recurso === "mapa" || recurso === "turmas") { parametros.set("secao", recurso === "turmas" ? "turmas" : "locais"); caminho = "/api/mapa"; }
       else if (recurso === "oficiais") caminho = "/api/documentos-oficiais";
-      else if (tiposConteudo.includes(recurso)) { parametros.set("tipo", ({ calendario: "agenda", cantina: "cardapios", estagios: "oportunidades" } as Record<string, string>)[recurso] || recurso); caminho = "/api/conteudo"; }
+      else if (tiposConteudo.includes(recurso)) { parametros.set("tipo", ({ calendario: "agenda", cantina: "cardapios" } as Record<string, string>)[recurso] || recurso); caminho = "/api/conteudo"; }
       else caminho = `/api/${recurso}`;
       const resposta = await fetch(`${caminho}?${parametros}`, { cache: "no-store", signal: controle.signal });
       const dados = await resposta.json();
@@ -95,7 +95,7 @@ export default function PainelConsulta({ recurso, publicos = false }: { recurso:
   const paginas = listaLocal ? Math.max(1, Math.ceil(filtrados.length / porPagina)) : totalPaginas;
   const paginaAtual = Math.min(pagina, paginas);
   const visiveis = listaLocal ? filtrados.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina) : filtrados;
-  const titulo = ({ eventos: "Eventos internos", interclasses: "Interclasses e campeonatos", reunioes: "Reuniões, atas e presenças", representantes: "Representantes", arquivos: "Biblioteca de arquivos", mapa: "Mapa e ensalamento", turmas: "Turmas", oficiais: "Estatuto e regimento", mensagens: "Mensagens recebidas" } as Record<string, string>)[recurso] || configuracaoPainel[(( { calendario: "agenda", cantina: "cardapios", estagios: "oportunidades" } as Record<string, string>)[recurso] || recurso) as TipoConteudo]?.nome || "Consulta";
+  const titulo = ({ eventos: "Eventos internos", interclasses: "Interclasses e campeonatos", reunioes: "Reuniões, atas e presenças", representantes: "Representantes", arquivos: "Biblioteca de arquivos", mapa: "Mapa e ensalamento", turmas: "Turmas", oficiais: "Estatuto e regimento", mensagens: "Mensagens recebidas" } as Record<string, string>)[recurso] || configuracaoPainel[(( { calendario: "agenda", cantina: "cardapios" } as Record<string, string>)[recurso] || recurso) as TipoConteudo]?.nome || "Consulta";
   if (arquivoFinanceiro) return <ArquivoMovimentos voltar={() => setArquivoFinanceiro(false)} />;
   return <section className="consulta-painel">
     <header className="topo-painel"><div><span className="rotulo-secao">SOMENTE CONSULTA</span><h1>{titulo}</h1><p>{publicos ? "Consulte as publicações disponíveis para seu cargo." : "Consulte publicações, rascunhos e registros arquivados disponíveis para seu cargo."} Este acesso não permite alterações.</p></div>{recurso === "movimentos" && !publicos && <div className="acoes-topo-servicos"><button className="botao-primario botao-historico-financeiro" type="button" onClick={() => setArquivoFinanceiro(true)}>Ver registros de anos anteriores</button></div>}</header>

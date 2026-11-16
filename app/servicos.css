@@ -85,19 +85,6 @@
 .grade-produtos .produto-cantina { border: 1px solid #dce5eb; border-top: 3px solid var(--azul); }
 .preco-cantina { display: block; font-size: 1.25rem; color: var(--azul-escuro); margin-top: 15px; }
 
-/* destaca os dados das vagas e mantém o detalhe dentro do próprio portal */
-.grade-oportunidades { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 22px; margin-top: 24px; }
-.grade-oportunidades article { display: flex; flex-direction: column; align-items: start; padding: 24px; border: 1px solid #dce5eb; border-top: 4px solid var(--azul); }
-.tipo-oportunidade { color: var(--azul-escuro); font-weight: bold; display: flex; justify-content: space-between; gap: 18px; width: 100%; }
-.tipo-oportunidade span { color: #687880; font-size: .75rem; font-weight: normal; }
-.grade-oportunidades h3 { color: var(--azul-escuro); font-size: 1.2rem; line-height: 1.4; margin-block: 18px; }
-.grade-oportunidades small { color: #687880; margin-block: 10px 20px; }
-.grade-oportunidades button { margin-top: auto; }
-.dialogo-oportunidade { width: min(800px, calc(100vw - 32px)); max-width: 800px; overflow-wrap: anywhere; }
-.dados-oportunidade > div { border-top: 1px solid #dce5eb; padding-block: 14px; }
-.dados-oportunidade dt { font-weight: bold; color: var(--azul-escuro); margin-bottom: 6px; }
-.dados-oportunidade dd { margin: 0; white-space: pre-line; line-height: 1.6; }
-
 /* organiza as chaves e a marcação dos dias dentro do painel */
 .servicos-painel { min-width: 0; }
 .servicos-painel fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }

@@ -11,7 +11,7 @@ export function consultaReferenciaPublica(chave: string, recebido = `/api/arquiv
       SELECT c.id FROM conteudos c, json_each(c.dados_json) j
         WHERE c.publicado = 1 AND j.key IN ('imagemUrl', 'fotoUrl', 'comprovanteUrl', 'link', 'arquivoUrl')
           AND (c.tipo <> 'movimentos' OR substr(json_extract(c.dados_json, '$.data'), 1, 4) = ?)
-          AND (c.tipo <> 'oportunidades' OR COALESCE(json_extract((SELECT dados_json FROM modulos_portal WHERE chave = 'paginas'), '$.estagios'), 1) = 1)
+          AND c.tipo <> 'oportunidades'
           AND (c.tipo <> 'cardapios' OR (COALESCE(json_extract((SELECT dados_json FROM modulos_portal WHERE chave = 'paginas'), '$.cantina'), 1) = 1
             AND COALESCE(json_extract((SELECT dados_json FROM modulos_portal WHERE chave = 'paginas'), '$.' || json_extract(c.dados_json, '$.categoria')), 1) = 1))
           AND j.value IN (a.endereco, a.recebido)

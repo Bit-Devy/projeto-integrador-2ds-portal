@@ -13,9 +13,9 @@ export const areasPainel = [
   { chave: "eleitoral", nome: "Comissão Eleitoral" },
 ] as const;
 export type AreaPainel = typeof areasPainel[number]["chave"];
-export type RecursoPainel = "geral" | "noticias" | "projetos" | "membros" | "movimentos" | "documentos" | "oficiais" | "arquivos" | "canais" | "eventos" | "interclasses" | "reunioes" | "representantes" | "mapa" | "turmas" | "mensagens" | "calendario" | "cantina" | "estagios" | "paginas";
+export type RecursoPainel = "geral" | "noticias" | "projetos" | "membros" | "movimentos" | "documentos" | "oficiais" | "arquivos" | "canais" | "eventos" | "interclasses" | "reunioes" | "representantes" | "mapa" | "turmas" | "mensagens" | "calendario" | "cantina" | "paginas";
 export type CargoPainel = { chave: string; nome: string; artigo: string; descricao: string; area: AreaPainel; editar: RecursoPainel[]; consultar: RecursoPainel[]; publicos?: boolean };
-const todos: RecursoPainel[] = ["noticias", "projetos", "membros", "movimentos", "documentos", "oficiais", "arquivos", "canais", "eventos", "interclasses", "reunioes", "representantes", "mapa", "turmas", "mensagens", "calendario", "cantina", "estagios", "paginas"];
+const todos: RecursoPainel[] = ["noticias", "projetos", "membros", "movimentos", "documentos", "oficiais", "arquivos", "canais", "eventos", "interclasses", "reunioes", "representantes", "mapa", "turmas", "mensagens", "calendario", "cantina", "paginas"];
 const secretaria: RecursoPainel[] = ["noticias", "documentos", "arquivos", "reunioes", "representantes", "mapa", "turmas", "calendario"];
 const publicacoes: RecursoPainel[] = ["noticias", "projetos", "eventos", "arquivos", "documentos", "calendario"];
 function cargo(chave: string, nome: string, artigo: string, descricao: string, area: AreaPainel, editar: RecursoPainel[], consultar: RecursoPainel[] = [], publicos = false): CargoPainel {
@@ -30,12 +30,12 @@ export const cargosPainel: CargoPainel[] = [
   cargo("primeiro-tesoureiro", "Primeiro-Tesoureiro", "Art. 50", "Lançamentos financeiros e documentos de prestação de contas", "financeiro", ["movimentos", "documentos", "arquivos"]),
   cargo("segundo-tesoureiro", "Segundo-Tesoureiro", "Art. 51", "Auxílio à tesouraria e prestação de contas", "financeiro", ["movimentos", "documentos", "arquivos"]),
   cargo("social", "Diretoria Social", "Art. 52", "Notícias, projetos, eventos e documentos da área social", "social", [...publicacoes, "cantina"]),
-  cargo("comunicacao", "Diretoria de Assuntos de Comunicação e Imprensa", "Art. 53", "Notícias e divulgação de todas as áreas, canais oficiais e mensagens", "comunicacao", ["noticias", "projetos", "eventos", "documentos", "arquivos", "canais", "mensagens", "calendario", "cantina", "estagios"]),
+  cargo("comunicacao", "Diretoria de Assuntos de Comunicação e Imprensa", "Art. 53", "Notícias e divulgação de todas as áreas, canais oficiais e mensagens", "comunicacao", ["noticias", "projetos", "eventos", "documentos", "arquivos", "canais", "mensagens", "calendario", "cantina"]),
   cargo("esportes", "Diretoria de Assuntos de Esporte e Lazer", "Art. 54", "Campeonatos, interclasses e publicações de esporte e lazer", "esportes", [...publicacoes, "interclasses"], ["mapa", "turmas"]),
   cargo("saude", "Diretoria de Saúde e Meio Ambiente", "Art. 55", "Publicações, projetos e eventos de saúde e meio ambiente", "saude", publicacoes),
   cargo("cultura", "Diretoria de Assuntos Culturais e Diversidade", "Art. 56", "Publicações, projetos e eventos culturais e de diversidade", "cultura", publicacoes),
-  cargo("academico", "Diretoria de Relações Acadêmicas", "Art. 57", "Publicações, projetos e eventos acadêmicos", "academico", [...publicacoes, "estagios"], ["mapa", "turmas"]),
-  cargo("tecnico", "Diretoria de Educação Técnica Profissional", "Art. 58", "Publicações, projetos e eventos dos cursos técnicos", "tecnico", [...publicacoes, "estagios"], ["mapa", "turmas"]),
+  cargo("academico", "Diretoria de Relações Acadêmicas", "Art. 57", "Publicações, projetos e eventos acadêmicos", "academico", publicacoes, ["mapa", "turmas"]),
+  cargo("tecnico", "Diretoria de Educação Técnica Profissional", "Art. 58", "Publicações, projetos e eventos dos cursos técnicos", "tecnico", publicacoes, ["mapa", "turmas"]),
   ...["manha", "tarde", "noite"].map((turno) => cargo(`conselho-fiscal-${turno}`, `Conselho Fiscal — ${turno === "manha" ? "manhã" : turno}`, "Arts. 70 e 74", "Consulta aos registros financeiros, documentos e reuniões, sem alterar as contas; duas senhas para efetivo e suplente", "geral", [], ["movimentos", "documentos", "arquivos", "reunioes"])),
   cargo("coe-presidente", "Comissão Eleitoral — Presidente", "Arts. 95 e 96", "Publicações, documentos e reuniões do processo eleitoral", "eleitoral", ["noticias", "projetos", "eventos", "documentos", "arquivos", "reunioes"]),
   cargo("coe-vice-presidente", "Comissão Eleitoral — Vice-Presidente", "Arts. 95 e 96", "Organização e publicações do processo eleitoral", "eleitoral", ["noticias", "projetos", "eventos", "documentos", "arquivos", "reunioes"]),
@@ -50,7 +50,6 @@ export type PermissoesCargo = Pick<CargoPainel, "editar" | "consultar" | "public
 export const menusGerenciaveis: Array<{ chave: RecursoPainel; nome: string }> = [
   { chave: "noticias", nome: "Notícias" },
   { chave: "calendario", nome: "Calendário" }, { chave: "cantina", nome: "Cantina" },
-  { chave: "estagios", nome: "Central de Estágios" },
   { chave: "projetos", nome: "Projetos" },
   { chave: "membros", nome: "Equipe" }, { chave: "movimentos", nome: "Transparência" },
   { chave: "documentos", nome: "Documentos — publicações" }, { chave: "arquivos", nome: "Documentos — biblioteca de arquivos" },
@@ -81,5 +80,5 @@ export function areaRestrita(cargoRecebido: string): AreaPainel | null {
   return !cargo || cargo.area === "geral" || cargo.chave === "comunicacao" ? null : cargo.area;
 }
 export function recursoConteudo(tipo: string): RecursoPainel {
-  return ({ noticias: "noticias", projetos: "projetos", membros: "membros", movimentos: "movimentos", documentos: "documentos", canais: "canais", eventos: "eventos", agenda: "calendario", cardapios: "cantina", oportunidades: "estagios" } as Record<string, RecursoPainel>)[tipo] || "geral";
+  return ({ noticias: "noticias", projetos: "projetos", membros: "membros", movimentos: "movimentos", documentos: "documentos", canais: "canais", eventos: "eventos", agenda: "calendario", cardapios: "cantina" } as Record<string, RecursoPainel>)[tipo] || "geral";
 }

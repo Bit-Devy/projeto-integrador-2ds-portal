@@ -11,7 +11,7 @@ import type { TipoConteudo } from "../../conteudo/tipos";
 import { exigirAdministradorApi, origemValida } from "../../lib/autorizacao";
 import { ErroJsonInvalido, lerObjetoJson } from "../../lib/corpo-json";
 // valida os botões e protege os documentos que têm uma versão central
-import { paginasPublicadas, caminhoInterno } from "../../conteudo/paginas";
+import { paginasPublicadas, caminhoInterno, destinoDaCentralRemovida } from "../../conteudo/paginas";
 
 // importa o arquivo do painel e a confirmação de senha
 import { consultarNoticiasPainel, prepararNoticia } from "../../conteudo/noticias-gestao";
@@ -28,7 +28,7 @@ import type { ModuloPortal } from "../../servicos/tipos";
 
 // lista os tipos aceitos pela api
 const tiposPermitidos: TipoConteudo[] = [
-  "agenda", "cardapios", "oportunidades",
+  "agenda", "cardapios",
   "membros",
   "eventos",
   "noticias",
@@ -42,7 +42,6 @@ const tiposPermitidos: TipoConteudo[] = [
 const camposObrigatorios: Record<TipoConteudo, string[]> = {
   agenda: ["titulo", "data", "modalidade", "descricao"],
   cardapios: ["titulo", "data", "categoria", "turno", "descricao"],
-  oportunidades: ["titulo", "categoria", "organizacao", "local", "escolaridade", "requisitos", "descricao", "data", "situacao", "link", "fonte"],
   membros: ["nome", "diretoria"],
   eventos: ["titulo", "data", "horario", "local", "categoria", "descricao"],
   noticias: ["titulo", "data", "categoria", "resumo"],
@@ -93,7 +92,7 @@ export async function GET(request: Request) {
     }
 
     // monta a consulta pública ou privada
-    const area = mostrarTodos && ["noticias", "projetos", "documentos", "eventos", "agenda", "cardapios", "oportunidades"].includes(tipo) ? url.searchParams.get("areaResponsavel") : null;
+    const area = mostrarTodos && ["noticias", "projetos", "documentos", "eventos", "agenda", "cardapios"].includes(tipo) ? url.searchParams.get("areaResponsavel") : null;
     const filtro = mostrarTodos
       ? "SELECT * FROM conteudos WHERE tipo = ?"
       : "SELECT * FROM conteudos WHERE tipo = ? AND publicado = 1";
@@ -118,9 +117,9 @@ export async function GET(request: Request) {
     const resultado = await getD1().prepare(consulta).bind(tipo, ...(area ? [area] : []), ...(ano ? [ano] : [])).all<LinhaConteudo>();
 
     let itens = resultado.results.map(formatarLinha);
-    if (!mostrarTodos && ["agenda", "cardapios", "oportunidades"].includes(tipo)) {
+    if (!mostrarTodos && (tipo === "agenda" || tipo === "cardapios")) {
       const modulos = await obterModulos();
-      const modulo = ({ agenda: "calendario", cardapios: "cantina", oportunidades: "estagios" } as const)[tipo as "agenda" | "cardapios" | "oportunidades"];
+      const modulo = tipo === "agenda" ? "calendario" : "cantina";
       if (!moduloAtivo(modulos, modulo)) return Response.json({ erro: "Esta página está desativada." }, { status: 404 });
       if (tipo === "cardapios") itens = itens.filter((item) => moduloAtivo(modulos, String(item.dados.categoria) as ModuloPortal));
       if (tipo === "agenda") {
@@ -183,7 +182,7 @@ export async function PUT(request: Request) {
     // retira do portal sem revalidar os campos de um cadastro antigo
     if (dadosRecebidos.acao === "arquivar") {
       const registro = await getD1().prepare("SELECT * FROM conteudos WHERE id = ?").bind(id).first<LinhaConteudo>();
-      if (!registro) return Response.json({ erro: "Registro não encontrado." }, { status: 404 });
+      if (!registro || !tiposPermitidos.includes(registro.tipo)) return Response.json({ erro: "Registro não encontrado." }, { status: 404 });
       const { resposta } = await exigirAdministradorApi(recursoConteudo(registro.tipo));
       if (resposta) return resposta;
       if (registro.tipo === "movimentos" && !movimentoDoAnoAtual(registro)) return erroMovimentoArquivado();
@@ -249,6 +248,7 @@ export async function DELETE(request: Request) {
     if (!Number.isInteger(id) || id <= 0) throw new Error("Registro inválido.");
     const registro = await getD1().prepare("SELECT * FROM conteudos WHERE id = ?").bind(id).first<LinhaConteudo>();
     if (registro) {
+      if (!tiposPermitidos.includes(registro.tipo)) return Response.json({ erro: "Registro não encontrado." }, { status: 404 });
       const { resposta: bloqueio } = await exigirAdministradorApi(recursoConteudo(registro.tipo));
       if (bloqueio) return bloqueio;
       if (registro.tipo === "movimentos" && !movimentoDoAnoAtual(registro)) return erroMovimentoArquivado();
@@ -394,6 +394,12 @@ function formatarLinha(linha: LinhaConteudo) {
   } catch {
     dados = {};
   }
+  // retira apenas os atalhos antigos que levavam à central removida
+  if (linha.tipo === "noticias" && destinoDaCentralRemovida(dados.botaoInternoUrl)) {
+    dados.botaoInternoAtivo = false;
+    dados.botaoInternoUrl = "";
+  }
+  if (linha.tipo === "agenda" && destinoDaCentralRemovida(dados.paginaUrl)) dados.paginaUrl = "";
   const ano = linha.tipo === "movimentos" ? Number(String(dados.data || "").slice(0, 4)) || anoDoRegistro(dados, linha.criado_em) : anoDoRegistro(dados, linha.criado_em);
   if (tiposComAno.includes(linha.tipo)) dados.ano = ano;
   // retira a opção antiga também dos registros já existentes

@@ -84,7 +84,6 @@ function idDoSubmenu(nome: string) {
 export default function EstruturaPortal({ children, modulosIniciais }: { children: ReactNode; modulosIniciais: ModulosPortal }) {
   const [modulos, setModulos] = useState(modulosIniciais);
   const menuVisivel = itensMenu.filter((item) => item.destino !== "/calendario" || modulos.calendario).map((item) => item.nome === "Mais" ? { ...item, subitens: item.subitens?.filter((subitem) => subitem.destino !== "/cantina" || modulos.cantina) } : item);
-  if (modulos.estagios) menuVisivel.splice(menuVisivel.length - 1, 0, { nome: "Central de Estágios", destino: "/estagios" });
   // reflete as chaves salvas no painel sem precisar sair da sessão
   useEffect(() => {
     const controle = new AbortController();

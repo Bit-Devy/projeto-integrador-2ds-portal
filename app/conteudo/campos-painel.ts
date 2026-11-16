@@ -46,30 +46,6 @@ export const configuracaoPainel: Record<TipoConteudo, {
       { chave: "imagemUrl", rotulo: "Foto", tipo: "arquivo" },
     ],
   },
-  // reúne os dados úteis para consultar uma vaga antes de se candidatar
-  oportunidades: {
-    nome: "Central de Estágios", singular: "oportunidade", descricao: "Vagas de estágio, emprego, jovem aprendiz e concursos, com fonte e prazo.",
-    campos: [
-      { chave: "titulo", rotulo: "Título da oportunidade", tipo: "text", obrigatorio: true },
-      { chave: "categoria", rotulo: "Tipo", tipo: "select", opcoes: [{ valor: "estagio", nome: "Estágio" }, { valor: "emprego", nome: "Emprego" }, { valor: "aprendiz", nome: "Jovem aprendiz" }, { valor: "concurso", nome: "Concurso" }] },
-      { chave: "organizacao", rotulo: "Empresa ou instituição", tipo: "text", obrigatorio: true },
-      { chave: "local", rotulo: "Cidade ou local", tipo: "text", obrigatorio: true },
-      { chave: "modalidade", rotulo: "Modalidade de trabalho", tipo: "select", opcoes: [{ valor: "Presencial", nome: "Presencial" }, { valor: "Híbrido", nome: "Híbrido" }, { valor: "Remoto", nome: "Remoto" }] },
-      { chave: "escolaridade", rotulo: "Escolaridade ou curso", tipo: "text", obrigatorio: true },
-      { chave: "requisitos", rotulo: "Requisitos", tipo: "textarea", obrigatorio: true },
-      { chave: "descricao", rotulo: "Atividades e informações", tipo: "textarea", obrigatorio: true },
-      { chave: "jornada", rotulo: "Jornada e horário", tipo: "text" },
-      { chave: "remuneracao", rotulo: "Bolsa ou remuneração", tipo: "text", dica: "Ex.: R$ 900,00 por mês ou A informar." },
-      { chave: "beneficios", rotulo: "Benefícios", tipo: "text" },
-      { chave: "quantidade", rotulo: "Quantidade de vagas", tipo: "text" },
-      { chave: "data", rotulo: "Data de divulgação", tipo: "date", obrigatorio: true },
-      { chave: "prazo", rotulo: "Último dia para inscrição", tipo: "date", dica: "Após o prazo, aparece como encerrada automaticamente. Deixe vazio se não houver prazo informado." },
-      { chave: "situacao", rotulo: "Situação", tipo: "select", opcoes: [{ valor: "aberta", nome: "Inscrições abertas" }, { valor: "encerrada", nome: "Encerrada" }, { valor: "suspensa", nome: "Suspensa" }] },
-      { chave: "link", rotulo: "Link da candidatura ou edital", tipo: "url", obrigatorio: true },
-      { chave: "fonte", rotulo: "Fonte da informação", tipo: "text", obrigatorio: true },
-      { chave: "arquivoUrl", rotulo: "Edital ou documento", tipo: "arquivo" },
-    ],
-  },
   // configura o formulário de integrantes
   membros: {
     nome: "Equipe",
@@ -209,4 +185,4 @@ export const configuracaoPainel: Record<TipoConteudo, {
 };
 
 // define a ordem das seções no painel
-export const tiposConteudoPainel: TipoConteudo[] = ["noticias", "agenda", "cardapios", "oportunidades", "eventos", "projetos", "membros", "movimentos", "documentos", "canais"];
+export const tiposConteudoPainel: TipoConteudo[] = ["noticias", "agenda", "cardapios", "eventos", "projetos", "membros", "movimentos", "documentos", "canais"];

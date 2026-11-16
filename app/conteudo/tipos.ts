@@ -1,5 +1,5 @@
 // importa os dados dos serviços do estudante
-import type { CompromissoCalendario, ItemCardapio, Oportunidade } from "../servicos/tipos";
+import type { CompromissoCalendario, ItemCardapio } from "../servicos/tipos";
 
 // lista os tipos de conteúdo do portal
 export type TipoConteudo =
@@ -11,7 +11,6 @@ export type TipoConteudo =
   | "canais"
   | "agenda"
   | "cardapios"
-  | "oportunidades"
   | "movimentos";
 
 // permite retirar cadastros operacionais que podem ser substituídos
@@ -119,7 +118,6 @@ export type MovimentoGecep = RegistroBase & {
 export type DadosPorTipo = {
   agenda: CompromissoCalendario;
   cardapios: ItemCardapio;
-  oportunidades: Oportunidade;
   membros: MembroGecep;
   eventos: EventoGecep;
   noticias: NoticiaGecep;

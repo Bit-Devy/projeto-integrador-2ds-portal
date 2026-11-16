@@ -8,13 +8,13 @@ export const paginasFixas = [
   ["/eventos", "Central de eventos"], ["/eventos/internos", "Eventos internos"], ["/eventos/interclasses", "Interclasses"],
   ["/eventos/reunioes", "Reuniões e atas"], ["/crt", "CRT"], ["/representantes", "Representantes"],
   ["/projetos", "Projetos"], ["/sugestoes", "Sugestões"], ["/contato", "Contato"], ["/mapa-do-colegio", "Mapa do colégio"],
-  ["/calendario", "Calendário"], ["/calendario#calculadora", "Calculadora de faltas"], ["/cantina", "Cantina"], ["/estagios", "Central de Estágios"],
+  ["/calendario", "Calendário"], ["/calendario#calculadora", "Calculadora de faltas"], ["/cantina", "Cantina"],
 ];
 
 // mostra apenas os atalhos gerais antes de abrir a busca de uma publicação
 export async function paginasBasicasPublicadas() {
   const modulos = await obterModulos();
-  return paginasFixas.filter(([url]) => !(url.startsWith("/calendario") && !modulos.calendario || url.startsWith("/cantina") && !modulos.cantina || url.startsWith("/estagios") && !modulos.estagios)).map(([url, nome]) => ({ url, nome }));
+  return paginasFixas.filter(([url]) => !(url.startsWith("/calendario") && !modulos.calendario || url.startsWith("/cantina") && !modulos.cantina)).map(([url, nome]) => ({ url, nome }));
 }
 
 // reúne páginas gerais e detalhes que já estão disponíveis ao público
@@ -31,7 +31,7 @@ export async function paginasPublicadas() {
       FROM partidas p INNER JOIN campeonatos c ON c.id = p.campeonato_id INNER JOIN fases_campeonato f ON f.id = p.fase_id
       WHERE p.publicado = 1 AND p.ativo = 1 AND c.publicado = 1 AND c.chave_publicada = 1 AND (c.ativo = 1 OR c.arquivado_em IS NOT NULL) AND f.publicado = 1 AND f.ativo = 1`),
   ]);
-  const fixas = paginasFixas.filter(([url]) => !(url.startsWith("/calendario") && !modulos.calendario || url.startsWith("/cantina") && !modulos.cantina || url.startsWith("/estagios") && !modulos.estagios));
+  const fixas = paginasFixas.filter(([url]) => !(url.startsWith("/calendario") && !modulos.calendario || url.startsWith("/cantina") && !modulos.cantina));
   return [...fixas.map(([url, nome]) => ({ url, nome })), ...resultados.flatMap((resultado) => resultado.results)];
 }
 
@@ -42,4 +42,10 @@ export function caminhoInterno(valor: string) {
     const url = new URL(valor, "https://portal.gecep.local");
     return url.origin === "https://portal.gecep.local" ? url : null;
   } catch { return null; }
+}
+
+// reconhece links internos antigos para a central removida
+export function destinoDaCentralRemovida(valor: unknown) {
+  const caminho = caminhoInterno(String(valor || ""))?.pathname;
+  return caminho === "/estagios" || caminho?.startsWith("/estagios/");
 }
