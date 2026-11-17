@@ -219,7 +219,7 @@ test("séries distantes só se encontram na final quando há grupos completos", 
 });
 
 test("a chave alinha fases às partidas de origem, inclusive vínculos personalizados", async () => {
-  const { posicionarChave } = await importarDominio("interclasse-utilitarios");
+  const { calcularZoomDaChave, margemDaChave, posicionarChave } = await importarDominio("interclasse-utilitarios");
   const a = { id: 1, proximaPartidaId: 3 };
   const b = { id: 2, proximaPartidaId: 3 };
   const final = { id: 3, proximaPartidaId: null };
@@ -242,6 +242,18 @@ test("a chave alinha fases às partidas de origem, inclusive vínculos personali
     const centro = espelhado.posicoes.get(final).x;
     assert.equal(centro * 2 + espelhado.larguraJogo, espelhado.largura);
     assert.equal(espelhado.posicoes.size, desenho.posicoes.size);
+    // os dois lados ficam na altura da final mesmo quando só um deles tem semifinal
+    for (const lado of [-1, 1]) {
+      const linhas = [...espelhado.posicoes.values()].filter(({ x }) => Math.sign(x - centro) === lado).map(({ y }) => y);
+      if (linhas.length) assert.equal((Math.min(...linhas) + Math.max(...linhas)) / 2, espelhado.posicoes.get(final).y, `${quantidade} turmas no lado ${lado}`);
+    }
+    for (const layout of [desenho, espelhado]) for (const [largura, altura] of [[340, 580], [960, 720], [1770, 650]]) {
+      const alturaChave = layout.altura + layout.topoFases;
+      const zoom = calcularZoomDaChave(largura, altura, layout.largura, alturaChave);
+      assert.ok(zoom > 0 && zoom <= 1);
+      assert.ok(layout.largura * zoom + margemDaChave * 2 <= largura + 1e-9);
+      assert.ok(alturaChave * zoom + margemDaChave * 2 <= altura + 1e-9);
+    }
     for (const { origem, destino, pontos } of espelhado.conexoes) {
       const inicio = espelhado.posicoes.get(origem);
       const fim = espelhado.posicoes.get(destino);

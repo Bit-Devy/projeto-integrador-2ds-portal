@@ -51,12 +51,21 @@ export type JogoPosicionado = {
 
 export type ModoChave = "dois-lados" | "um-lado";
 
+// deixa uma margem em volta de toda a chave na visão inicial
+export const margemDaChave = 24;
+export function calcularZoomDaChave(larguraVisor: number, alturaVisor: number, larguraChave: number, alturaChave: number) {
+  const larguraDisponivel = Math.max(1, larguraVisor - margemDaChave * 2);
+  const alturaDisponivel = Math.max(1, alturaVisor - margemDaChave * 2);
+  return Math.min(1, larguraDisponivel / larguraChave, alturaDisponivel / alturaChave);
+}
+
 // organiza cada grupo de jogos pelo caminho até a final
 export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos: T[]; nome?: string; tipo?: string }>, modo: ModoChave = "um-lado") {
   // usa cartões iguais e deixa espaço para as linhas
   const alturaJogo = 184;
   const larguraJogo = 280;
   const intervalo = 24;
+  const passoLinha = alturaJogo + intervalo;
   const passoColuna = larguraJogo + 56;
   const topoFases = 46;
   const posicoes = new Map<T, { x: number; y: number }>();
@@ -100,14 +109,19 @@ export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos:
 
   // coloca os jogos iniciais juntos e centraliza seus destinos
   let proximaLinha = 0;
-  function posicionar(jogo: T, direcao: -1 | 1): number {
+  function posicionar(jogo: T, direcao: -1 | 1, deslocamento = 0): number {
     const grupo = origens.get(jogo) ?? [];
-    const linhas = grupo.map((origem) => posicionar(origem, direcao));
-    const y = linhas.length ? (Math.min(...linhas) + Math.max(...linhas)) / 2 : proximaLinha++ * (alturaJogo + intervalo);
+    const linhas = grupo.map((origem) => posicionar(origem, direcao, deslocamento));
+    const y = linhas.length ? (Math.min(...linhas) + Math.max(...linhas)) / 2 : proximaLinha++ * passoLinha + deslocamento;
     const coluna = colunas.get(jogo)!;
     const x = direcao === 1 ? colunaX(coluna) : (2 * colunaFinal - coluna) * passoColuna;
     posicoes.set(jogo, { x, y });
     return y;
+  }
+
+  // conta as linhas ocupadas pelos jogos que não recebem vencedores
+  function contarLinhas(grupo: T[]): number {
+    return grupo.reduce((total, jogo) => total + Math.max(1, contarLinhas(origens.get(jogo) ?? [])), 0);
   }
 
   // coloca cada ramo da final no lado da vaga para a qual ele avança
@@ -124,13 +138,15 @@ export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos:
       (lado === "a" ? esquerda : direita).push(origem);
     }
     const primeiraLinha = proximaLinha;
-    const linhasEsquerda = esquerda.map((origem) => posicionar(origem, 1));
-    const fimEsquerda = proximaLinha;
+    const linhasEsquerda = contarLinhas(esquerda);
+    const linhasDireita = contarLinhas(direita);
+    const linhasDoGrupo = Math.max(linhasEsquerda, linhasDireita);
+    // centraliza cada lado na mesma altura mesmo quando há folgas
+    esquerda.forEach((origem) => posicionar(origem, 1, (linhasDoGrupo - linhasEsquerda) * passoLinha / 2));
     proximaLinha = primeiraLinha;
-    const linhasDireita = direita.map((origem) => posicionar(origem, -1));
-    proximaLinha = Math.max(proximaLinha, fimEsquerda);
-    const linhas = [...linhasEsquerda, ...linhasDireita];
-    posicoes.set(jogo, { x: colunaFinal * passoColuna, y: (Math.min(...linhas) + Math.max(...linhas)) / 2 });
+    direita.forEach((origem) => posicionar(origem, -1, (linhasDoGrupo - linhasDireita) * passoLinha / 2));
+    proximaLinha = primeiraLinha + linhasDoGrupo;
+    posicoes.set(jogo, { x: colunaX(colunaFinal), y: (primeiraLinha + (linhasDoGrupo - 1) / 2) * passoLinha });
   }
 
   // liga os cartões pelas bordas voltadas para o próximo jogo

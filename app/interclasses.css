@@ -290,12 +290,12 @@
 .ic-area-desenho {
   position: relative;
   min-width: 100%;
+  min-height: 100%;
   overflow: clip;
 }
 
 .ic-prancheta {
   position: absolute;
-  top: 24px;
   transform-origin: top left;
 }
 

@@ -1,13 +1,13 @@
 "use client";
 
 // usa os controles da tela e guarda as alterações da navegação
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 // usa os mesmos dados da chave pública e do painel
 import type { FasePublica, JogoPublico } from "../eventos/modelo-publico";
 // prepara os textos que aparecem nos jogos
 import { formatarData, normalizarBusca, rotuloSituacao, textoParticipante } from "../eventos/modelo-publico";
 // calcula a posição dos cartões e das linhas
-import { posicionarChave, type ModoChave } from "../eventos/interclasse-utilitarios";
+import { calcularZoomDaChave, margemDaChave, posicionarChave, type ModoChave } from "../eventos/interclasse-utilitarios";
 
 // guarda o jogo e o lado escolhido para a troca
 export type PosicaoChave = { partidaId: number; posicao: "a" | "b" };
@@ -17,10 +17,13 @@ export function nomeEquipe(jogo: JogoPublico, lado: "a" | "b") {
   return (lado === "a" ? jogo.participanteANome || jogo.nomeParticipanteA || textoParticipante(jogo.participanteA) : jogo.participanteBNome || jogo.nomeParticipanteB || textoParticipante(jogo.participanteB)) || "A definir";
 }
 
-// move o visor para o centro de uma fase
-function rolarParaColuna(visor: HTMLDivElement, x: number, top: number, behavior: ScrollBehavior = "auto") {
-  const margem = visor.querySelector<HTMLElement>(".ic-prancheta")?.offsetLeft ?? 24;
-  visor.scrollTo({ left: margem + x - visor.clientWidth / 2, top, behavior });
+// move o visor para uma posição da prancheta
+function rolarParaPonto(visor: HTMLDivElement, prancheta: HTMLDivElement, x: number, y: number, behavior: ScrollBehavior = "auto") {
+  visor.scrollTo({
+    left: prancheta.offsetLeft + x - visor.clientWidth / 2,
+    top: prancheta.offsetTop + y - visor.clientHeight / 2,
+    behavior,
+  });
 }
 
 // mostra a chave e permite navegar ou editar os confrontos
@@ -36,8 +39,11 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
   // guarda a busca, a navegação e a posição escolhida
   const filtroId = useId();
   const visor = useRef<HTMLDivElement>(null);
+  const prancheta = useRef<HTMLDivElement>(null);
   const arraste = useRef<{ x: number; y: number; esquerda: number; topo: number } | null>(null);
-  const [zoom, setZoom] = useState(1);
+  const [zoomEncaixe, setZoomEncaixe] = useState(1);
+  const [zoomEscolhido, setZoomEscolhido] = useState<number | null>(null);
+  const zoom = Math.max(zoomEncaixe, zoomEscolhido ?? zoomEncaixe);
   const [modo, setModo] = useState<ModoChave>("dois-lados");
   const [busca, setBusca] = useState("");
   const [selecionada, setSelecionada] = useState<PosicaoChave | null>(null);
@@ -46,21 +52,27 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
   const dialogo = useRef<HTMLDialogElement>(null);
   const botaoTelaCheia = useRef<HTMLButtonElement>(null);
   const estavaEmTelaCheia = useRef(false);
-  const rolagem = useRef({ left: 0, top: 0 });
-  // recupera o foco e a rolagem ao voltar da tela cheia
-  useEffect(() => {
-    if (telaCheia) dialogo.current?.showModal();
+  const centroDoVisor = useRef<{ x: number; y: number } | null>(null);
+  // abre o visor antes de medir o espaço e recupera o foco ao sair
+  useLayoutEffect(() => {
+    if (telaCheia && !dialogo.current?.open) dialogo.current?.showModal();
     else if (estavaEmTelaCheia.current) botaoTelaCheia.current?.focus({ preventScroll: true });
-    const elemento = visor.current;
-    if (elemento && (telaCheia || estavaEmTelaCheia.current)) {
-      elemento.scrollTo({ left: rolagem.current.left - elemento.clientWidth / 2, top: rolagem.current.top });
-    }
     estavaEmTelaCheia.current = telaCheia;
   }, [telaCheia]);
-  // salva a posição antes de mudar o tamanho da tela
-  function alternarTelaCheia() {
+
+  // usa o mesmo ponto da chave ao ampliar ou mudar o tamanho da tela
+  function guardarCentro() {
     const elemento = visor.current;
-    rolagem.current = { left: elemento ? elemento.scrollLeft + elemento.clientWidth / 2 : 0, top: elemento?.scrollTop ?? 0 };
+    const quadro = prancheta.current;
+    if (!elemento || !quadro) return;
+    centroDoVisor.current = {
+      x: (elemento.scrollLeft + elemento.clientWidth / 2 - quadro.offsetLeft) / zoom,
+      y: (elemento.scrollTop + elemento.clientHeight / 2 - quadro.offsetTop) / zoom,
+    };
+  }
+
+  function alternarTelaCheia() {
+    if (zoomEscolhido !== null) guardarCentro();
     setTelaCheia((atual) => !atual);
   }
   // organiza as fases e calcula onde cada jogo aparece
@@ -85,22 +97,47 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
   }).sort((a, b) => a.x - b.x), [colunas, desenho]);
   const jogos = colunas.flatMap((fase) => fase.jogos);
 
-  // enquadra a final na visão dos dois lados ao abrir ou trocar o formato
-  const final = colunasOrganizadas.find((fase) => fase.indiceFase === desenho.colunaFinal)?.jogos[0];
-  const pontoFinal = final && desenho.posicoes.get(final);
-  const centroFinal = desenho.espelhada && pontoFinal ? pontoFinal.x + desenho.larguraJogo / 2 : null;
-  const alturaFinal = pontoFinal ? pontoFinal.y + desenho.topoFases + desenho.alturaJogo / 2 : 0;
   const largura = desenho.largura;
-  const zoomAtual = useRef(zoom);
-  useEffect(() => {
-    zoomAtual.current = zoom;
-  }, [zoom]);
-  useEffect(() => {
+  const altura = desenho.altura + desenho.topoFases;
+  const temColunas = colunas.length > 0;
+  // mede o visor para mostrar a chave inteira na largura e na altura
+  useLayoutEffect(() => {
     const elemento = visor.current;
     if (!elemento) return;
-    if (centroFinal === null) elemento.scrollTo({ left: 0, top: 0 });
-    else rolarParaColuna(elemento, centroFinal * zoomAtual.current, 24 + alturaFinal * zoomAtual.current - elemento.clientHeight / 2);
-  }, [centroFinal, alturaFinal, largura, modo]);
+    function medir() {
+      if (!elemento?.clientWidth || !elemento.clientHeight) return;
+      setZoomEncaixe(calcularZoomDaChave(elemento.clientWidth, elemento.clientHeight, largura, altura));
+    }
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(elemento);
+    return () => observador.disconnect();
+  }, [largura, altura, telaCheia, modo, temColunas]);
+
+  // mantém a região que a pessoa estava vendo ao ajustar o zoom
+  useLayoutEffect(() => {
+    const centro = centroDoVisor.current;
+    if (!centro || !visor.current || !prancheta.current) return;
+    rolarParaPonto(visor.current, prancheta.current, centro.x * zoom, centro.y * zoom);
+    centroDoVisor.current = null;
+  }, [zoom, telaCheia]);
+
+  // o menor zoom e o botão central sempre voltam para a chave inteira
+  function enquadrarChave() {
+    centroDoVisor.current = null;
+    setZoomEscolhido(null);
+    visor.current?.scrollTo({ left: 0, top: 0 });
+  }
+
+  function ajustarZoom(fator: number) {
+    const proximo = Math.min(1.4, zoom * fator);
+    if (proximo <= zoomEncaixe) enquadrarChave();
+    else {
+      guardarCentro();
+      setZoomEscolhido(proximo);
+    }
+  }
+
   // encontra as turmas mesmo com diferenças na escrita
   const termo = normalizarBusca(busca);
   const corresponde = (jogo: JogoPublico) => !termo || normalizarBusca(`${nomeEquipe(jogo, "a")} ${nomeEquipe(jogo, "b")}`).includes(termo);
@@ -109,11 +146,12 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
   // mostra o centro da fase escolhida sem deixar os jogos fora da tela
   function irParaFase(fase: (typeof colunasOrganizadas)[number]) {
     const elemento = visor.current;
-    if (!elemento || !fase.jogos.length) return;
+    const quadro = prancheta.current;
+    if (!elemento || !quadro || !fase.jogos.length) return;
     const primeiro = desenho.posicoes.get(fase.jogos[0])!.y;
     const ultimo = desenho.posicoes.get(fase.jogos.at(-1)!)!.y + desenho.alturaJogo;
-    rolarParaColuna(elemento, (fase.x + desenho.larguraJogo / 2) * zoom,
-      Math.max(0, ((primeiro + ultimo) / 2 + desenho.topoFases) * zoom + 24 - elemento.clientHeight / 2),
+    rolarParaPonto(elemento, quadro, (fase.x + desenho.larguraJogo / 2) * zoom,
+      ((primeiro + ultimo) / 2 + desenho.topoFases) * zoom,
       window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
   }
 
@@ -140,19 +178,11 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
       <div className="ic-atalhos-fases" role="group" aria-label="Ir para uma fase">{colunasOrganizadas.filter((fase) => fase.jogos.length).map((fase) => <button type="button" key={`${fase.indiceFase}-${fase.x}`} onClick={() => irParaFase(fase)}>{fase.rotulo}</button>)}</div>
       <div className="ic-controles-visualizacao">
         <div className="ic-zoom">
-          <button type="button" aria-label="Diminuir zoom" disabled={zoom <= 0.6} onClick={() => setZoom((atual) => Math.max(0.6, +(atual - 0.1).toFixed(1)))}>−</button>
-          <button type="button" aria-label="Restaurar zoom e posição" onClick={() => {
-            setZoom(1);
-            requestAnimationFrame(() => {
-              const elemento = visor.current;
-              if (!elemento) return;
-              if (centroFinal === null) elemento.scrollTo({ left: 0, top: 0 });
-              else rolarParaColuna(elemento, centroFinal, 24 + alturaFinal - elemento.clientHeight / 2);
-            });
-          }}>{Math.round(zoom * 100)}%</button>
-          <button type="button" aria-label="Aumentar zoom" disabled={zoom >= 1.4} onClick={() => setZoom((atual) => Math.min(1.4, +(atual + 0.1).toFixed(1)))}>+</button>
+          <button type="button" aria-label="Diminuir zoom" disabled={zoom <= zoomEncaixe} onClick={() => ajustarZoom(1 / 1.25)}>−</button>
+          <button type="button" aria-label="Enquadrar a chave inteira" title="Enquadrar a chave inteira" onClick={enquadrarChave}>{Math.round(zoom * 100)}%</button>
+          <button type="button" aria-label="Aumentar zoom" disabled={zoom >= 1.4} onClick={() => ajustarZoom(1.25)}>+</button>
         </div>
-        {telaCheia && <select aria-label="Visualização da chave" value={modo} onChange={(evento) => setModo(evento.target.value === "um-lado" ? "um-lado" : "dois-lados")}>
+        {telaCheia && <select aria-label="Visualização da chave" value={modo} onChange={(evento) => { enquadrarChave(); setModo(evento.target.value === "um-lado" ? "um-lado" : "dois-lados"); }}>
           <option value="dois-lados">Dois lados</option>
           <option value="um-lado">Um lado</option>
         </select>}
@@ -161,15 +191,19 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
     {selecionada && <div className="ic-selecao" role="status">Selecione a posição de destino para trocar as turmas.<button type="button" onClick={() => setSelecionada(null)}>Cancelar troca</button></div>}
     {termo && <p className="ic-resultado-busca" role="status">{jogos.filter(corresponde).length} jogo(s) com “{busca}”</p>}
     {/* move a chave quando a pessoa arrasta o fundo */}
-    <div className="ic-visor" ref={visor} tabIndex={0} role="region" aria-label="Chave com rolagem horizontal e vertical. Use as setas ou arraste o fundo."
+    <div className="ic-visor" ref={visor} style={telaCheia ? undefined : { height: altura + margemDaChave * 2 + 2 }} tabIndex={0} role="region" aria-label="Chave com rolagem horizontal e vertical. Use as setas ou arraste o fundo."
       onPointerDown={(e) => { if (e.pointerType !== "mouse" || e.button !== 0 || (e.target as HTMLElement).closest("button, input")) return; const elemento = e.currentTarget; arraste.current = { x: e.clientX, y: e.clientY, esquerda: elemento.scrollLeft, topo: elemento.scrollTop }; elemento.setPointerCapture(e.pointerId); elemento.classList.add("arrastando"); }}
       onPointerMove={(e) => { if (!arraste.current) return; e.currentTarget.scrollLeft = arraste.current.esquerda - (e.clientX - arraste.current.x); e.currentTarget.scrollTop = arraste.current.topo - (e.clientY - arraste.current.y); }}
       onPointerUp={(e) => { arraste.current = null; e.currentTarget.classList.remove("arrastando"); }}
       onPointerCancel={(e) => { arraste.current = null; e.currentTarget.classList.remove("arrastando"); }}>
-      <div className="ic-area-desenho" style={{ width: desenho.largura * zoom + 48, height: (desenho.altura + desenho.topoFases + 24) * zoom + 48 }}>
-        <div className="ic-prancheta" style={{ left: `max(24px, calc((100% - ${desenho.largura * zoom}px) / 2))`, width: desenho.largura, height: desenho.altura + desenho.topoFases + 24, transform: `scale(${zoom})` }}>
+      <div className="ic-area-desenho" style={{ width: largura * zoom + margemDaChave * 2, height: altura * zoom + margemDaChave * 2 }}>
+        <div className="ic-prancheta" ref={prancheta} style={{
+          left: `max(${margemDaChave}px, calc((100% - ${largura * zoom}px) / 2))`,
+          top: `max(${margemDaChave}px, calc((100% - ${altura * zoom}px) / 2))`,
+          width: largura, height: altura, transform: `scale(${zoom})`,
+        }}>
           {/* liga cada jogo ao destino do vencedor */}
-          <svg className="ic-conexoes" width={desenho.largura} height={desenho.altura + desenho.topoFases + 24} aria-hidden="true"><g transform={`translate(0 ${desenho.topoFases})`}>{desenho.conexoes.map((conexao, indice) =>
+          <svg className="ic-conexoes" width={largura} height={altura} aria-hidden="true"><g transform={`translate(0 ${desenho.topoFases})`}>{desenho.conexoes.map((conexao, indice) =>
             <path key={conexao.origem.id ?? indice} className={`${conexao.pulaFase ? "ic-conexao-folga" : ""} ${termo && corresponde(conexao.origem) ? "ic-conexao-destaque" : ""}`} d={conexao.caminho} />
           )}</g></svg>
           {colunasOrganizadas.map((fase) => <section key={`${fase.indiceFase}-${fase.x}`} aria-label={fase.rotulo}>
