@@ -41,9 +41,9 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
   const visor = useRef<HTMLDivElement>(null);
   const prancheta = useRef<HTMLDivElement>(null);
   const arraste = useRef<{ x: number; y: number; esquerda: number; topo: number } | null>(null);
-  const [zoomEncaixe, setZoomEncaixe] = useState(1);
+  const [medidasVisor, setMedidasVisor] = useState<{ largura: number; altura: number } | null>(null);
   const [zoomEscolhido, setZoomEscolhido] = useState<number | null>(null);
-  const zoom = Math.max(zoomEncaixe, zoomEscolhido ?? zoomEncaixe);
+  const [faseEmFoco, setFaseEmFoco] = useState<string | null>(null);
   const [modo, setModo] = useState<ModoChave>("dois-lados");
   const [busca, setBusca] = useState("");
   const [selecionada, setSelecionada] = useState<PosicaoChave | null>(null);
@@ -82,49 +82,90 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
   const desenho = useMemo(() => posicionarChave(colunas, modo), [colunas, modo]);
   // mantém a leitura e o teclado na mesma ordem dos cartões na tela
   const colunasOrganizadas = useMemo(() => colunas.flatMap((fase, indiceFase) => {
-    const porPosicao = new Map<number, JogoPublico[]>();
+    const porPosicao = new Map<number, { jogos: JogoPublico[]; avancos: typeof desenho.avancos }>();
+    function grupoNaPosicao(x: number) {
+      const grupo = porPosicao.get(x) ?? { jogos: [], avancos: [] };
+      porPosicao.set(x, grupo);
+      return grupo;
+    }
     for (const jogo of fase.jogos) {
       const { x } = desenho.posicoes.get(jogo)!;
-      if (!porPosicao.has(x)) porPosicao.set(x, []);
-      porPosicao.get(x)!.push(jogo);
+      grupoNaPosicao(x).jogos.push(jogo);
     }
-    if (!porPosicao.size) porPosicao.set(desenho.colunaX(indiceFase), []);
-    return Array.from(porPosicao, ([x, jogos]) => ({
-      indiceFase, x, nome: fase.nome,
-      rotulo: porPosicao.size > 1 ? `${fase.nome} · ${x > desenho.colunaX(desenho.colunaFinal) ? "direita" : "esquerda"}` : fase.nome,
-      jogos: jogos.sort((a, b) => desenho.posicoes.get(a)!.y - desenho.posicoes.get(b)!.y),
-    }));
+    for (const avanco of desenho.avancos) {
+      if (avanco.indiceFase === indiceFase) grupoNaPosicao(avanco.x).avancos.push(avanco);
+    }
+    if (!porPosicao.size) grupoNaPosicao(desenho.colunaX(indiceFase));
+    return Array.from(porPosicao, ([x, { jogos, avancos }]) => {
+      const nome = fase.nome || `Fase ${indiceFase + 1}`;
+      const lado = x > desenho.colunaX(desenho.colunaFinal) ? "direita" : "esquerda";
+      const rotulo = desenho.espelhada && indiceFase < desenho.colunaFinal ? `${nome} · ${lado}` : nome;
+      jogos.sort((a, b) => desenho.posicoes.get(a)!.y - desenho.posicoes.get(b)!.y);
+      const primeiro = jogos[0];
+      const ultimo = jogos.at(-1);
+      const topo = Math.min(primeiro ? desenho.posicoes.get(primeiro)!.y : Infinity,
+        ...avancos.map((avanco) => avanco.y - desenho.alturaAvanco / 2));
+      const base = Math.max(ultimo ? desenho.posicoes.get(ultimo)!.y + desenho.alturaJogo : -Infinity,
+        ...avancos.map((avanco) => avanco.y + desenho.alturaAvanco / 2));
+      const foco = Number.isFinite(topo)
+        ? { x: x + desenho.larguraJogo / 2, y: (topo + base) / 2 + desenho.topoFases, altura: base - topo }
+        : null;
+      const confrontos = jogos.filter((jogo) => jogo.formaVitoria !== "bye").length;
+      const folgas = jogos.length - confrontos + avancos.length;
+      return { chave: `${indiceFase}-${x}`, indiceFase, x, nome, rotulo, jogos, avancos, foco, folgas, confrontos };
+    });
   }).sort((a, b) => a.x - b.x), [colunas, desenho]);
   const jogos = colunas.flatMap((fase) => fase.jogos);
 
   const largura = desenho.largura;
   const altura = desenho.altura + desenho.topoFases;
+  const foco = colunasOrganizadas.find((fase) => fase.chave === faseEmFoco)?.foco;
+  const zoomEncaixe = medidasVisor ? calcularZoomDaChave(medidasVisor.largura, medidasVisor.altura, largura, altura) : 1;
+  const zoomFase = foco && medidasVisor
+    ? calcularZoomDaChave(medidasVisor.largura, medidasVisor.altura, desenho.larguraJogo, foco.altura)
+    : zoomEncaixe;
+  const zoom = Math.max(zoomEncaixe, zoomEscolhido ?? zoomFase);
   const temColunas = colunas.length > 0;
-  // mede o visor para mostrar a chave inteira na largura e na altura
+
+  // reserva espaço para centralizar a fase mesmo quando a chave cabe na largura
+  const margemParaFoco = (metadeVisor: number, distancia: number) => Math.max(margemDaChave, metadeVisor - distancia * zoom);
+  const espacoFoco = foco && medidasVisor ? {
+    esquerda: margemParaFoco(medidasVisor.largura / 2, foco.x),
+    direita: margemParaFoco(medidasVisor.largura / 2, largura - foco.x),
+    topo: margemParaFoco(medidasVisor.altura / 2, foco.y),
+    base: margemParaFoco(medidasVisor.altura / 2, altura - foco.y),
+  } : null;
+
+  // mede o visor para enquadrar a chave ou a fase escolhida
   useLayoutEffect(() => {
     const elemento = visor.current;
     if (!elemento) return;
     function medir() {
-      if (!elemento?.clientWidth || !elemento.clientHeight) return;
-      setZoomEncaixe(calcularZoomDaChave(elemento.clientWidth, elemento.clientHeight, largura, altura));
+      const largura = elemento?.clientWidth ?? 0;
+      const altura = elemento?.clientHeight ?? 0;
+      if (!largura || !altura) return;
+      setMedidasVisor((atual) => atual?.largura === largura && atual.altura === altura ? atual : { largura, altura });
     }
     medir();
     const observador = new ResizeObserver(medir);
     observador.observe(elemento);
     return () => observador.disconnect();
-  }, [largura, altura, telaCheia, modo, temColunas]);
+  }, [telaCheia, temColunas]);
 
-  // mantém a região que a pessoa estava vendo ao ajustar o zoom
+  // navega depois de aplicar o zoom ao desenho
+  const focoX = foco?.x;
+  const focoY = foco?.y;
   useLayoutEffect(() => {
-    const centro = centroDoVisor.current;
-    if (!centro || !visor.current || !prancheta.current) return;
+    const centro = focoX !== undefined && focoY !== undefined ? { x: focoX, y: focoY } : centroDoVisor.current;
+    if (!visor.current || !prancheta.current || !centro) return;
     rolarParaPonto(visor.current, prancheta.current, centro.x * zoom, centro.y * zoom);
     centroDoVisor.current = null;
-  }, [zoom, telaCheia]);
+  }, [focoX, focoY, zoom, telaCheia, medidasVisor]);
 
   // o menor zoom e o botão central sempre voltam para a chave inteira
   function enquadrarChave() {
     centroDoVisor.current = null;
+    setFaseEmFoco(null);
     setZoomEscolhido(null);
     visor.current?.scrollTo({ left: 0, top: 0 });
   }
@@ -134,6 +175,7 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
     if (proximo <= zoomEncaixe) enquadrarChave();
     else {
       guardarCentro();
+      setFaseEmFoco(null);
       setZoomEscolhido(proximo);
     }
   }
@@ -143,16 +185,16 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
   const corresponde = (jogo: JogoPublico) => !termo || normalizarBusca(`${nomeEquipe(jogo, "a")} ${nomeEquipe(jogo, "b")}`).includes(termo);
   const mover = (distancia: number) => visor.current?.scrollBy({ left: distancia, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 
-  // mostra o centro da fase escolhida sem deixar os jogos fora da tela
+  // enquadra todos os cartões da fase e centraliza a coluna escolhida
   function irParaFase(fase: (typeof colunasOrganizadas)[number]) {
-    const elemento = visor.current;
-    const quadro = prancheta.current;
-    if (!elemento || !quadro || !fase.jogos.length) return;
-    const primeiro = desenho.posicoes.get(fase.jogos[0])!.y;
-    const ultimo = desenho.posicoes.get(fase.jogos.at(-1)!)!.y + desenho.alturaJogo;
-    rolarParaPonto(elemento, quadro, (fase.x + desenho.larguraJogo / 2) * zoom,
-      ((primeiro + ultimo) / 2 + desenho.topoFases) * zoom,
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
+    if (!fase.foco) return;
+    if (fase.chave === faseEmFoco && visor.current && prancheta.current) {
+      rolarParaPonto(visor.current, prancheta.current, fase.foco.x * zoom, fase.foco.y * zoom);
+      return;
+    }
+    centroDoVisor.current = null;
+    setZoomEscolhido(null);
+    setFaseEmFoco(fase.chave);
   }
 
   // troca as duas posições escolhidas pelo toque ou teclado
@@ -175,7 +217,7 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
     <div className="ic-chave-topo"><div><span className="ic-sobretitulo">DO PRIMEIRO JOGO À FINAL</span><h2>Chave do campeonato</h2><p>{trocar ? "Arraste uma turma para trocar posições. No celular ou teclado, selecione duas posições." : "Explore as fases e toque em um jogo para ver os detalhes."}</p></div><label className="ic-busca" htmlFor={filtroId}><span>Encontre sua turma</span><input id={filtroId} type="search" placeholder="Ex.: 2DS" value={busca} onChange={(e) => setBusca(e.target.value)} /></label></div>
     {/* permite pular de fase e ajustar o tamanho dos cartões */}
     <div className="ic-ferramentas">
-      <div className="ic-atalhos-fases" role="group" aria-label="Ir para uma fase">{colunasOrganizadas.filter((fase) => fase.jogos.length).map((fase) => <button type="button" key={`${fase.indiceFase}-${fase.x}`} onClick={() => irParaFase(fase)}>{fase.rotulo}</button>)}</div>
+      <div className="ic-atalhos-fases" role="group" aria-label="Ir para uma fase">{colunasOrganizadas.filter((fase) => fase.foco).map((fase) => <button type="button" key={fase.chave} aria-pressed={faseEmFoco === fase.chave} onClick={() => irParaFase(fase)}>{fase.rotulo}</button>)}</div>
       <div className="ic-controles-visualizacao">
         <div className="ic-zoom">
           <button type="button" aria-label="Diminuir zoom" disabled={zoom <= zoomEncaixe} onClick={() => ajustarZoom(1 / 1.25)}>−</button>
@@ -191,23 +233,34 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
     {selecionada && <div className="ic-selecao" role="status">Selecione a posição de destino para trocar as turmas.<button type="button" onClick={() => setSelecionada(null)}>Cancelar troca</button></div>}
     {termo && <p className="ic-resultado-busca" role="status">{jogos.filter(corresponde).length} jogo(s) com “{busca}”</p>}
     {/* move a chave quando a pessoa arrasta o fundo */}
-    <div className="ic-visor" ref={visor} style={telaCheia ? undefined : { height: altura + margemDaChave * 2 + 2 }} tabIndex={0} role="region" aria-label="Chave com rolagem horizontal e vertical. Use as setas ou arraste o fundo."
+    <div className={desenho.espelhada ? "ic-visor ic-visor-espelhado" : "ic-visor"} ref={visor} style={telaCheia ? undefined : { height: altura + margemDaChave * 2 + 2 }} tabIndex={0} role="region" aria-label="Chave com rolagem horizontal e vertical. Use as setas ou arraste o fundo."
       onPointerDown={(e) => { if (e.pointerType !== "mouse" || e.button !== 0 || (e.target as HTMLElement).closest("button, input")) return; const elemento = e.currentTarget; arraste.current = { x: e.clientX, y: e.clientY, esquerda: elemento.scrollLeft, topo: elemento.scrollTop }; elemento.setPointerCapture(e.pointerId); elemento.classList.add("arrastando"); }}
       onPointerMove={(e) => { if (!arraste.current) return; e.currentTarget.scrollLeft = arraste.current.esquerda - (e.clientX - arraste.current.x); e.currentTarget.scrollTop = arraste.current.topo - (e.clientY - arraste.current.y); }}
       onPointerUp={(e) => { arraste.current = null; e.currentTarget.classList.remove("arrastando"); }}
       onPointerCancel={(e) => { arraste.current = null; e.currentTarget.classList.remove("arrastando"); }}>
-      <div className="ic-area-desenho" style={{ width: largura * zoom + margemDaChave * 2, height: altura * zoom + margemDaChave * 2 }}>
+      <div className="ic-area-desenho" style={{
+        width: largura * zoom + (espacoFoco ? espacoFoco.esquerda + espacoFoco.direita : margemDaChave * 2),
+        height: altura * zoom + (espacoFoco ? espacoFoco.topo + espacoFoco.base : margemDaChave * 2),
+      }}>
         <div className="ic-prancheta" ref={prancheta} style={{
-          left: `max(${margemDaChave}px, calc((100% - ${largura * zoom}px) / 2))`,
-          top: `max(${margemDaChave}px, calc((100% - ${altura * zoom}px) / 2))`,
+          left: espacoFoco?.esquerda ?? `max(${margemDaChave}px, calc((100% - ${largura * zoom}px) / 2))`,
+          top: espacoFoco?.topo ?? `max(${margemDaChave}px, calc((100% - ${altura * zoom}px) / 2))`,
           width: largura, height: altura, transform: `scale(${zoom})`,
         }}>
           {/* liga cada jogo ao destino do vencedor */}
           <svg className="ic-conexoes" width={largura} height={altura} aria-hidden="true"><g transform={`translate(0 ${desenho.topoFases})`}>{desenho.conexoes.map((conexao, indice) =>
-            <path key={conexao.origem.id ?? indice} className={`${conexao.pulaFase ? "ic-conexao-folga" : ""} ${termo && corresponde(conexao.origem) ? "ic-conexao-destaque" : ""}`} d={conexao.caminho} />
+            <path key={conexao.origem.id ?? indice} className={`${conexao.pulaFase && !desenho.espelhada ? "ic-conexao-folga" : ""} ${termo && corresponde(conexao.origem) ? "ic-conexao-destaque" : ""}`} d={conexao.caminho} />
           )}</g></svg>
-          {colunasOrganizadas.map((fase) => <section key={`${fase.indiceFase}-${fase.x}`} aria-label={fase.rotulo}>
-            <h3 className={`ic-fase-titulo ${fase.indiceFase === desenho.colunaFinal ? "ic-fase-final" : ""}`} style={{ left: fase.x }}>{fase.indiceFase === desenho.colunaFinal && <span aria-hidden="true">🏆 </span>}{fase.nome}<small>{fase.jogos.length} {fase.jogos.length === 1 ? "jogo" : "jogos"}</small></h3>
+          {colunasOrganizadas.map((fase) => <section key={fase.chave} aria-label={fase.rotulo}>
+            <h3 className={`ic-fase-titulo ${fase.indiceFase === desenho.colunaFinal ? "ic-fase-final" : ""}`} style={{ left: fase.x }}>
+              {fase.indiceFase === desenho.colunaFinal && <span aria-hidden="true">🏆 </span>}{fase.nome}
+              <small>{[
+                (fase.confrontos || !fase.folgas) && `${fase.confrontos} ${fase.confrontos === 1 ? "jogo" : "jogos"}`,
+                fase.folgas && `${fase.folgas} ${fase.folgas === 1 ? "folga" : "folgas"}`,
+              ].filter(Boolean).join(" · ")}</small>
+            </h3>
+            {/* mostra a folga na coluna pela qual o vencedor já está classificado */}
+            {fase.avancos.map((avanco, indice) => <span className={`ic-avanco-direto ${termo && !corresponde(avanco.origem) ? "ic-jogo-apagado" : ""}`} key={avanco.origem.id ?? indice} style={{ left: avanco.x + desenho.larguraJogo / 2, top: avanco.y + desenho.topoFases, height: desenho.alturaAvanco }}>Avanço direto</span>)}
             {fase.jogos.map((jogo, indice) => {
               // destaca o resultado e identifica a folga nas próximas fases
               const ponto = desenho.posicoes.get(jogo)!;

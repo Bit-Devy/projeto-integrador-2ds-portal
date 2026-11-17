@@ -212,14 +212,17 @@
 
 .ic-atalhos-fases {
   display: flex;
+  flex-wrap: wrap;
   gap: 7px;
   overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 /* mantém o formato da chave ao lado dos controles de zoom */
 .ic-controles-visualizacao {
   display: flex;
   flex-wrap: wrap;
+  flex-shrink: 0;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
@@ -246,6 +249,11 @@
   border-radius: 7px;
   font-size: 0.75rem;
   cursor: pointer;
+}
+
+.ic-atalhos-fases button[aria-pressed="true"] {
+  background: var(--azul-escuro);
+  color: white;
 }
 
 .ic-zoom {
@@ -286,6 +294,12 @@
   user-select: none;
 }
 
+/* deixa as ligações sólidas e legíveis na chave espelhada */
+.ic-visor-espelhado {
+  background-image: none;
+  --ic-cor-conexao: #86a2b5;
+}
+
 /* reserva apenas o espaço visível da chave depois do zoom */
 .ic-area-desenho {
   position: relative;
@@ -307,7 +321,7 @@
 
 .ic-conexoes path {
   fill: none;
-  stroke: #bccedb;
+  stroke: var(--ic-cor-conexao, #bccedb);
   stroke-width: 2;
   stroke-linejoin: round;
 }
@@ -340,10 +354,27 @@
   color: #7d91a0;
   font-size: 0.6875rem;
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .ic-fase-final {
   color: #956b13;
+}
+
+/* identifica o avanço por folga na fase que ficou sem confronto */
+.ic-avanco-direto {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 14px;
+  transform: translate(-50%, -50%);
+  border: 1px solid #b8cbd8;
+  border-radius: 999px;
+  background: #f8fbfd;
+  color: #365c74;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 /* mantém os cartões do painel e do portal com o mesmo tamanho */
@@ -1137,6 +1168,7 @@ button.ic-equipe {
 
   .ic-atalhos-fases {
     width: 100%;
+    flex-wrap: nowrap;
   }
 
   .ic-zoom {

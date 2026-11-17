@@ -914,8 +914,8 @@ async function testarTrocasComFolgas(cookie) {
     const iniciais = detalhe.partidas.filter((jogo) => jogo.faseId === detalhe.fases[0].id);
     const folgas = iniciais.filter((jogo) => jogo.formaVitoria === "bye");
     const confronto = iniciais.find((jogo) => jogo.participanteAId && jogo.participanteBId);
-    assert.equal(iniciais.length, 3);
-    assert.equal(folgas.length, 1);
+    assert.equal(iniciais.length, 4);
+    assert.equal(folgas.length, 3);
     const novaTurma = confronto.participanteBId;
     detalhe = await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
       acao: "trocar_turmas", id,
@@ -931,41 +931,48 @@ async function testarTrocasComFolgas(cookie) {
       origem: { partidaId: folgaAtual.id, posicao: "a" }, destino: { partidaId: folgaAtual.id, posicao: "b" },
     });
     assert.equal(detalhe.partidas.find((jogo) => jogo.id === folgaAtual.id).participanteBId, novaTurma);
-    // a rodada começa com dois jogos reais e apenas uma folga
+    // mantém as folgas automáticas depois das trocas
     const depois = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
     assert.ok(depois.partidas.filter((jogo) => jogo.faseId === depois.fases[0].id).every((jogo) => jogo.participanteAId || jogo.participanteBId));
-    assert.equal(depois.partidas.filter((jogo) => jogo.formaVitoria === "bye").length, 1);
+    assert.equal(depois.partidas.filter((jogo) => jogo.formaVitoria === "bye").length, 3);
   } finally {
     if (id) await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", id, { chavePublicada: false });
   }
 }
 
-// confere o avanço direto quando uma rodada posterior tem número ímpar de turmas
+// confere se as chaves antigas ainda permitem registrar um avanço direto
 async function testarAvancoComRodadaImpar(cookie) {
   let id = 0;
   try {
     const criado = await requisicaoDominio(cookie, "/api/interclasses", "POST", { dados: {
-      nome: `Teste de rodada ímpar ${Date.now()}`, modalidade: "Futsal",
+      nome: `Teste de chave antiga ${Date.now()}`, modalidade: "Futsal",
       participantes: ["6A", "6B", "6C", "6D", "6E", "6F"].map((nome) => ({ nome })),
     } }, 201);
     id = criado.item.id;
-    let chave = await requisicaoDominio(cookie, "/api/interclasses", "PUT", { acao: "gerar_chave", id });
-    const primeiraFase = chave.fases[0].id;
-    const faseFinal = chave.fases.at(-1).id;
-    const iniciais = chave.partidas.filter((jogo) => jogo.faseId === primeiraFase);
-    assert.equal(iniciais.length, 3);
-    assert.ok(iniciais.every((jogo) => jogo.participanteAId && jogo.participanteBId));
-    const avancoDireto = iniciais.find((jogo) => chave.partidas.find((destino) => destino.id === jogo.proximaPartidaId)?.faseId === faseFinal);
-    assert.ok(avancoDireto);
+    const { participantes } = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
+    const cadastrar = async (entidade, dados) => (await requisicaoDominio(cookie, "/api/interclasses", "POST", { entidade, campeonatoId: id, dados }, 201)).item;
+    const quartas = await cadastrar("fases", { nome: "Quartas de final", ordem: 1 });
+    const semis = await cadastrar("fases", { nome: "Semifinais", ordem: 2 });
+    const faseFinal = await cadastrar("fases", { nome: "Final", ordem: 3 });
+    const chegada = await cadastrar("partidas", { faseId: faseFinal.id, ordem: 1 });
+    const viaSemifinal = await cadastrar("partidas", { faseId: semis.id, ordem: 1, proximaPartidaId: chegada.id, proximaPosicao: "b" });
+    const iniciais = [];
+    for (const [indice, destino, lado] of [[0, chegada, "a"], [1, viaSemifinal, "a"], [2, viaSemifinal, "b"]]) {
+      iniciais.push(await cadastrar("partidas", {
+        faseId: quartas.id, ordem: indice + 1, participanteAId: participantes[indice * 2].id,
+        participanteBId: participantes[indice * 2 + 1].id, proximaPartidaId: destino.id, proximaPosicao: lado,
+      }));
+    }
+    const avancoDireto = iniciais[0];
 
     // registra os três jogos e verifica quem chegou direto à final
     for (const jogo of iniciais) await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
       acao: "registrar_resultado", partidaId: jogo.id,
       dados: { situacao: "wo", formaVitoria: "wo", vencedorId: jogo.participanteAId },
     });
-    chave = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
-    const semifinal = chave.partidas.find((jogo) => jogo.faseId === chave.fases[1].id);
-    const final = chave.partidas.find((jogo) => jogo.faseId === faseFinal);
+    let chave = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
+    const semifinal = chave.partidas.find((jogo) => jogo.id === viaSemifinal.id);
+    const final = chave.partidas.find((jogo) => jogo.id === chegada.id);
     const campoDireto = avancoDireto.proximaPosicao === "a" ? "participanteAId" : "participanteBId";
     assert.equal(final[campoDireto], avancoDireto.participanteAId);
     assert.ok(semifinal.participanteAId && semifinal.participanteBId);

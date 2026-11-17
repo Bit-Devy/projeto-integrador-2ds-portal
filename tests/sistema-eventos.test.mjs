@@ -91,10 +91,9 @@ test("gera uma chave de mata-mata navegável sem inventar equipes", async () => 
   const fases = planejarChaveMataMata(participantes);
 
   assert.deepEqual(fases.map((fase) => fase.nome), ["Quartas de final", "Semifinais", "Final"]);
-  assert.deepEqual(fases.map((fase) => fase.jogos.length), [3, 1, 1]);
-  assert.equal(fases[0].jogos.filter((jogo) => jogo.vencedorAutomatico).length, 0);
-  assert.equal(fases[0].jogos.filter((jogo) => jogo.proximaFaseOrdem === 2).length, 2);
-  assert.equal(fases[0].jogos.filter((jogo) => jogo.proximaFaseOrdem === 3).length, 1);
+  assert.deepEqual(fases.map((fase) => fase.jogos.length), [4, 2, 1]);
+  assert.deepEqual([1, 2].map((ordem) => fases[0].jogos.filter((jogo) => jogo.vencedorAutomatico && jogo.proximaPartidaOrdem === ordem).length), [1, 1]);
+  assert.ok(fases[0].jogos.every((jogo) => jogo.proximaFaseOrdem === 2));
   assert.equal(fases.at(-1).jogos[0].proximaPartidaOrdem, null);
 
   assert.doesNotThrow(() => validarLigacaoPartida(1, 2, "a"));
@@ -137,7 +136,7 @@ test("o sorteio embaralha participantes e folgas sem alterar os cadastros", asyn
   assert.deepEqual(participantes, original);
   for (const jogos of [primeiro, segundo]) {
     assert.deepEqual(new Set(ids(jogos).filter(Boolean)), new Set(participantes.map((p) => p.id)));
-    assert.equal(jogos.filter((jogo) => jogo.vencedorAutomatico).length, 0);
+    assert.equal(jogos.filter((jogo) => jogo.vencedorAutomatico).length, 2);
     assert.ok(jogos.every((jogo) => jogo.participanteA || jogo.participanteB));
   }
 });
@@ -167,20 +166,29 @@ test("sorteio adia encontros distantes e aceita os que forem inevitáveis", asyn
   assert.ok(jogos.every((jogo) => Math.abs(anoEscolarTurma(jogo.participanteA.nome) - anoEscolarTurma(jogo.participanteB.nome)) <= 1));
 });
 
-// verifica todas as quantidades aceitas, incluindo folgas em rodadas posteriores
-test("cada rodada tem só a folga necessária e todos os caminhos chegam à final", async () => {
+// verifica todas as quantidades aceitas e o equilíbrio das metades da chave
+test("as folgas ficam na entrada e os vencedores passam por todas as rodadas seguintes", async () => {
   const { planejarChaveMataMata } = await importarDominio("chave");
   for (let quantidade = 2; quantidade <= 128; quantidade++) {
     const participantes = Array.from({ length: quantidade }, (_, indice) => ({ id: indice + 1, nome: `1${String.fromCharCode(65 + indice % 26)}`, posicaoInicial: indice + 1 }));
     const fases = planejarChaveMataMata(participantes);
     const preenchidos = new Map();
     const destinos = new Set();
-    let turmasNaRodada = quantidade;
+    const iniciais = fases[0].jogos;
+    const capacidade = 2 ** fases.length;
+    assert.deepEqual(iniciais.flatMap((jogo) => [jogo.participanteA?.id, jogo.participanteB?.id]).filter(Boolean).sort((a, b) => a - b), participantes.map((item) => item.id));
+    for (let tamanho = iniciais.length; tamanho > 1; tamanho /= 2) {
+      const metade = tamanho / 2;
+      for (let inicio = 0; inicio < iniciais.length; inicio += tamanho) {
+        const a = iniciais.slice(inicio, inicio + metade).filter((jogo) => jogo.vencedorAutomatico).length;
+        const b = iniciais.slice(inicio + metade, inicio + tamanho).filter((jogo) => jogo.vencedorAutomatico).length;
+        assert.ok(Math.abs(a - b) <= 1, `${quantidade} turmas, grupo de ${tamanho} entradas`);
+      }
+    }
     let jogosDisputados = 0;
     fases.forEach((fase, indiceFase) => {
-      const folgas = indiceFase === 0 ? fase.jogos.filter((jogo) => jogo.vencedorAutomatico).length : fases.slice(0, indiceFase).flatMap((anterior) => anterior.jogos).filter((jogo) => jogo.proximaFaseOrdem > fase.ordem).length;
-      assert.equal(folgas, turmasNaRodada % 2, `${quantidade} turmas, fase ${fase.ordem}`);
-      assert.equal(fase.jogos.length, indiceFase === 0 ? Math.ceil(turmasNaRodada / 2) : Math.floor(turmasNaRodada / 2));
+      assert.equal(fase.jogos.filter((jogo) => jogo.vencedorAutomatico).length, indiceFase === 0 ? capacidade - quantidade : 0);
+      assert.equal(fase.jogos.length, capacidade / 2 ** fase.ordem);
       fase.jogos.forEach((jogo) => {
         const chave = `${fase.ordem}:${jogo.ordem}`;
         const turmaA = jogo.participanteA?.id ?? preenchidos.get(`${chave}:a`);
@@ -188,25 +196,26 @@ test("cada rodada tem só a folga necessária e todos os caminhos chegam à fina
         assert.ok(turmaA, `o jogo ${chave} precisa ter uma turma`);
         if (!jogo.vencedorAutomatico) { assert.ok(turmaB); assert.notEqual(turmaA, turmaB); jogosDisputados++; }
         if (jogo.proximaFaseOrdem !== null) {
-          assert.ok(jogo.proximaFaseOrdem > fase.ordem);
+          assert.equal(jogo.proximaFaseOrdem, fase.ordem + 1);
           const destino = `${jogo.proximaFaseOrdem}:${jogo.proximaPartidaOrdem}:${jogo.proximaPosicao}`;
           assert.ok(!destinos.has(destino), "cada vaga recebe apenas um vencedor");
           destinos.add(destino);
           preenchidos.set(destino, turmaA);
         } else assert.equal(fase, fases.at(-1));
       });
-      turmasNaRodada = Math.ceil(turmasNaRodada / 2);
     });
     assert.equal(jogosDisputados, quantidade - 1);
-    assert.equal(turmasNaRodada, 1);
+    assert.equal(fases.at(-1).jogos.length, 1);
   }
 });
 
 // confere se os grupos distantes ficam separados até a final
 test("séries distantes só se encontram na final quando há grupos completos", async () => {
   const { planejarChaveMataMata } = await importarDominio("chave");
-  // também cobre grupos ímpares que precisam de folgas em fases diferentes
-  for (const nomes of [["6A", "6B", "6C", "6D", "3A", "3B", "3C", "3D"], ["6A", "6B", "6C", "3A", "3B", "3C", "3D", "3E", "3F"]]) {
+  for (const nomes of [
+    ["6A", "6B", "6C", "6D", "3A", "3B", "3C", "3D"],
+    ["6A", "6B", "6C", "6D", "6E", "6F", "3A", "3B", "3C", "3D", "3E", "3F"],
+  ]) {
     const fases = planejarChaveMataMata(nomes.map((nome, indice) => ({ id: indice + 1, nome, posicaoInicial: indice })), 1);
     const series = new Map();
     for (const fase of fases) for (const jogo of fase.jogos) {
@@ -254,10 +263,14 @@ test("a chave alinha fases às partidas de origem, inclusive vínculos personali
       assert.ok(layout.largura * zoom + margemDaChave * 2 <= largura + 1e-9);
       assert.ok(alturaChave * zoom + margemDaChave * 2 <= altura + 1e-9);
     }
+    assert.equal(espelhado.avancos.length, 0);
     for (const { origem, destino, pontos } of espelhado.conexoes) {
       const inicio = espelhado.posicoes.get(origem);
       const fim = espelhado.posicoes.get(destino);
-      if (destino === final && origem.proximaPosicao) assert.equal(inicio.x < centro, origem.proximaPosicao === "a");
+      if (destino === final) {
+        assert.equal(inicio.x < centro, origem.proximaPosicao === "a");
+        assert.equal(pontos.length, 2, "a ligação com a final precisa ser reta");
+      }
       assert.equal(pontos[0].x, inicio.x < fim.x ? inicio.x + espelhado.larguraJogo : inicio.x);
       assert.equal(pontos.at(-1).x, inicio.x < fim.x ? fim.x : fim.x + espelhado.larguraJogo);
     }
@@ -324,6 +337,42 @@ test("organiza vínculos cruzados e folgas em grupos próximos", async () => {
   assert.equal(finalAntesDoTerceiro.colunaFinal, 3);
   assert.ok(finalAntesDoTerceiro.posicoes.get(jogos[3]).x > finalAntesDoTerceiro.posicoes.get(final).x);
   assert.ok(finalAntesDoTerceiro.posicoes.get(terceiro).x > finalAntesDoTerceiro.posicoes.get(jogos[3]).x);
+});
+
+// reproduz uma chave antiga em que um lado pulava a semifinal
+test("a chave espelhada recupera o alinhamento de fases puladas sem mexer nos jogos salvos", async () => {
+  const { posicionarChave } = await importarDominio("interclasse-utilitarios");
+  const criarJogos = (linhas) => linhas.map(([id, proximaPartidaId, proximaPosicao]) => ({ id, proximaPartidaId, proximaPosicao }));
+  const fases = [
+    { nome: "Dezesseis avos de final", jogos: criarJogos([[1, 12, "a"], [2, 12, "b"], [3, 13, "a"], [4, 13, "b"], [5, 18, "a"], [6, 14, "a"], [7, 14, "b"], [8, 15, "a"], [9, 15, "b"], [10, 16, "a"], [11, 16, "b"]]) },
+    { nome: "Oitavas de final", jogos: criarJogos([[12, 17, "a"], [13, 17, "b"], [14, 18, "b"], [15, 19, "a"], [16, 19, "b"]]) },
+    { nome: "Quartas de final", jogos: criarJogos([[17, 21, "a"], [18, 20, "a"], [19, 20, "b"]]) },
+    { nome: "Semifinais", jogos: criarJogos([[20, 21, "b"]]) },
+    { nome: "Final", jogos: criarJogos([[21, null, ""]]) },
+  ];
+  const original = structuredClone(fases);
+  const desenho = posicionarChave(fases, "dois-lados");
+  const final = fases.at(-1).jogos[0];
+  const pontoFinal = desenho.posicoes.get(final);
+  assert.equal(desenho.posicoes.size, 21);
+  assert.deepEqual(desenho.avancos.map(({ origem, indiceFase }) => [origem.id, indiceFase]), [[5, 1], [17, 3]]);
+  const caminhos = desenho.conexoes.filter(({ destino }) => destino === final);
+  assert.equal(caminhos.length, 2);
+  for (const { pontos } of caminhos) {
+    assert.equal(pontos.length, 2);
+    assert.equal(pontos[0].y, pontos[1].y);
+  }
+  const semifinalPorFolga = desenho.avancos.find((item) => item.indiceFase === 3);
+  assert.equal(semifinalPorFolga.x, pontoFinal.x - desenho.passoColuna);
+  assert.equal(semifinalPorFolga.y, pontoFinal.y + desenho.alturaJogo / 2);
+  for (const direita of [false, true]) {
+    const alturas = [...desenho.posicoes.values()].filter(({ x }) => direita ? x > pontoFinal.x : x < pontoFinal.x).map(({ y }) => y);
+    assert.ok(Math.abs((Math.min(...alturas) + Math.max(...alturas)) / 2 - pontoFinal.y) < 1e-9);
+  }
+  const umLado = posicionarChave(fases, "um-lado");
+  assert.equal(umLado.avancos.length, 0);
+  assert.equal(umLado.conexoes.filter(({ pulaFase }) => pulaFase).length, 2);
+  assert.deepEqual(fases, original);
 });
 
 test("possui as páginas públicas e navegação acessível do sistema", async () => {

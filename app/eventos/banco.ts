@@ -1242,7 +1242,7 @@ export async function gerarChaveCampeonato(campeonatoIdRecebido: unknown, confir
   const participantes = participantesResultado.results.map((linha) => ({
     id: numero(linha.id), nome: string(linha.nome), nomeCadastrado: string(linha.nome_cadastrado), posicaoInicial: numero(linha.posicao_inicial),
   }));
-  // monta cada rodada sem criar vagas extras
+  // monta as rodadas com as folgas distribuídas na entrada
   const fases = planejarChaveMataMata(participantes, campeonato.diferencaMaximaAnos);
   const existentes = await d1.prepare(`SELECT
     (SELECT COUNT(*) FROM fases_campeonato WHERE campeonato_id = ? AND ativo = 1) AS fases,
@@ -1270,7 +1270,7 @@ export async function gerarChaveCampeonato(campeonatoIdRecebido: unknown, confir
     comandos.push(d1.prepare(`INSERT INTO fases_campeonato (campeonato_id, nome, ordem, tipo, quantidade_jogos, publicado, ativo)
       VALUES (?, ?, ?, 'eliminatoria', ?, 0, 1)`).bind(campeonatoId, fase.nome, fase.ordem, fase.jogos.length));
   }
-  // guarda os confrontos e a única folga da primeira rodada ímpar
+  // guarda os confrontos e as turmas classificadas por folga
   for (const fase of fases) {
     for (const jogo of fase.jogos) {
       const automatico = jogo.vencedorAutomatico;
@@ -2214,9 +2214,9 @@ async function validarReferenciasPartida(campeonatoId: number, partidaId: number
 
 // não deixa uma edição antecipar encontros que ainda podem ser evitados
 function validarConfrontosSeries(jogos: Array<{ nomeA: string; nomeB: string }>, nomes: string[], limite: number) {
-  const inevitaveis = Math.floor(nomes.length / 2) - quantidadeParesProximos(nomes, limite);
-  const distantes = jogos.filter(({ nomeA, nomeB }) => {
-    if (!nomeA || !nomeB) return false;
+  const confrontos = jogos.filter(({ nomeA, nomeB }) => nomeA && nomeB);
+  const inevitaveis = Math.max(0, confrontos.length - quantidadeParesProximos(nomes, limite));
+  const distantes = confrontos.filter(({ nomeA, nomeB }) => {
     const anoA = anoEscolarTurma(nomeA);
     const anoB = anoEscolarTurma(nomeB);
     return anoA === null || anoB === null || Math.abs(anoA - anoB) > limite;

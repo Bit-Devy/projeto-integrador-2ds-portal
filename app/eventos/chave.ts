@@ -30,13 +30,10 @@ export type FasePlanejada = {
   jogos: JogoPlanejado[];
 };
 
-// guarda a turma ou o jogo que vai preencher uma vaga
-type VagaChave = {
-  participante: ParticipanteChave | null;
-  origem: { jogo: JogoPlanejado } | null;
-  anos: number[];
-  folgas: number;
-};
+// guarda a série usada para aproximar as turmas no sorteio
+type TurmaSorteada = { participante: ParticipanteChave; ano: number };
+type ParSorteado = [TurmaSorteada, TurmaSorteada];
+type JogoInicial = [TurmaSorteada, TurmaSorteada?];
 
 // conta quantos pares próximos podem jogar na mesma rodada
 export function quantidadeParesProximos(nomes: string[], limite: number) {
@@ -48,7 +45,7 @@ export function quantidadeParesProximos(nomes: string[], limite: number) {
   return pares;
 }
 
-// sorteia os jogos e deixa só uma folga nas rodadas ímpares
+// sorteia uma chave com folgas na entrada e as mesmas fases nos dois lados
 export function planejarChaveMataMata(participantesRecebidos: ParticipanteChave[], diferencaMaximaAnos: number | null = null) {
   // confere a lista antes de montar os jogos
   const participantes = embaralhar(participantesRecebidos);
@@ -58,55 +55,31 @@ export function planejarChaveMataMata(participantesRecebidos: ParticipanteChave[
   if (diferencaMaximaAnos !== null && (!Number.isInteger(diferencaMaximaAnos) || diferencaMaximaAnos < 1 || diferencaMaximaAnos > 3)) throw new ErroEventos("Escolha uma diferença máxima de 1 a 3 anos.");
 
   // usa a série cadastrada e mantém o nome público separado
-  let vagas: VagaChave[] = participantes.map((participante) => {
+  const turmas = participantes.map((participante) => {
     const ano = anoEscolarTurma(participante.nomeCadastrado ?? participante.nome);
     if (diferencaMaximaAnos !== null && ano === null) throw new ErroEventos(`Revise o nome cadastrado da turma ${participante.nomeCadastrado ?? participante.nome}. Use a série e de 1 a 3 letras, como 6A ou 2DS.`);
-    return { participante, origem: null, anos: ano === null ? [] : [ano], folgas: 0 };
+    return { participante, ano: ano ?? 0 };
   });
 
-  // aproxima as séries sem prender o sorteio quando o confronto for necessário
-  if (diferencaMaximaAnos !== null) vagas = aproximarTurmas(vagas, diferencaMaximaAnos);
+  const capacidade = 2 ** Math.ceil(Math.log2(turmas.length));
+  const primeiraRodada = sortearPrimeiraRodada(turmas, capacidade / 2, diferencaMaximaAnos);
   const fases: FasePlanejada[] = [];
-  while (vagas.length > 1) {
+  // liga todos os vencedores à rodada seguinte até chegar à final
+  for (let vagas = capacidade; vagas >= 2; vagas /= 2) {
     const ordemFase = fases.length + 1;
-    const quantidadeTurmas = vagas.length;
-    const proximasVagas: VagaChave[] = [];
-    const jogos: JogoPlanejado[] = [];
-
-    // a folga das próximas rodadas pula direto para o jogo seguinte
-    if (ordemFase > 1 && vagas.length % 2 === 1) {
-      const indiceFolga = escolherFolga(vagas, diferencaMaximaAnos);
-      const [vagaFolga] = vagas.splice(indiceFolga, 1);
-      proximasVagas.push({ ...vagaFolga, folgas: vagaFolga.folgas + 1 });
-    }
-
-    // junta duas vagas por jogo e liga os vencedores ao seu destino
-    for (let indice = 0; indice < vagas.length; indice += 2) {
-      const vagaA = vagas[indice];
-      const vagaB = vagas[indice + 1] ?? null;
-      const jogo: JogoPlanejado = {
-        ordem: jogos.length + 1,
-        participanteA: vagaA.participante,
-        participanteB: vagaB?.participante ?? null,
-        proximaFaseOrdem: null,
-        proximaPartidaOrdem: null,
-        proximaPosicao: "",
-        vencedorAutomatico: !vagaB ? vagaA.participante : null,
+    const jogos = Array.from({ length: vagas / 2 }, (_, indice): JogoPlanejado => {
+      const par = ordemFase === 1 ? primeiraRodada[indice] : undefined;
+      return {
+        ordem: indice + 1,
+        participanteA: par?.[0].participante ?? null,
+        participanteB: par?.[1]?.participante ?? null,
+        vencedorAutomatico: par && !par[1] ? par[0].participante : null,
+        proximaFaseOrdem: vagas > 2 ? ordemFase + 1 : null,
+        proximaPartidaOrdem: vagas > 2 ? Math.floor(indice / 2) + 1 : null,
+        proximaPosicao: vagas === 2 ? "" : indice % 2 === 0 ? "a" : "b",
       };
-      jogos.push(jogo);
-      for (const [vaga, posicao] of [[vagaA, "a"], [vagaB, "b"]] as const) {
-        if (!vaga?.origem) continue;
-        vaga.origem.jogo.proximaFaseOrdem = ordemFase;
-        vaga.origem.jogo.proximaPartidaOrdem = jogo.ordem;
-        vaga.origem.jogo.proximaPosicao = posicao;
-      }
-      proximasVagas.push({ participante: null, origem: { jogo },
-        anos: [...vagaA.anos, ...(vagaB?.anos ?? [])], folgas: Math.max(vagaA.folgas, vagaB?.folgas ?? 0) + (vagaB ? 0 : 1) });
-    }
-
-    // mantém grupos próximos juntos até o encontro ser necessário
-    fases.push({ nome: nomeDaFase(quantidadeTurmas), ordem: ordemFase, tipo: "eliminatoria", jogos });
-    vagas = diferencaMaximaAnos === null ? proximasVagas : proximasVagas.sort((a, b) => mediaAnos(a) - mediaAnos(b));
+    });
+    fases.push({ nome: nomeDaFase(vagas), ordem: ordemFase, tipo: "eliminatoria", jogos });
   }
   return fases;
 }
@@ -121,46 +94,84 @@ function embaralhar<T>(valores: readonly T[]): T[] {
   return resultado;
 }
 
-// usa a média para manter caminhos de séries próximas lado a lado
-function mediaAnos(vaga: VagaChave) {
-  return vaga.anos.reduce((total, ano) => total + ano, 0) / (vaga.anos.length || 1);
-}
-
-// deixa a turma sem par para uma folga ou um confronto inevitável
-function aproximarTurmas(vagas: VagaChave[], limite: number) {
-  const ordenadas = [...vagas].sort((a, b) => mediaAnos(a) - mediaAnos(b));
-  const pares: VagaChave[][] = [];
-  const restantes: VagaChave[] = [];
-  for (let indice = 0; indice < ordenadas.length; indice++) {
-    if (indice + 1 < ordenadas.length && mediaAnos(ordenadas[indice + 1]) - mediaAnos(ordenadas[indice]) <= limite) {
-      pares.push([ordenadas[indice], ordenadas[++indice]]);
-    } else restantes.push(ordenadas[indice]);
+// encontra o maior número de pares próximos em uma lista ordenada por série
+function paresProximos(ordenadas: TurmaSorteada[], limite: number): ParSorteado[] {
+  const proximos: ParSorteado[] = [];
+  for (let indice = 0; indice < ordenadas.length - 1; indice++) {
+    const seguinte = ordenadas[indice + 1];
+    if (seguinte.ano - ordenadas[indice].ano <= limite) {
+      proximos.push([ordenadas[indice], seguinte]);
+      indice++;
+    }
   }
-  // escolhe uma única folga se sobrar um número ímpar de turmas
-  const folga = restantes.length % 2 === 1 ? restantes.splice(escolherFolga(restantes, limite), 1) : [];
-  for (let indice = 0; indice < restantes.length; indice += 2) pares.push([restantes[indice], restantes[indice + 1]]);
-  if (folga.length) pares.push(folga);
-  const grupos = pares.sort((a, b) => mediaAnos(a[0]) - mediaAnos(b[0]));
-
-  // o lado do grupo e os nomes dentro de cada série também são sorteados
-  if (Math.random() < 0.5) grupos.reverse();
-  const vagaFolga = grupos.find((grupo) => grupo.length === 1);
-  return [...grupos.filter((grupo) => grupo.length === 2).flatMap((grupo) => embaralhar(grupo)), ...(vagaFolga ?? [])];
+  return proximos;
 }
 
-// escolhe a folga sem antecipar encontros distantes
-function escolherFolga(vagas: VagaChave[], limite: number | null) {
-  const candidatas = embaralhar(vagas.map((vaga, indice) => ({ vaga, indice })));
-  if (limite === null) return candidatas.sort((a, b) => a.vaga.folgas - b.vaga.folgas)[0].indice;
+// escolhe pares próximos antes de marcar confrontos entre séries distantes
+function sortearPares(turmas: TurmaSorteada[], total: number, limite: number | null): ParSorteado[] {
+  if (limite === null) return Array.from({ length: total }, (_, indice) => [turmas[indice * 2], turmas[indice * 2 + 1]]);
+  const ordenadas = [...turmas].sort((a, b) => a.ano - b.ano);
+  const pares = embaralhar(paresProximos(ordenadas, limite)).slice(0, total);
+  const escolhidas = new Set(pares.flat());
+  const restantes = ordenadas.filter((turma) => !escolhidas.has(turma));
+  while (pares.length < total) {
+    let maisProximo = 0;
+    for (let indice = 1; indice < restantes.length - 1; indice++) {
+      if (restantes[indice + 1].ano - restantes[indice].ano < restantes[maisProximo + 1].ano - restantes[maisProximo].ano) maisProximo = indice;
+    }
+    const [a, b] = restantes.splice(maisProximo, 2);
+    pares.push([a, b]);
+  }
+  return pares;
+}
 
-  // escolhe a folga que deixa os outros confrontos mais próximos
-  const distancia = (indiceFolga: number) => {
-    const restantes = vagas.filter((_, indice) => indice !== indiceFolga);
-    let total = 0;
-    for (let indice = 0; indice < restantes.length; indice += 2) total += Math.max(0, Math.abs(mediaAnos(restantes[indice]) - mediaAnos(restantes[indice + 1])) - limite);
-    return total;
-  };
-  return candidatas.sort((a, b) => distancia(a.indice) - distancia(b.indice) || a.vaga.folgas - b.vaga.folgas)[0].indice;
+// separa grupos por série quando o corte mantém o equilíbrio e os pares próximos
+function separarPorSerie(turmas: TurmaSorteada[], jogos: number, limite: number) {
+  const ordenadas = [...turmas].sort((a, b) => a.ano - b.ano);
+  const metade = jogos / 2;
+  const totalPares = turmas.length - jogos;
+  const ideal = Math.min(totalPares, paresProximos(ordenadas, limite).length);
+  const cortes = embaralhar([...new Set([Math.floor(turmas.length / 2), Math.ceil(turmas.length / 2)])]);
+  cortes.sort((a, b) => (ordenadas[b].ano - ordenadas[b - 1].ano) - (ordenadas[a].ano - ordenadas[a - 1].ano));
+  for (const corte of cortes) {
+    const lados = [ordenadas.slice(0, corte), ordenadas.slice(corte)];
+    const proximos = lados.reduce((total, lado) => total + Math.min(lado.length - metade, paresProximos(lado, limite).length), 0);
+    if (proximos === ideal) return Math.random() < 0.5 ? lados : lados.reverse();
+  }
+  return null;
+}
+
+// distribui partidas e folgas entre as metades de cada fase
+function sortearPrimeiraRodada(turmas: TurmaSorteada[], jogos: number, limite: number | null): JogoInicial[] {
+  if (limite !== null && jogos > 1) {
+    const lados = separarPorSerie(turmas, jogos, limite);
+    if (lados) return lados.flatMap((lado) => sortearPrimeiraRodada(lado, jogos / 2, limite));
+  }
+  const pares = sortearPares(turmas, turmas.length - jogos, limite);
+  const emConfronto = new Set(pares.flat());
+  const folgas = turmas.filter((turma) => !emConfronto.has(turma));
+  if (limite !== null) {
+    // mantém séries próximas no mesmo trecho da chave
+    const media = ([a, b]: ParSorteado) => (a.ano + b.ano) / 2;
+    const sentido = Math.random() < 0.5 ? 1 : -1;
+    pares.sort((a, b) => sentido * (media(a) - media(b)));
+    folgas.sort((a, b) => sentido * (a.ano - b.ano));
+  }
+  let indicePar = 0;
+  let indiceFolga = 0;
+  const rodada: JogoInicial[] = [];
+  function distribuir(vagas: number, confrontos: number) {
+    if (vagas === 1) {
+      const par: JogoInicial = confrontos ? pares[indicePar++] : [folgas[indiceFolga++]];
+      rodada.push(par[1] && Math.random() < 0.5 ? [par[1], par[0]] : par);
+      return;
+    }
+    const esquerda = Math.random() < 0.5 ? Math.floor(confrontos / 2) : Math.ceil(confrontos / 2);
+    distribuir(vagas / 2, esquerda);
+    distribuir(vagas / 2, confrontos - esquerda);
+  }
+  distribuir(jogos, pares.length);
+  return rodada;
 }
 
 // valida uma ligação manual entre duas partidas da mesma chave
@@ -173,7 +184,7 @@ export function validarLigacaoPartida(partidaId: number, proximaPartidaId: numbe
   if (posicao !== "a" && posicao !== "b") throw new ErroEventos("Escolha a posição A ou B na próxima partida.");
 }
 
-// dá o nome da fase pela quantidade de turmas que chegou nela
+// dá o nome da fase pelo tamanho da rodada
 function nomeDaFase(quantidadeTurmas: number) {
   if (quantidadeTurmas === 2) return "Final";
   if (quantidadeTurmas <= 4) return "Semifinais";
