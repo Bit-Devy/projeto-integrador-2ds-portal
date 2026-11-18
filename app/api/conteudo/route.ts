@@ -21,6 +21,7 @@ import { areaPermitida, escolherArea, erroArea } from "../../lib/areas-registros
 import { obterUsuarioPainel } from "../../lib/sessao";
 // mantém as vagas publicadas da equipe ligadas aos cargos do estatuto
 import { condicaoVagaLivre, prepararMembroEquipe } from "../../conteudo/equipe";
+import { validarContatosEquipe } from "../../conteudo/contatos-equipe";
 // valida e protege as publicações das páginas modulares
 import { validarServico } from "../../servicos/validacao";
 import { moduloAtivo, obterModulos } from "../../servicos/banco";
@@ -308,8 +309,14 @@ function validarCorpo(corpo: Record<string, unknown>) {
   }
 
   // limpa os campos e encontra o título principal
-  const dados = limparObjeto(corpo.dados as Record<string, unknown>);
-  if (tipo === "agenda" && String((corpo.dados as Record<string, unknown>).paginaUrl || "").trim() && !dados.paginaUrl) throw new ErroJsonInvalido("Escolha um endereço interno válido para o compromisso.");
+  const entrada = corpo.dados as Record<string, unknown>;
+  const dados: Record<string, unknown> = limparObjeto(entrada);
+  if (tipo === "agenda" && String(entrada.paginaUrl || "").trim() && !dados.paginaUrl) throw new ErroJsonInvalido("Escolha um endereço interno válido para o compromisso.");
+  // salva a lista de contatos e substitui o campo antigo quando ela é enviada
+  if (tipo === "membros" && entrada.contatos !== undefined) {
+    dados.contatos = validarContatosEquipe(entrada.contatos);
+    delete dados.contato;
+  }
   validarServico(tipo, dados);
   if (tiposComAno.includes(tipo)) { if (dados.ano !== undefined && dados.ano !== "" && (!Number.isInteger(Number(dados.ano)) || Number(dados.ano) < 1900 || Number(dados.ano) > 2199)) throw new ErroJsonInvalido("Informe um ano válido."); dados.ano = anoDoRegistro(dados); }
   const titulo = obterTitulo(tipo, dados);

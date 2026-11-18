@@ -1,5 +1,6 @@
 // usa a mesma escrita de turma nas buscas do site
 import { normalizarTurma } from "./normalizacao";
+import { normalizarBusca, type JogoPublico } from "./modelo-publico";
 
 // lista os esportes que podem ser escolhidos no painel
 export const esportesInterclasse = [
@@ -51,6 +52,17 @@ export type JogoPosicionado = {
 
 export type ModoChave = "dois-lados" | "um-lado";
 type PontoChave = { x: number; y: number };
+
+// usa a fase informada ou encontra a primeira rodada com jogos pendentes
+export function indiceFaseParaAbrir(fases: Array<{ nome?: string; jogos: JogoPublico[] }>, atual: string) {
+  const nomeAtual = normalizarBusca(atual);
+  const cadastrada = fases.findIndex(({ nome, jogos }) => nomeAtual && jogos.length && normalizarBusca(nome || "") === nomeAtual);
+  if (cadastrada >= 0) return cadastrada;
+
+  const concluidas = new Set(["encerrada", "wo", "cancelada"]);
+  const pendente = fases.findIndex(({ jogos }) => jogos.some((jogo) => jogo.formaVitoria !== "bye" && !concluidas.has(jogo.situacao || "")));
+  return pendente >= 0 ? pendente : fases.findLastIndex(({ jogos }) => jogos.length > 0);
+}
 
 // deixa uma margem em volta de toda a chave na visão inicial
 export const margemDaChave = 24;

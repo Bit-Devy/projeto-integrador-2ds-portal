@@ -6,6 +6,8 @@ import { readFile, readdir } from "node:fs/promises";
 import { cargosPainel } from "../app/lib/cargos.ts";
 import { dadosMembroEquipe, obterCargoEquipe, vagasDoCargo } from "../app/lib/equipe.ts";
 import { condicaoVagaLivre } from "../app/conteudo/equipe.ts";
+import { contatosDoMembro, enderecoContatoEquipe } from "../app/conteudo/contatos-equipe.ts";
+import { abrirPortalMemoria } from "./apoio/portal-memoria.mjs";
 
 test("as vagas da equipe seguem o estatuto e usam somente cargos disponíveis no painel", () => {
   assert.deepEqual(vagasDoCargo("presidente").map((item) => item.chave), ["titular"]);
@@ -21,6 +23,56 @@ test("as vagas da equipe seguem o estatuto e usam somente cargos disponíveis no
   assert.equal(dadosMembroEquipe(1, { nome: "Pessoa anterior", cargo: "Diretoria Social" }), null);
   assert.equal(dadosMembroEquipe(1, { nome: "Pessoa anterior", cargo: "Presidente" }).vaga, "titular");
   assert.equal(dadosMembroEquipe(1, { nome: "Pessoa fiscal", cargoChave: "conselho-fiscal-tarde", vaga: "suplente", turno: "manha" }).turno, "tarde");
+});
+
+test("a ficha pública oferece até três contatos e preserva o link antigo na edição", async () => {
+  const portal = await abrirPortalMemoria();
+  const api = "/api/conteudo";
+  const dados = { nome: "Pessoa da ficha de teste", diretoria: "Equipe", cargoChave: "apoio", vaga: "apoio" };
+  const contatos = [
+    { tipo: "whatsapp", valor: "(41) 99999-0000" },
+    { tipo: "email", valor: "equipe@example.org" },
+    { tipo: "instagram", valor: "https://www.instagram.com/gecep.teste/?igsh=exemplo" },
+  ];
+  const telefone = { tipo: "telefone", valor: "+55 (41) 3333-0000" };
+  const publicar = async (campos, esperado = 201, publicado = true) => (await portal.chamar(api, {
+    method: "POST", corpo: { tipo: "membros", publicado, dados: { ...dados, ...campos } }, esperado,
+  })).json();
+  const dadosPublicos = async () => (await (await portal.chamar(`${api}?tipo=membros&ano=todos`, { jar: new Map() })).json()).itens;
+
+  try {
+    const { item } = await publicar({ contatos });
+    const publicado = (await dadosPublicos()).find((registro) => registro.id === item.id);
+    assert.deepEqual(publicado.dados.contatos, contatos);
+    assert.deepEqual(contatosDoMembro(publicado.dados).map(enderecoContatoEquipe), [
+      "https://wa.me/5541999990000", "mailto:equipe@example.org", "https://www.instagram.com/gecep.teste/",
+    ]);
+    assert.equal(enderecoContatoEquipe(telefone), "tel:+554133330000");
+    await publicar({ contatos: [...contatos, telefone] }, 400);
+    await publicar({ contatos: "(41) 99999-0000" }, 400);
+    for (const invalido of [
+      { tipo: "instagram", valor: "https://example.org/gecep.teste" },
+      { tipo: "whatsapp", valor: "12" },
+      { tipo: "email", valor: "email-incompleto" },
+      { tipo: "link", valor: "ftp://example.org" },
+    ]) await publicar({ contatos: [invalido] }, 400);
+
+    const { item: rascunho } = await publicar({ nome: "Rascunho com contato", contatos: [telefone] }, 201, false);
+    assert.equal((await dadosPublicos()).some((registro) => registro.id === rascunho.id), false);
+
+    const { item: antigo } = await publicar({ nome: "Integrante antigo", contato: "https://example.org/equipe" });
+    const listaAntiga = contatosDoMembro(antigo.dados);
+    assert.deepEqual(listaAntiga, [{ tipo: "link", valor: "https://example.org/equipe" }]);
+    const atualizar = async (lista) => (await (await portal.chamar(api, { method: "PUT", corpo: {
+      tipo: "membros", id: antigo.id, publicado: true, dados: { ...antigo.dados, contatos: lista },
+    } })).json()).item;
+    const editado = await atualizar([...listaAntiga, telefone]);
+    assert.deepEqual(contatosDoMembro(editado.dados), [...listaAntiga, telefone]);
+    assert.equal(editado.dados.contato, undefined);
+    await atualizar([]);
+    const semContatos = (await dadosPublicos()).find((registro) => registro.id === antigo.id);
+    assert.deepEqual(contatosDoMembro(semContatos.dados), []);
+  } finally { await portal.fechar(); }
 });
 
 test("a gravação impede duas publicações na mesma vaga mesmo sem uma consulta anterior", () => {

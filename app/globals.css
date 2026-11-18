@@ -5340,12 +5340,157 @@ html:has(#topo.texto-maior) {
   line-height: 1.55;
 }
 
-/* link de cartão de integrante */
-.cartao-integrante a {
+/* mantém o nome e o contato na mesma posição do cartão */
+.nome-integrante,
+.contato-integrante {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nome-integrante {
+  color: inherit;
+  font: inherit;
+}
+
+.contato-integrante {
+  align-self: flex-start;
   margin-top: auto;
   color: var(--azul);
   font-size: 0.6875rem;
   font-weight: 700;
+}
+
+.nome-integrante:hover,
+.contato-integrante:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* acomoda a apresentação toda e deixa a ficha rolar nas telas menores */
+.dialogo-integrante {
+  width: min(600px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-top: 5px solid var(--azul);
+  background: var(--branco);
+  color: var(--cinza-texto);
+  box-shadow: 0 18px 45px rgba(12, 51, 76, 0.25);
+  overflow-wrap: anywhere;
+}
+
+.dialogo-integrante::backdrop {
+  background: rgba(20, 43, 55, 0.6);
+}
+
+/* deixa o nome e o botão de fechar visíveis ao descer até os contatos */
+.topo-ficha-integrante {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #dbe3e6;
+  background: var(--branco);
+}
+
+.topo-ficha-integrante,
+.corpo-ficha-integrante,
+.contatos-ficha-integrante {
+  padding: clamp(16px, 4vw, 26px);
+}
+
+.topo-ficha-integrante small {
+  color: var(--azul);
+  font-weight: 700;
+}
+
+.topo-ficha-integrante h2 {
+  margin: 4px 0 0;
+  color: var(--azul-escuro);
+  font-size: 1.375rem;
+}
+
+.topo-ficha-integrante > div {
+  min-width: 0;
+}
+
+.topo-ficha-integrante .botao-secundario {
+  width: auto;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* mostra a foto junto do cargo e conserva as quebras da apresentação */
+.dados-ficha-integrante {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dados-ficha-integrante > div {
+  display: grid;
+  gap: 4px;
+}
+
+.dados-ficha-integrante > img,
+.dados-ficha-integrante > .foto-integrante-vazia {
+  width: clamp(64px, 18vw, 92px);
+  height: clamp(64px, 18vw, 92px);
+  flex-shrink: 0;
+  margin: 0;
+  object-fit: cover;
+  font-size: 1.5rem;
+}
+
+.apresentacao-ficha-integrante {
+  margin-top: 20px;
+}
+
+.dialogo-integrante h3 {
+  margin: 0 0 10px;
+  color: var(--azul-escuro);
+  font-size: 1rem;
+}
+
+.apresentacao-ficha-integrante p {
+  margin: 0;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+/* reúne as opções de contato no fim da ficha */
+.contatos-ficha-integrante {
+  border-top: 1px solid #dbe3e6;
+  background: #eef4f6;
+}
+
+.contatos-ficha-integrante ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contatos-ficha-integrante a {
+  width: 100%;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.contatos-ficha-integrante a span {
+  min-width: 0;
+  font-weight: 400;
 }
 
 /* estado vazio equipe */
@@ -5792,6 +5937,60 @@ html:has(#topo.texto-maior) {
 .grade-campos-painel label>small {
   color: #7c888d;
   line-height: 1.4;
+}
+
+/* agrupa os contatos opcionais dentro do formulário da equipe */
+.campos-contato-equipe {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #cbd8dc;
+}
+
+.campos-contato-equipe legend {
+  padding: 0 6px;
+  color: var(--azul-escuro);
+  font-weight: 700;
+}
+
+.campos-contato-equipe p {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.linha-contato-equipe {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.linha-contato-equipe label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.campos-contato-equipe button {
+  min-height: 36px;
+  padding-block: 8px;
+  cursor: pointer;
+}
+
+.adicionar-contato-equipe {
+  margin-top: 14px;
+}
+
+@media (max-width: 720px) {
+  .linha-contato-equipe {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+
+  .linha-contato-equipe label {
+    width: 100%;
+  }
 }
 
 /* campo largo */

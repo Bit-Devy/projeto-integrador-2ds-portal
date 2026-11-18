@@ -59,7 +59,6 @@ export const configuracaoPainel: Record<TipoConteudo, {
       { chave: "turma", rotulo: "Turma", tipo: "text" },
       { chave: "biografia", rotulo: "Apresentação", tipo: "textarea", dica: "Escreva de duas a quatro frases." },
       { chave: "fotoUrl", rotulo: "Foto", tipo: "arquivo", dica: "PNG, JPG ou WebP com até 10 MB." },
-      { chave: "contato", rotulo: "Link de contato", tipo: "url" },
     ],
   },
   // configura o formulário de eventos

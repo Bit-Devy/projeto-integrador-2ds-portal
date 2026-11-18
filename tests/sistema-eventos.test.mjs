@@ -105,6 +105,23 @@ test("gera uma chave de mata-mata navegável sem inventar equipes", async () => 
   );
 });
 
+test("a abertura da chave no celular encontra a fase atual entre os jogos públicos", async () => {
+  const { indiceFaseParaAbrir } = await importarDominio("interclasse-utilitarios");
+  const fases = [
+    { nome: "Oitavas de final", jogos: [{ situacao: "encerrada" }, { formaVitoria: "bye" }, { situacao: "wo" }] },
+    { nome: "Quartas de final", jogos: [{ situacao: "agendada" }, { situacao: "cancelada" }] },
+    { nome: "Semifinais", jogos: [] },
+    { nome: "Final", jogos: [{ situacao: "data_a_definir" }] },
+  ];
+  assert.equal(indiceFaseParaAbrir(fases, " OITAVAS de Final "), 0);
+  assert.equal(indiceFaseParaAbrir(fases, "Semifinais"), 1);
+  assert.equal(indiceFaseParaAbrir(fases, ""), 1);
+  assert.equal(indiceFaseParaAbrir(fases, "Final"), 3);
+  const concluidas = fases.map((fase) => ({ ...fase, jogos: fase.jogos.map((jogo) => ({ ...jogo, situacao: "encerrada" })) }));
+  assert.equal(indiceFaseParaAbrir(concluidas, ""), 3);
+  assert.equal(indiceFaseParaAbrir([], "Quartas de final"), -1);
+});
+
 test("cadastro aceita apenas séries válidas seguidas de uma a três letras", async () => {
   const { separarTurmas, anoEscolarTurma } = await importarDominio("interclasse-utilitarios");
   const { validarParticipante, validarCampeonato } = await importarDominio("validacao");

@@ -158,9 +158,9 @@ export function ListaInterclasses({ filtrosIniciais = {} }: { filtrosIniciais?: 
   );
 }
 
-function ChaveCampeonato({ fases, partidas, campeonatoSlug }: { fases: FasePublica[]; partidas: JogoPublico[]; campeonatoSlug: string }) {
+function ChaveCampeonato({ fases, partidas, campeonatoSlug, faseAtual }: { fases: FasePublica[]; partidas: JogoPublico[]; campeonatoSlug: string; faseAtual?: string }) {
   const [jogoAberto, setJogoAberto] = useState<JogoPublico | null>(null);
-  return <><ChaveInterativa fases={fases} partidas={partidas} abrirJogo={setJogoAberto} />{jogoAberto && <ModalJogo campeonato={campeonatoSlug} jogo={jogoAberto} fechar={() => setJogoAberto(null)} />}</>;
+  return <><ChaveInterativa fases={fases} partidas={partidas} faseInicialNoCelular={faseAtual ?? ""} abrirJogo={setJogoAberto} />{jogoAberto && <ModalJogo campeonato={campeonatoSlug} jogo={jogoAberto} fechar={() => setJogoAberto(null)} />}</>;
 }
 
 function ModalJogo({ campeonato, jogo, fechar }: { campeonato: string; jogo: JogoPublico; fechar: () => void }) {
@@ -228,7 +228,7 @@ export function DetalheInterclasse({ slug, guiaInicial }: { slug: string; guiaIn
           {!!campeonato.atualizacoes?.length && <section className="bloco-conteudo-evento"><h2>Notícias e atualizações</h2><div className="linha-atualizacoes">{campeonato.atualizacoes.map((atualizacao, indice) => <article key={`${atualizacao.titulo}-${indice}`}><time>{formatarData(atualizacao.data)}</time>{temTexto(atualizacao.titulo) && <h3>{atualizacao.titulo}</h3>}{temTexto(atualizacao.texto) && <p>{atualizacao.texto}</p>}</article>)}</div></section>}
           <BlocoTexto titulo="Observações" conteudo={campeonato.observacoesPublicas || campeonato.observacoes} />
         </div>}
-        {guia === "chave" && <div className="conteudo-guia"><ChaveCampeonato key={slug} fases={fases} partidas={partidas} campeonatoSlug={slug} /></div>}
+        {guia === "chave" && <div className="conteudo-guia"><ChaveCampeonato key={slug} fases={fases} partidas={partidas} campeonatoSlug={slug} faseAtual={campeonato.faseAtual} /></div>}
         {guia === "jogos" && <div className="conteudo-guia"><ListaPartidas partidas={partidas} campeonatoSlug={slug} /></div>}
         {guia === "classificacao" && <div className="conteudo-guia"><TabelaClassificacao linhas={classificacao} /></div>}
         {guia === "documentos" && <div className="conteudo-guia"><BlocoTexto titulo="Regulamento" conteudo={campeonato.regulamento} /><ListaDocumentos documentos={campeonato.documentos} titulo="Documentos do campeonato" /></div>}

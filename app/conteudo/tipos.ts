@@ -1,5 +1,6 @@
 // importa os dados dos serviços do estudante
 import type { CompromissoCalendario, ItemCardapio } from "../servicos/tipos";
+import type { ContatoEquipe } from "./contatos-equipe";
 
 // lista os tipos de conteúdo do portal
 export type TipoConteudo =
@@ -36,7 +37,8 @@ export type MembroGecep = RegistroBase & {
   turma: string;
   biografia: string;
   fotoUrl: string;
-  contato: string;
+  contato?: string;
+  contatos?: ContatoEquipe[];
 };
 
 // define os dados de um evento

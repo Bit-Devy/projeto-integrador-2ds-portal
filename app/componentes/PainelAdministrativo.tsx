@@ -11,7 +11,7 @@ import { configuracaoPainel, tiposConteudoPainel, type CampoPainel } from "../co
 // importa a ordenação dos registros
 import { ordenarRegistrosMaisRecentes } from "../conteudo/ordenacao";
 // importa os tipos dos conteúdos e mensagens
-import type { RegistroConteudo, TipoConteudo, NoticiaGecep } from "../conteudo/tipos";
+import type { RegistroConteudo, TipoConteudo, NoticiaGecep, MembroGecep } from "../conteudo/tipos";
 // importa o painel do mapa
 import PainelMapaColegio from "./PainelMapaColegio";
 // importa o cadastro de turmas e seus vínculos com as salas
@@ -46,6 +46,8 @@ import { anoDoPortal, dataDoPortal } from "../conteudo/periodos";
 import { tiposComAno, anoDoRegistro } from "../conteudo/ciclos";
 // liga a composição da equipe às vagas do estatuto
 import CamposCargoEquipe from "./CamposCargoEquipe";
+import CamposContatoEquipe from "./CamposContatoEquipe";
+import { contatosDoMembro, type ContatoEquipe } from "../conteudo/contatos-equipe";
 import { obterCargoEquipe } from "../lib/equipe";
 import {
   confirmarSaida,
@@ -94,6 +96,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
   const [erro, setErro] = useState("");
   // guarda os campos do formulário
   const [formulario, setFormulario] = useState<Record<string, ValorCampo> | null>(null);
+  const [contatosEquipe, setContatosEquipe] = useState<ContatoEquipe[]>([]);
   // guarda o registro em edição
   const [idEditando, setIdEditando] = useState<number | null>(null);
   // controla a publicação do registro
@@ -211,6 +214,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
       configuracao.campos.map((campo) => [campo.chave, campo.tipo === "checkbox" ? false : campo.chave === "ano" ? anoDoPortal() : campo.tipo === "number" ? 0 : campo.opcoes?.[0]?.valor ?? ""]),
     );
     setFormulario({ ...valores, ...(tipo === "membros" ? { cargoChave: "", vaga: "", turno: "" } : {}), ...(tipo === "movimentos" ? { data: dataDoPortal() } : {}), areaResponsavel: areaRestrita(usuario.cargo) || "geral" });
+    setContatosEquipe([]);
     setPublicado(true);
     setNoticiaJaPublicada(false);
     setNoticiaOriginal(null);
@@ -225,6 +229,7 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
     // completa campos que ainda não possuem valor
     setFormulario(Object.fromEntries(configuracao.campos.map((campo) => [campo.chave, dados[campo.chave] ?? (campo.tipo === "checkbox" ? false : campo.tipo === "number" ? 0 : "")])));
     setFormulario((atual) => atual ? { ...atual, ...(tipo === "membros" ? { cargoChave: obterCargoEquipe(dados)?.chave || "", vaga: String(dados.vaga || ""), turno: String(dados.turno || "") } : {}), areaResponsavel: String(dados.areaResponsavel || "geral") } : atual);
+    setContatosEquipe(item.tipo === "membros" ? contatosDoMembro(item.dados as MembroGecep) : []);
     setPublicado(item.publicado);
     setNoticiaOriginal(item.tipo === "noticias" ? item.dados as NoticiaGecep : null);
     setNoticiaJaPublicada(item.publicado || item.jaPublicado || Boolean((item.dados as { jaPublicada?: boolean }).jaPublicada));
@@ -247,10 +252,11 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
 
     try {
       // envia o formulário para a api
+      const dados = tipo === "membros" ? { ...formulario, contatos: contatosEquipe } : formulario;
       const resposta = await fetch("/api/conteudo", {
         method: idEditando ? "PUT" : "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: idEditando, tipo, dados: formulario, publicado: vaiPublicar }),
+        body: JSON.stringify({ id: idEditando, tipo, dados, publicado: vaiPublicar }),
       });
       // lê o registro salvo
       const resultado = await resposta.json() as { item?: RegistroConteudo; erro?: string };
@@ -432,6 +438,10 @@ export default function PainelAdministrativo({ usuario }: { usuario: UsuarioPain
 
                   {tipo === "membros" && <CamposCargoEquipe dados={formulario} mudar={mudarFormulario} />}
                   {configuracao.campos.filter((campo) => (tipo !== "membros" || campo.chave !== "cargo") && (!campo.dependeDe || Boolean(formulario[campo.dependeDe]))).map((campo) => <CampoFormulario campo={campo} valor={formulario[campo.chave]} mudar={(valor) => mudarFormulario(campo.chave, valor)} enviarArquivo={(arquivo) => enviarArquivo(campo.chave, arquivo)} anoLimite={tipo === "movimentos" && campo.chave === "data" ? anoAtual : undefined} key={campo.chave} />)}
+                  {tipo === "membros" && <CamposContatoEquipe contatos={contatosEquipe} desabilitado={salvando} alterar={(contatos) => {
+                    setContatosEquipe(contatos);
+                    setConteudoSujo(true);
+                  }} />}
                   {tipo !== "noticias" && <label className="campo-publicado"><CheckboxComAjuda checked={publicado} onChange={(evento) => { setPublicado(evento.target.checked); setConteudoSujo(true); }} explicacao={descricaoCheckbox("publicado")} aria-label={"Publicar este registro no portal"} /><span>Publicar este registro no portal</span></label>}
                 </div>
                 {tipo === "noticias" && <p className="ajuda-busca">Salvar registro publica a notícia no portal. Salvar em rascunho mantém uma notícia nova apenas no painel.</p>}

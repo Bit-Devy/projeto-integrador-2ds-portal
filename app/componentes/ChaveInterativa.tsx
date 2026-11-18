@@ -1,13 +1,13 @@
 "use client";
 
 // usa os controles da tela e guarda as alterações da navegação
-import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 // usa os mesmos dados da chave pública e do painel
 import type { FasePublica, JogoPublico } from "../eventos/modelo-publico";
 // prepara os textos que aparecem nos jogos
 import { formatarData, normalizarBusca, rotuloSituacao, textoParticipante } from "../eventos/modelo-publico";
 // calcula a posição dos cartões e das linhas
-import { calcularZoomDaChave, margemDaChave, posicionarChave, type ModoChave } from "../eventos/interclasse-utilitarios";
+import { calcularZoomDaChave, indiceFaseParaAbrir, margemDaChave, posicionarChave, type ModoChave } from "../eventos/interclasse-utilitarios";
 
 // guarda o jogo e o lado escolhido para a troca
 export type PosicaoChave = { partidaId: number; posicao: "a" | "b" };
@@ -26,10 +26,19 @@ function rolarParaPonto(visor: HTMLDivElement, prancheta: HTMLDivElement, x: num
   });
 }
 
+// usa o mesmo limite de tela do menu do portal
+const consultaTelaCelular = "(max-width: 780px)";
+function acompanharTelaCelular(notificar: () => void) {
+  const tela = window.matchMedia(consultaTelaCelular);
+  tela.addEventListener("change", notificar);
+  return () => tela.removeEventListener("change", notificar);
+}
+
 // mostra a chave e permite navegar ou editar os confrontos
-export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, desabilitado = false, erro, sucesso }: {
+export default function ChaveInterativa({ fases, partidas, faseInicialNoCelular, abrirJogo, trocar, desabilitado = false, erro, sucesso }: {
   fases: FasePublica[];
   partidas: JogoPublico[];
+  faseInicialNoCelular?: string;
   abrirJogo?: (jogo: JogoPublico) => void;
   trocar?: (origem: PosicaoChave, destino: PosicaoChave) => void;
   desabilitado?: boolean;
@@ -40,11 +49,16 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
   const filtroId = useId();
   const visor = useRef<HTMLDivElement>(null);
   const prancheta = useRef<HTMLDivElement>(null);
+  const atalhos = useRef<HTMLDivElement>(null);
   const arraste = useRef<{ x: number; y: number; esquerda: number; topo: number } | null>(null);
   const [medidasVisor, setMedidasVisor] = useState<{ largura: number; altura: number } | null>(null);
   const [zoomEscolhido, setZoomEscolhido] = useState<number | null>(null);
-  const [faseEmFoco, setFaseEmFoco] = useState<string | null>(null);
-  const [modo, setModo] = useState<ModoChave>("dois-lados");
+  const [faseEscolhida, setFaseEmFoco] = useState<string | null>();
+  const [modoEscolhido, setModo] = useState<ModoChave | null>(null);
+  const inicioNoCelular = useSyncExternalStore(acompanharTelaCelular,
+    () => faseInicialNoCelular !== undefined && window.matchMedia(consultaTelaCelular).matches,
+    () => false);
+  const modo = modoEscolhido ?? (inicioNoCelular ? "um-lado" : "dois-lados");
   const [busca, setBusca] = useState("");
   const [selecionada, setSelecionada] = useState<PosicaoChave | null>(null);
   // mantém a mesma chave quando a tela cheia abre ou fecha
@@ -99,7 +113,8 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
     return Array.from(porPosicao, ([x, { jogos, avancos }]) => {
       const nome = fase.nome || `Fase ${indiceFase + 1}`;
       const lado = x > desenho.colunaX(desenho.colunaFinal) ? "direita" : "esquerda";
-      const rotulo = desenho.espelhada && indiceFase < desenho.colunaFinal ? `${nome} · ${lado}` : nome;
+      const mostraLado = desenho.espelhada && indiceFase < desenho.colunaFinal;
+      const rotulo = mostraLado ? `${nome} · ${lado}` : nome;
       jogos.sort((a, b) => desenho.posicoes.get(a)!.y - desenho.posicoes.get(b)!.y);
       const primeiro = jogos[0];
       const ultimo = jogos.at(-1);
@@ -112,13 +127,18 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
         : null;
       const confrontos = jogos.filter((jogo) => jogo.formaVitoria !== "bye").length;
       const folgas = jogos.length - confrontos + avancos.length;
-      return { chave: `${indiceFase}-${x}`, indiceFase, x, nome, rotulo, jogos, avancos, foco, folgas, confrontos };
+      const chave = mostraLado ? `${indiceFase}-${lado}` : String(indiceFase);
+      return { chave, indiceFase, x, nome, rotulo, jogos, avancos, foco, folgas, confrontos };
     });
   }).sort((a, b) => a.x - b.x), [colunas, desenho]);
   const jogos = colunas.flatMap((fase) => fase.jogos);
 
   const largura = desenho.largura;
   const altura = desenho.altura + desenho.topoFases;
+  // usa o mesmo enquadramento dos atalhos quando a chave pública abre no celular
+  const faseInicial = inicioNoCelular && faseEscolhida === undefined
+    ? indiceFaseParaAbrir(colunas, faseInicialNoCelular ?? "") : -1;
+  const faseEmFoco = faseInicial >= 0 ? String(faseInicial) : faseEscolhida;
   const foco = colunasOrganizadas.find((fase) => fase.chave === faseEmFoco)?.foco;
   const zoomEncaixe = medidasVisor ? calcularZoomDaChave(medidasVisor.largura, medidasVisor.altura, largura, altura) : 1;
   const zoomFase = foco && medidasVisor
@@ -161,6 +181,15 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
     rolarParaPonto(visor.current, prancheta.current, centro.x * zoom, centro.y * zoom);
     centroDoVisor.current = null;
   }, [focoX, focoY, zoom, telaCheia, medidasVisor]);
+
+  // deixa o atalho selecionado visível sem mover a página
+  useLayoutEffect(() => {
+    const barra = atalhos.current;
+    const selecionado = barra?.querySelector("button[aria-pressed='true']");
+    if (!inicioNoCelular || !barra || !selecionado) return;
+    const { left, width } = selecionado.getBoundingClientRect();
+    barra.scrollLeft += left - barra.getBoundingClientRect().left - (barra.clientWidth - width) / 2;
+  }, [faseEmFoco, inicioNoCelular, telaCheia]);
 
   // o menor zoom e o botão central sempre voltam para a chave inteira
   function enquadrarChave() {
@@ -217,7 +246,7 @@ export default function ChaveInterativa({ fases, partidas, abrirJogo, trocar, de
     <div className="ic-chave-topo"><div><span className="ic-sobretitulo">DO PRIMEIRO JOGO À FINAL</span><h2>Chave do campeonato</h2><p>{trocar ? "Arraste uma turma para trocar posições. No celular ou teclado, selecione duas posições." : "Explore as fases e toque em um jogo para ver os detalhes."}</p></div><label className="ic-busca" htmlFor={filtroId}><span>Encontre sua turma</span><input id={filtroId} type="search" placeholder="Ex.: 2DS" value={busca} onChange={(e) => setBusca(e.target.value)} /></label></div>
     {/* permite pular de fase e ajustar o tamanho dos cartões */}
     <div className="ic-ferramentas">
-      <div className="ic-atalhos-fases" role="group" aria-label="Ir para uma fase">{colunasOrganizadas.filter((fase) => fase.foco).map((fase) => <button type="button" key={fase.chave} aria-pressed={faseEmFoco === fase.chave} onClick={() => irParaFase(fase)}>{fase.rotulo}</button>)}</div>
+      <div className="ic-atalhos-fases" ref={atalhos} role="group" aria-label="Ir para uma fase">{colunasOrganizadas.filter((fase) => fase.foco).map((fase) => <button type="button" key={fase.chave} aria-pressed={faseEmFoco === fase.chave} onClick={() => irParaFase(fase)}>{fase.rotulo}</button>)}</div>
       <div className="ic-controles-visualizacao">
         <div className="ic-zoom">
           <button type="button" aria-label="Diminuir zoom" disabled={zoom <= zoomEncaixe} onClick={() => ajustarZoom(1 / 1.25)}>−</button>
