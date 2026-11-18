@@ -1,4 +1,3 @@
-// importa o armazenamento separado de cada pedido
 import { AsyncLocalStorage } from "node:async_hooks";
 
 // descreve os recursos disponíveis no servidor

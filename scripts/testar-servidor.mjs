@@ -1,8 +1,5 @@
-// importa as verificações dos resultados
 import assert from "node:assert/strict";
-// importa a leitura de arquivos
 import { readFile } from "node:fs/promises";
-// importa a execução de programas
 import { spawn } from "node:child_process";
 
 // guarda o endereço usado pelos testes
@@ -10,19 +7,26 @@ const testarStart = process.argv.includes("--start");
 const portaTeste = process.env.GECEP_TEST_PORT || (testarStart ? "4173" : "5173");
 const endereco = `http://127.0.0.1:${portaTeste}`;
 // inicia o servidor local
-const servidor = spawn(process.execPath, ["scripts/comando-local.mjs", testarStart ? "start" : "vite",
-  "--port", portaTeste], {
-  cwd: process.cwd(),
-  env: process.env,
-  stdio: ["ignore", "pipe", "pipe"],
-});
+const servidor = spawn(
+  process.execPath,
+  ["scripts/comando-local.mjs", testarStart ? "start" : "vite", "--port", portaTeste],
+  {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: ["ignore", "pipe", "pipe"],
+  },
+);
 
 // guarda as mensagens do servidor
 let registro = "";
 // recebe as mensagens normais do servidor
-servidor.stdout.on("data", (parte) => { registro += parte.toString(); });
+servidor.stdout.on("data", (parte) => {
+  registro += parte.toString();
+});
 // recebe as mensagens de erro do servidor
-servidor.stderr.on("data", (parte) => { registro += parte.toString(); });
+servidor.stderr.on("data", (parte) => {
+  registro += parte.toString();
+});
 
 // executa a sequência completa de testes
 try {
@@ -62,7 +66,12 @@ try {
 
   // entra no painel com a senha local
   const senha = await lerSenhaLocal();
-  const formulario = new URLSearchParams({ login: await lerLoginLocal(), senha, geral: "1", returnTo: "/painel" });
+  const formulario = new URLSearchParams({
+    login: await lerLoginLocal(),
+    senha,
+    geral: "1",
+    returnTo: "/painel",
+  });
   const respostaLogin = await fetch(`${endereco}/api/login`, {
     method: "POST",
     redirect: "manual",
@@ -110,7 +119,10 @@ try {
 async function testarLimitesNavegador(cookieAdministrador, senha) {
   const inicio = await fetch(`${endereco}/api/limites?acao=mensagens`);
   assert.equal(inicio.status, 200);
-  const navegador = inicio.headers.getSetCookie().find((item) => item.startsWith("gecep_navegador="))?.split(";")[0];
+  const navegador = inicio.headers
+    .getSetCookie()
+    .find((item) => item.startsWith("gecep_navegador="))
+    ?.split(";")[0];
   assert.ok(navegador);
   assert.equal(inicio.headers.get("cache-control"), "no-store");
   const ids = [];
@@ -118,42 +130,80 @@ async function testarLimitesNavegador(cookieAdministrador, senha) {
     // confirma o anonimato mesmo quando alguém envia dados pessoais diretamente à api
     for (let indice = 0; indice < 3; indice += 1) {
       const resposta = await fetch(`${endereco}/api/mensagens`, {
-        method: "POST", headers: { cookie: navegador, "content-type": "application/json" },
-        body: JSON.stringify({ anonimo: true, nome: "Não guardar", turma: "Não guardar", contato: "Não guardar", tipoContato: "email",
-          assunto: "Teste", titulo: `Limite temporário ${indice}`, mensagem: "Mensagem temporária para verificar o limite por navegador." }),
+        method: "POST",
+        headers: { cookie: navegador, "content-type": "application/json" },
+        body: JSON.stringify({
+          anonimo: true,
+          nome: "Não guardar",
+          turma: "Não guardar",
+          contato: "Não guardar",
+          tipoContato: "email",
+          assunto: "Teste",
+          titulo: `Limite temporário ${indice}`,
+          mensagem: "Mensagem temporária para verificar o limite por navegador.",
+        }),
       });
       assert.equal(resposta.status, 201);
       const dados = await resposta.json();
       ids.push(Number(dados.protocolo.split("-").at(-1)));
     }
     const bloqueada = await fetch(`${endereco}/api/mensagens`, {
-      method: "POST", headers: { cookie: navegador, "content-type": "application/json" },
-      body: JSON.stringify({ anonimo: true, assunto: "Teste", titulo: "Não deve salvar", mensagem: "Esta quarta mensagem deve ser bloqueada pelo servidor." }),
+      method: "POST",
+      headers: { cookie: navegador, "content-type": "application/json" },
+      body: JSON.stringify({
+        anonimo: true,
+        assunto: "Teste",
+        titulo: "Não deve salvar",
+        mensagem: "Esta quarta mensagem deve ser bloqueada pelo servidor.",
+      }),
     });
     assert.equal(bloqueada.status, 429);
     assert.ok(Number(bloqueada.headers.get("retry-after")) > 0);
-    const recarregada = await fetch(`${endereco}/api/limites?acao=mensagens`, { headers: { cookie: navegador } });
+    const recarregada = await fetch(`${endereco}/api/limites?acao=mensagens`, {
+      headers: { cookie: navegador },
+    });
     assert.equal((await recarregada.json()).limite.bloqueado, true);
   } finally {
     // arquiva as mensagens de teste sem permitir apagar o histórico
-    for (const id of ids) await requisicaoDominio(cookieAdministrador, "/api/mensagens", "PUT", { id, status: "arquivada" });
+    for (const id of ids)
+      await requisicaoDominio(cookieAdministrador, "/api/mensagens", "PUT", {
+        id,
+        status: "arquivada",
+      });
   }
 
   // verifica o primeiro bloqueio e impede até uma senha correta durante a espera
   const preparoLogin = await fetch(`${endereco}/api/limites?acao=login`);
-  const navegadorLogin = preparoLogin.headers.getSetCookie().find((item) => item.startsWith("gecep_navegador="))?.split(";")[0];
+  const navegadorLogin = preparoLogin.headers
+    .getSetCookie()
+    .find((item) => item.startsWith("gecep_navegador="))
+    ?.split(";")[0];
   assert.ok(navegadorLogin);
   for (let indice = 0; indice < 5; indice += 1) {
     const resposta = await fetch(`${endereco}/api/login`, {
-      method: "POST", redirect: "manual", headers: { cookie: navegadorLogin },
-      body: new URLSearchParams({ login: await lerLoginLocal(), senha: `${senha}-incorreta`, geral: "1", returnTo: "/painel" }),
+      method: "POST",
+      redirect: "manual",
+      headers: { cookie: navegadorLogin },
+      body: new URLSearchParams({
+        login: await lerLoginLocal(),
+        senha: `${senha}-incorreta`,
+        geral: "1",
+        returnTo: "/painel",
+      }),
     });
     assert.equal(resposta.status, 303);
     assert.match(resposta.headers.get("location"), indice < 4 ? /erro=1/ : /erro=limite/);
   }
   const bloqueioLogin = await fetch(`${endereco}/api/login`, {
-    method: "POST", redirect: "manual", headers: { cookie: navegadorLogin },
-    body: new URLSearchParams({ login: await lerLoginLocal(), senha, geral: "1", returnTo: "/painel" }),
+    method: "POST",
+    redirect: "manual",
+    headers: { cookie: navegadorLogin },
+    body: new URLSearchParams({
+      login: await lerLoginLocal(),
+      senha,
+      geral: "1",
+      returnTo: "/painel",
+    }),
   });
   assert.match(bloqueioLogin.headers.get("location"), /erro=limite/);
   assert.ok(!bloqueioLogin.headers.getSetCookie().some((item) => item.startsWith("gecep_sessao=")));
@@ -243,15 +293,17 @@ async function testarMapaPublicoSemLogin() {
   assert.equal(local3J?.numero, "216");
 
   // verifica a busca por turma
-  const buscaTurma = await fetch(`${endereco}/api/mapa?busca=${encodeURIComponent("3º J")}&turno=manha&tipo=aula_regular`);
+  const buscaTurma = await fetch(
+    `${endereco}/api/mapa?busca=${encodeURIComponent("3º J")}&turno=manha&tipo=aula_regular`,
+  );
   assert.equal(buscaTurma.status, 200);
   const resultadoTurma = await buscaTurma.json();
   assert.ok(resultadoTurma.turmas.some((item) => item.nome === "3J"));
 
   // verifica a classificação das turmas
-  const nomesTurmasEmOutro = [...new Set(
-    dados.turmas.filter((item) => item.tipo === "outro").map((item) => item.nome),
-  )];
+  const nomesTurmasEmOutro = [
+    ...new Set(dados.turmas.filter((item) => item.tipo === "outro").map((item) => item.nome)),
+  ];
   assert.deepEqual(nomesTurmasEmOutro, ["Reforço"]);
   assert.ok(dados.turmas.some((item) => item.nome === "2PD" && item.tipo === "aula_regular"));
   assert.ok(dados.turmas.some((item) => item.nome === "CURCEP" && item.tipo === "aula_regular"));
@@ -269,7 +321,9 @@ async function testarMapaPublicoSemLogin() {
     { termo: "Coro", nome: /Coro/i },
     { termo: "SRM - DI", nome: /SRM\s*-\s*DI/i },
   ]) {
-    const resposta = await fetch(`${endereco}/api/mapa?busca=${encodeURIComponent(pesquisa.termo)}`);
+    const resposta = await fetch(
+      `${endereco}/api/mapa?busca=${encodeURIComponent(pesquisa.termo)}`,
+    );
     assert.equal(resposta.status, 200);
     const resultado = await resposta.json();
     assert.ok(
@@ -279,7 +333,9 @@ async function testarMapaPublicoSemLogin() {
   }
 
   // verifica a busca pela atividade de reforço
-  const buscaReforco = await fetch(`${endereco}/api/mapa?busca=${encodeURIComponent("Reforço")}&tipo=outro`);
+  const buscaReforco = await fetch(
+    `${endereco}/api/mapa?busca=${encodeURIComponent("Reforço")}&tipo=outro`,
+  );
   assert.equal(buscaReforco.status, 200);
   assert.ok((await buscaReforco.json()).turmas.some((item) => item.nome === "Reforço"));
 
@@ -288,7 +344,11 @@ async function testarMapaPublicoSemLogin() {
   assert.equal(filtroCombinado.status, 200);
   const resultadoCombinado = await filtroCombinado.json();
   assert.deepEqual(resultadoCombinado.locais.map((item) => item.numero).sort(), ["113B", "213B"]);
-  assert.ok(resultadoCombinado.ensalamentos.every((item) => item.turno === "manha" && item.tipo === "idiomas"));
+  assert.ok(
+    resultadoCombinado.ensalamentos.every(
+      (item) => item.turno === "manha" && item.tipo === "idiomas",
+    ),
+  );
 
   // rejeita um turno que não existe
   const turnoInvalido = await fetch(`${endereco}/api/mapa?turno=inexistente`);
@@ -300,7 +360,10 @@ async function testarMapaPublicoSemLogin() {
   const escritaProtegida = await fetch(`${endereco}/api/mapa`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ entidade: "locais", dados: { nome: "Não deve ser criado", tipo: "outro" } }),
+    body: JSON.stringify({
+      entidade: "locais",
+      dados: { nome: "Não deve ser criado", tipo: "outro" },
+    }),
   });
   assert.equal(escritaProtegida.status, 401);
 }
@@ -330,13 +393,33 @@ async function testarSistemaEventosSemLogin() {
 
   // as páginas especializadas mostram as publicações antes do arquivo de filtros
   for (const [rota, titulos] of [
-    ["/eventos/internos", ["Acontecendo agora", "Próximos eventos", "Eventos recentes", "Procurar outro evento"]],
-    ["/eventos/interclasses", ["Interclasses acontecendo agora", "Últimos resultados", "Campeonatos encerrados", "Procurar campeonato"]],
-    ["/eventos/reunioes", ["Últimas reuniões", "Próximas reuniões", "Reuniões internas do GECEP", "Procurar reunião ou ata"]],
+    [
+      "/eventos/internos",
+      ["Acontecendo agora", "Próximos eventos", "Eventos recentes", "Procurar outro evento"],
+    ],
+    [
+      "/eventos/interclasses",
+      [
+        "Interclasses acontecendo agora",
+        "Últimos resultados",
+        "Campeonatos encerrados",
+        "Procurar campeonato",
+      ],
+    ],
+    [
+      "/eventos/reunioes",
+      [
+        "Últimas reuniões",
+        "Próximas reuniões",
+        "Reuniões internas do GECEP",
+        "Procurar reunião ou ata",
+      ],
+    ],
   ]) {
     const pagina = await fetch(`${endereco}${rota}`);
     const html = await pagina.text();
-    for (const titulo of titulos) assert.match(html, new RegExp(titulo), `${rota} deve apresentar ${titulo}.`);
+    for (const titulo of titulos)
+      assert.match(html, new RegExp(titulo), `${rota} deve apresentar ${titulo}.`);
   }
 
   // links de "ver todos" mantêm o arquivo aberto e expõem os filtros correspondentes
@@ -368,10 +451,12 @@ async function testarSistemaEventosSemLogin() {
       const complemento = method === "DELETE" ? "?id=1" : "";
       const respostaEscrita = await fetch(`${endereco}${api}${complemento}`, {
         method,
-        ...(method === "DELETE" ? {} : {
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ dados: {} }),
-        }),
+        ...(method === "DELETE"
+          ? {}
+          : {
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ dados: {} }),
+            }),
       });
       assert.equal(respostaEscrita.status, 401, `${method} ${api} deve exigir uma sessão.`);
     }
@@ -392,7 +477,7 @@ async function testarSistemaEventosSemLogin() {
   afirmarSemCamposPrivados(central);
 }
 
-// testa o fluxo HTTP integrado de eventos, interclasses, reuniões e representantes
+// testa o fluxo http integrado de eventos, interclasses, reuniões e representantes
 async function testarSistemaEventos(cookie) {
   const sufixo = `${Date.now().toString(36)}-${Math.floor(Math.random() * 1_000_000)}`;
   const criados = {
@@ -412,27 +497,35 @@ async function testarSistemaEventos(cookie) {
     // cadastra um representante que aparece no portal durante o mandato
     const nomeRepresentante = `Representante HTTP ${sufixo}`;
     const nomeExibicao = `Representante ${sufixo}`;
-    const respostaRepresentante = await requisicaoDominio(cookie, "/api/representantes", "POST", {
-      dados: {
-        nome: nomeRepresentante,
-        nomeExibicao,
-        nivelEnsino: "Ensino Médio",
-        serie: "3ª série",
-        turma: "3º J",
-        turno: "manha",
-        funcao: "titular",
-        inicioMandato: "2000-01-01",
-        fimMandato: "2199-12-31",
-        observacaoPublica: "Representante criado pelo teste HTTP local.",
-        observacaoInterna: `não publicar representante ${sufixo}`,
-        ativo: true,
+    const respostaRepresentante = await requisicaoDominio(
+      cookie,
+      "/api/representantes",
+      "POST",
+      {
+        dados: {
+          nome: nomeRepresentante,
+          nomeExibicao,
+          nivelEnsino: "Ensino Médio",
+          serie: "3ª série",
+          turma: "3º J",
+          turno: "manha",
+          funcao: "titular",
+          inicioMandato: "2000-01-01",
+          fimMandato: "2199-12-31",
+          observacaoPublica: "Representante criado pelo teste HTTP local.",
+          observacaoInterna: `não publicar representante ${sufixo}`,
+          ativo: true,
+        },
       },
-    }, 201);
+      201,
+    );
     criados.representante = respostaRepresentante.item.id;
 
     // encontra a turma mesmo sem espaço e com o símbolo ordinal
     assert.equal(respostaRepresentante.item.publicado, true);
-    const buscaTurma = await requisicaoPublica(`/api/representantes?busca=${encodeURIComponent("3ºJ")}&limite=100&teste=${sufixo}`);
+    const buscaTurma = await requisicaoPublica(
+      `/api/representantes?busca=${encodeURIComponent("3ºJ")}&limite=100&teste=${sufixo}`,
+    );
     const representantePublico = buscaTurma.itens.find((item) => item.id === criados.representante);
     assert.ok(representantePublico, "A busca normalizada por 3ºJ deve encontrar 3º J.");
     assert.equal(representantePublico.turma, "3J");
@@ -451,13 +544,18 @@ async function testarSistemaEventos(cookie) {
     assert.equal(representanteArquivado.ativo, false);
     assert.equal(representanteArquivado.publicado, false);
     assert.ok(representanteArquivado.arquivadoEm);
-    await requisicaoPublica(`/api/representantes/${criados.representante}?teste=arquivado-${sufixo}`, 404);
+    await requisicaoPublica(
+      `/api/representantes/${criados.representante}?teste=arquivado-${sufixo}`,
+      404,
+    );
 
     // a reativação limpa o arquivamento e volta a mostrar o mandato vigente
-    const representanteReativado = (await requisicaoDominio(cookie, "/api/representantes", "PUT", {
-      id: criados.representante,
-      dados: { ativo: true },
-    })).item;
+    const representanteReativado = (
+      await requisicaoDominio(cookie, "/api/representantes", "PUT", {
+        id: criados.representante,
+        dados: { ativo: true },
+      })
+    ).item;
     assert.equal(representanteReativado.ativo, true);
     assert.equal(representanteReativado.publicado, true);
     assert.equal(representanteReativado.arquivadoEm, null);
@@ -468,38 +566,45 @@ async function testarSistemaEventos(cookie) {
     afirmarSemCamposPrivados(detalheRepresentanteReativado);
 
     // cria um evento interno com conteúdo público e uma observação estritamente privada
-    const respostaEvento = await requisicaoDominio(cookie, "/api/eventos", "POST", {
-      dados: {
-        titulo: `Evento HTTP ${sufixo}`,
-        subtitulo: "Integração local",
-        descricaoCurta: "Evento temporário do teste local.",
-        descricao: "Conteúdo público do evento temporário.",
-        categoria: "Teste",
-        dataInicial: "2099-10-20",
-        dataFinal: "2099-10-20",
-        horarioInicial: "09:00",
-        horarioFinal: "10:30",
-        local: "Auditório",
-        turno: "manha",
-        publicoDestinado: "Comunidade escolar",
-        situacao: "proximo",
-        observacoesPublicas: "Observação pública do teste.",
-        observacoesInternas: `não publicar evento ${sufixo}`,
-        publicado: false,
-        ativo: true,
+    const respostaEvento = await requisicaoDominio(
+      cookie,
+      "/api/eventos",
+      "POST",
+      {
+        dados: {
+          titulo: `Evento HTTP ${sufixo}`,
+          subtitulo: "Integração local",
+          descricaoCurta: "Evento temporário do teste local.",
+          descricao: "Conteúdo público do evento temporário.",
+          categoria: "Teste",
+          dataInicial: "2099-10-20",
+          dataFinal: "2099-10-20",
+          horarioInicial: "09:00",
+          horarioFinal: "10:30",
+          local: "Auditório",
+          turno: "manha",
+          publicoDestinado: "Comunidade escolar",
+          situacao: "proximo",
+          observacoesPublicas: "Observação pública do teste.",
+          observacoesInternas: `não publicar evento ${sufixo}`,
+          publicado: false,
+          ativo: true,
+        },
       },
-    }, 201);
+      201,
+    );
     criados.evento = respostaEvento.item.id;
     const slugEvento = respostaEvento.item.slug;
     await requisicaoPublica(`/api/eventos/${slugEvento}`, 404);
     assert.equal((await fetch(`${endereco}/eventos/internos/${slugEvento}`)).status, 404);
 
-    // publica o evento e confirma o DTO e a página de detalhe públicos
+    // publica o evento e confirma o dto e a página de detalhe públicos
     await requisicaoDominio(cookie, "/api/eventos", "PUT", {
       id: criados.evento,
       dados: { publicado: true },
     });
-    const eventoPublico = (await requisicaoPublica(`/api/eventos/${slugEvento}?teste=${sufixo}`)).item;
+    const eventoPublico = (await requisicaoPublica(`/api/eventos/${slugEvento}?teste=${sufixo}`))
+      .item;
     assert.equal(eventoPublico.id, criados.evento);
     assert.equal(eventoPublico.observacoesPublicas, "Observação pública do teste.");
     afirmarSemCamposPrivados(eventoPublico);
@@ -512,40 +617,62 @@ async function testarSistemaEventos(cookie) {
       posicaoInicial: indice + 1,
       ativo: true,
     }));
-    const respostaCampeonato = await requisicaoDominio(cookie, "/api/interclasses", "POST", {
-      dados: {
-        nome: `Interclasse HTTP ${sufixo}`,
-        edicao: "Teste local",
-        ano: 2099,
-        modalidade: "Futsal",
-        categoria: "Misto",
-        turno: "tarde",
-        descricao: "Campeonato temporário do teste HTTP.",
-        premiacao: "1º lugar: troféu e medalhas\n2º lugar: medalhas",
-        regulamento: "Mata-mata com quatro equipes.",
-        formato: "mata_mata",
-        situacao: "em_andamento",
-        dataInicial: "2099-09-01",
-        dataFinal: "2099-09-30",
-        observacoesInternas: `não publicar campeonato ${sufixo}`,
-        chavePublicada: false,
-        publicado: false,
-        ativo: true,
-        participantes: equipes.slice(0, 2),
+    const respostaCampeonato = await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "POST",
+      {
+        dados: {
+          nome: `Interclasse HTTP ${sufixo}`,
+          edicao: "Teste local",
+          ano: 2099,
+          modalidade: "Futsal",
+          categoria: "Misto",
+          turno: "tarde",
+          descricao: "Campeonato temporário do teste HTTP.",
+          premiacao: "1º lugar: troféu e medalhas\n2º lugar: medalhas",
+          regulamento: "Mata-mata com quatro equipes.",
+          formato: "mata_mata",
+          situacao: "em_andamento",
+          dataInicial: "2099-09-01",
+          dataFinal: "2099-09-30",
+          observacoesInternas: `não publicar campeonato ${sufixo}`,
+          chavePublicada: false,
+          publicado: false,
+          ativo: true,
+          participantes: equipes.slice(0, 2),
+        },
       },
-    }, 201);
+      201,
+    );
     criados.campeonato = respostaCampeonato.item.id;
     const slugCampeonato = respostaCampeonato.item.slug;
     await requisicaoPublica(`/api/interclasses/${slugCampeonato}`, 404);
     assert.equal((await fetch(`${endereco}/eventos/interclasses/${slugCampeonato}`)).status, 404);
 
-    // O cadastro em lote rejeita duplicatas sem adicionar parte do lote.
-    await requisicaoDominio(cookie, "/api/interclasses", "POST", {
-      acao: "adicionar_turmas", id: criados.campeonato, turmas: [equipes[2], equipes[2]],
-    }, 400);
-    const lote = await requisicaoDominio(cookie, "/api/interclasses", "POST", {
-      acao: "adicionar_turmas", id: criados.campeonato, turmas: equipes.slice(2),
-    }, 201);
+    // o cadastro em lote rejeita duplicatas sem adicionar parte do lote
+    await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "POST",
+      {
+        acao: "adicionar_turmas",
+        id: criados.campeonato,
+        turmas: [equipes[2], equipes[2]],
+      },
+      400,
+    );
+    const lote = await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "POST",
+      {
+        acao: "adicionar_turmas",
+        id: criados.campeonato,
+        turmas: equipes.slice(2),
+      },
+      201,
+    );
     assert.equal(lote.participantes.length, 4);
     assert.equal(lote.item.premiacao, "1º lugar: troféu e medalhas\n2º lugar: medalhas");
 
@@ -563,39 +690,61 @@ async function testarSistemaEventos(cookie) {
     const iniciais = chave.partidas.filter((item) => item.faseId === chave.fases[0].id);
     const turmaOriginal = iniciais[0].participanteAId;
     const turmaDestino = iniciais[1].participanteBId;
-    const troca = { acao: "trocar_turmas", id: criados.campeonato,
+    const troca = {
+      acao: "trocar_turmas",
+      id: criados.campeonato,
       origem: { partidaId: iniciais[0].id, posicao: "a" },
-      destino: { partidaId: iniciais[1].id, posicao: "b" } };
+      destino: { partidaId: iniciais[1].id, posicao: "b" },
+    };
     chave = await requisicaoDominio(cookie, "/api/interclasses", "PUT", troca);
-    assert.equal(chave.partidas.find((item) => item.id === iniciais[0].id).participanteAId, turmaDestino);
-    assert.equal(chave.partidas.find((item) => item.id === iniciais[1].id).participanteBId, turmaOriginal);
-    await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
-      ...troca, destino: { partidaId: chave.partidas.at(-1).id, posicao: "a" },
-    }, 400);
+    assert.equal(
+      chave.partidas.find((item) => item.id === iniciais[0].id).participanteAId,
+      turmaDestino,
+    );
+    assert.equal(
+      chave.partidas.find((item) => item.id === iniciais[1].id).participanteBId,
+      turmaOriginal,
+    );
+    await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "PUT",
+      {
+        ...troca,
+        destino: { partidaId: chave.partidas.at(-1).id, posicao: "a" },
+      },
+      400,
+    );
 
-    const semifinal = chave.partidas.find((item) => (
-      item.participanteAId && item.participanteBId && item.proximaPartidaId
-    ));
+    const semifinal = chave.partidas.find(
+      (item) => item.participanteAId && item.participanteBId && item.proximaPartidaId,
+    );
     assert.ok(semifinal, "A chave de quatro equipes deve conter uma semifinal ligada à final.");
-    const participanteInvalido = chave.participantes.find((item) => (
-      item.id !== semifinal.participanteAId && item.id !== semifinal.participanteBId
-    ));
+    const participanteInvalido = chave.participantes.find(
+      (item) => item.id !== semifinal.participanteAId && item.id !== semifinal.participanteBId,
+    );
     assert.ok(participanteInvalido);
 
     // rejeita um vencedor que não participou da partida
-    const vencedorInvalido = await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
-      acao: "registrar_resultado",
-      partidaId: semifinal.id,
-      dados: {
-        vencedorId: participanteInvalido.id,
-        situacao: "wo",
-        formaVitoria: "wo",
-        placarPublicado: true,
+    const vencedorInvalido = await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "PUT",
+      {
+        acao: "registrar_resultado",
+        partidaId: semifinal.id,
+        dados: {
+          vencedorId: participanteInvalido.id,
+          situacao: "wo",
+          formaVitoria: "wo",
+          placarPublicado: true,
+        },
       },
-    }, 400);
+      400,
+    );
     assert.match(vencedorInvalido.erro ?? "", /vencedor|partida|particip/i);
 
-    // registra W.O. válido e confirma o avanço automático para a final
+    // registra w.o. válido e confirma o avanço automático para a final
     const resultadoWo = await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
       acao: "registrar_resultado",
       partidaId: semifinal.id,
@@ -611,8 +760,13 @@ async function testarSistemaEventos(cookie) {
     assert.equal(resultadoWo.item.situacao, "wo");
     assert.equal(resultadoWo.item.vencedorId, semifinal.participanteAId);
     await requisicaoDominio(cookie, "/api/interclasses", "PUT", troca, 409);
-    const chaveComAvanco = await requisicaoDominio(cookie, `/api/interclasses/${criados.campeonato}?todos=1`);
-    const partidaSeguinte = chaveComAvanco.partidas.find((item) => item.id === semifinal.proximaPartidaId);
+    const chaveComAvanco = await requisicaoDominio(
+      cookie,
+      `/api/interclasses/${criados.campeonato}?todos=1`,
+    );
+    const partidaSeguinte = chaveComAvanco.partidas.find(
+      (item) => item.id === semifinal.proximaPartidaId,
+    );
     assert.ok(partidaSeguinte);
     const campoAvanco = semifinal.proximaPosicao === "a" ? "participanteAId" : "participanteBId";
     assert.equal(partidaSeguinte[campoAvanco], semifinal.participanteAId);
@@ -620,13 +774,14 @@ async function testarSistemaEventos(cookie) {
     assert.equal(chaveComAvanco.item.faseAtual, semifinal.faseNome);
 
     // conclui a outra semifinal e confirma a transição da fase atual para a final
-    const outraSemifinal = chaveComAvanco.partidas.find((item) => (
-      item.id !== semifinal.id
-      && item.faseId === semifinal.faseId
-      && item.participanteAId
-      && item.participanteBId
-      && item.proximaPartidaId === semifinal.proximaPartidaId
-    ));
+    const outraSemifinal = chaveComAvanco.partidas.find(
+      (item) =>
+        item.id !== semifinal.id &&
+        item.faseId === semifinal.faseId &&
+        item.participanteAId &&
+        item.participanteBId &&
+        item.proximaPartidaId === semifinal.proximaPartidaId,
+    );
     assert.ok(outraSemifinal, "A chave deve conter uma segunda semifinal ligada à mesma final.");
     await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
       acao: "registrar_resultado",
@@ -640,7 +795,10 @@ async function testarSistemaEventos(cookie) {
         placarPublicado: true,
       },
     });
-    const chaveNaFinal = await requisicaoDominio(cookie, `/api/interclasses/${criados.campeonato}?todos=1`);
+    const chaveNaFinal = await requisicaoDominio(
+      cookie,
+      `/api/interclasses/${criados.campeonato}?todos=1`,
+    );
     const final = chaveNaFinal.partidas.find((item) => item.id === semifinal.proximaPartidaId);
     assert.ok(final);
     assert.notEqual(final.faseNome, semifinal.faseNome);
@@ -674,43 +832,59 @@ async function testarSistemaEventos(cookie) {
       id: criados.campeonato,
       dados: { chavePublicada: true },
     });
-    const campeonatoPublico = await requisicaoPublica(`/api/interclasses/${slugCampeonato}?teste=com-chave-${sufixo}`);
+    const campeonatoPublico = await requisicaoPublica(
+      `/api/interclasses/${slugCampeonato}?teste=com-chave-${sufixo}`,
+    );
     assert.equal(campeonatoPublico.item.id, criados.campeonato);
     assert.equal(campeonatoPublico.item.chavePublicada, true);
     assert.equal(campeonatoPublico.participantes.length, 4);
     assert.equal(campeonatoPublico.partidas.length, 3);
     assert.equal(campeonatoPublico.item.proximaPartida?.id, final.id);
     assert.ok(campeonatoPublico.item.ultimoResultado);
-    assert.ok(campeonatoPublico.partidas.some((item) => item.id === semifinal.id && item.situacao === "wo"));
+    assert.ok(
+      campeonatoPublico.partidas.some((item) => item.id === semifinal.id && item.situacao === "wo"),
+    );
     afirmarSemCamposPrivados(campeonatoPublico);
-    const jogoPublico = await requisicaoPublica(`/api/interclasses/${slugCampeonato}/jogos/${semifinal.id}`);
+    const jogoPublico = await requisicaoPublica(
+      `/api/interclasses/${slugCampeonato}/jogos/${semifinal.id}`,
+    );
     assert.equal(jogoPublico.item.vencedorId, semifinal.participanteAId);
     afirmarSemCamposPrivados(jogoPublico);
     assert.equal((await fetch(`${endereco}/eventos/interclasses/${slugCampeonato}`)).status, 200);
-    assert.equal((await fetch(`${endereco}/eventos/interclasses/${slugCampeonato}/jogos/${semifinal.id}`)).status, 200);
+    assert.equal(
+      (await fetch(`${endereco}/eventos/interclasses/${slugCampeonato}/jogos/${semifinal.id}`))
+        .status,
+      200,
+    );
 
     // cria uma reunião e mantém a pauta interna fora da resposta pública
-    const respostaReuniao = await requisicaoDominio(cookie, "/api/reunioes", "POST", {
-      dados: {
-        titulo: `Reunião HTTP ${sufixo}`,
-        tipo: "representantes",
-        data: "2099-08-20",
-        horarioInicial: "13:30",
-        horarioFinal: "15:00",
-        local: "Sala do GECEP",
-        turno: "tarde",
-        niveisEnsino: ["medio"],
-        descricaoCurta: "Reunião temporária do teste HTTP.",
-        responsaveis: "GECEP",
-        pauta: "Pauta pública do teste.",
-        pautaInterna: `não publicar pauta ${sufixo}`,
-        observacoesInternas: `não publicar reunião ${sufixo}`,
-        situacao: "agendada",
-        quantidadeParticipantesPublicada: false,
-        publicado: false,
-        ativo: true,
+    const respostaReuniao = await requisicaoDominio(
+      cookie,
+      "/api/reunioes",
+      "POST",
+      {
+        dados: {
+          titulo: `Reunião HTTP ${sufixo}`,
+          tipo: "representantes",
+          data: "2099-08-20",
+          horarioInicial: "13:30",
+          horarioFinal: "15:00",
+          local: "Sala do GECEP",
+          turno: "tarde",
+          niveisEnsino: ["medio"],
+          descricaoCurta: "Reunião temporária do teste HTTP.",
+          responsaveis: "GECEP",
+          pauta: "Pauta pública do teste.",
+          pautaInterna: `não publicar pauta ${sufixo}`,
+          observacoesInternas: `não publicar reunião ${sufixo}`,
+          situacao: "agendada",
+          quantidadeParticipantesPublicada: false,
+          publicado: false,
+          ativo: true,
+        },
       },
-    }, 201);
+      201,
+    );
     criados.reuniao = respostaReuniao.item.id;
     const slugReuniao = respostaReuniao.item.slug;
     await requisicaoPublica(`/api/reunioes/${slugReuniao}`, 404);
@@ -722,7 +896,9 @@ async function testarSistemaEventos(cookie) {
       id: criados.reuniao,
       filtros: { turma: "3ºJ" },
     });
-    const presenca = geracaoPresencas.presencas.find((item) => item.representanteId === criados.representante);
+    const presenca = geracaoPresencas.presencas.find(
+      (item) => item.representanteId === criados.representante,
+    );
     assert.ok(presenca, "A geração deve incluir o representante temporário.");
     criados.presencas.push(...geracaoPresencas.presencas.map((item) => item.id));
     assert.equal(presenca.nome, nomeExibicao);
@@ -733,8 +909,14 @@ async function testarSistemaEventos(cookie) {
       id: criados.representante,
       dados: { nomeExibicao: `${nomeExibicao} atualizado` },
     });
-    const reuniaoComSnapshot = await requisicaoDominio(cookie, `/api/reunioes/${criados.reuniao}?todos=1`);
-    assert.equal(reuniaoComSnapshot.presencas.find((item) => item.id === presenca.id)?.nome, nomeExibicao);
+    const reuniaoComSnapshot = await requisicaoDominio(
+      cookie,
+      `/api/reunioes/${criados.reuniao}?todos=1`,
+    );
+    assert.equal(
+      reuniaoComSnapshot.presencas.find((item) => item.id === presenca.id)?.nome,
+      nomeExibicao,
+    );
 
     // publica a presença, registra um encaminhamento e uma votação pública
     await requisicaoDominio(cookie, "/api/reunioes", "PUT", {
@@ -746,20 +928,26 @@ async function testarSistemaEventos(cookie) {
         observacaoPublica: "Presença confirmada no teste local.",
       },
     });
-    const itemReuniao = await requisicaoDominio(cookie, "/api/reunioes", "POST", {
-      entidade: "itens",
-      reuniaoId: criados.reuniao,
-      dados: {
-        tipo: "encaminhamento",
-        titulo: `Encaminhamento ${sufixo}`,
-        conteudo: "Executar a ação definida durante a reunião de teste.",
-        responsaveis: "GECEP",
-        prazo: "2099-08-30",
-        ordem: 1,
-        publicado: true,
-        ativo: true,
+    const itemReuniao = await requisicaoDominio(
+      cookie,
+      "/api/reunioes",
+      "POST",
+      {
+        entidade: "itens",
+        reuniaoId: criados.reuniao,
+        dados: {
+          tipo: "encaminhamento",
+          titulo: `Encaminhamento ${sufixo}`,
+          conteudo: "Executar a ação definida durante a reunião de teste.",
+          responsaveis: "GECEP",
+          prazo: "2099-08-30",
+          ordem: 1,
+          publicado: true,
+          ativo: true,
+        },
       },
-    }, 201);
+      201,
+    );
     criados.itensReuniao.push(itemReuniao.item.id);
     assert.equal(itemReuniao.item.publicado, true);
     assert.equal(itemReuniao.item.ativo, true);
@@ -769,10 +957,13 @@ async function testarSistemaEventos(cookie) {
       cookie,
       `/api/reunioes/${criados.reuniao}?todos=1`,
     );
-    let itemAdministrativo = detalheReuniaoAdministrativo.itens.find((item) => item.id === itemReuniao.item.id);
+    let itemAdministrativo = detalheReuniaoAdministrativo.itens.find(
+      (item) => item.id === itemReuniao.item.id,
+    );
     assert.equal(itemAdministrativo?.publicado, true);
     assert.equal(itemAdministrativo?.ativo, true);
-    const conteudoItemAtualizado = "Executar e documentar a ação definida durante a reunião de teste.";
+    const conteudoItemAtualizado =
+      "Executar e documentar a ação definida durante a reunião de teste.";
     const itemEditado = await requisicaoDominio(cookie, "/api/reunioes", "PUT", {
       entidade: "itens",
       id: itemReuniao.item.id,
@@ -785,30 +976,38 @@ async function testarSistemaEventos(cookie) {
       cookie,
       `/api/reunioes/${criados.reuniao}?todos=1&teste=item-editado-${sufixo}`,
     );
-    itemAdministrativo = detalheReuniaoAdministrativo.itens.find((item) => item.id === itemReuniao.item.id);
+    itemAdministrativo = detalheReuniaoAdministrativo.itens.find(
+      (item) => item.id === itemReuniao.item.id,
+    );
     assert.equal(itemAdministrativo?.conteudo, conteudoItemAtualizado);
     assert.equal(itemAdministrativo?.publicado, true);
     assert.equal(itemAdministrativo?.ativo, true);
 
-    const votacao = await requisicaoDominio(cookie, "/api/reunioes", "POST", {
-      entidade: "votacoes",
-      reuniaoId: criados.reuniao,
-      dados: {
-        titulo: `Votação ${sufixo}`,
-        pergunta: "A proposta de teste foi aprovada?",
-        resultado: "Aprovada",
-        decisaoFinal: "Executar a proposta.",
-        abstencoes: 0,
-        ordem: 1,
-        publicado: true,
-        interno: false,
-        ativo: true,
-        opcoes: [
-          { texto: "Sim", quantidadeVotos: 3, ordem: 1, ativo: true },
-          { texto: "Não", quantidadeVotos: 1, ordem: 2, ativo: true },
-        ],
+    const votacao = await requisicaoDominio(
+      cookie,
+      "/api/reunioes",
+      "POST",
+      {
+        entidade: "votacoes",
+        reuniaoId: criados.reuniao,
+        dados: {
+          titulo: `Votação ${sufixo}`,
+          pergunta: "A proposta de teste foi aprovada?",
+          resultado: "Aprovada",
+          decisaoFinal: "Executar a proposta.",
+          abstencoes: 0,
+          ordem: 1,
+          publicado: true,
+          interno: false,
+          ativo: true,
+          opcoes: [
+            { texto: "Sim", quantidadeVotos: 3, ordem: 1, ativo: true },
+            { texto: "Não", quantidadeVotos: 1, ordem: 2, ativo: true },
+          ],
+        },
       },
-    }, 201);
+      201,
+    );
     criados.votacoes.push(votacao.item.id);
 
     // publica a reunião e confere itens, votação e presença sem campos internos
@@ -827,41 +1026,60 @@ async function testarSistemaEventos(cookie) {
       reuniaoPublica.itens.find((item) => item.id === itemReuniao.item.id)?.conteudo,
       conteudoItemAtualizado,
     );
-    assert.ok(reuniaoPublica.votacoes.some((item) => item.id === votacao.item.id && item.opcoes.length === 2));
-    assert.ok(reuniaoPublica.presencas.some((item) => (
-      item.id === presenca.id && item.nome === nomeExibicao && item.situacao === "presente"
-    )));
+    assert.ok(
+      reuniaoPublica.votacoes.some(
+        (item) => item.id === votacao.item.id && item.opcoes.length === 2,
+      ),
+    );
+    assert.ok(
+      reuniaoPublica.presencas.some(
+        (item) =>
+          item.id === presenca.id && item.nome === nomeExibicao && item.situacao === "presente",
+      ),
+    );
     afirmarSemCamposPrivados(reuniaoPublica);
     assert.equal((await fetch(`${endereco}/eventos/reunioes/${slugReuniao}`)).status, 200);
 
     // uma reunião interna aceita membros manuais sem vínculo com representantes
-    const reuniaoInterna = await requisicaoDominio(cookie, "/api/reunioes", "POST", {
-      dados: {
-        titulo: `Reunião interna HTTP ${sufixo}`,
-        tipo: "interna_gecep",
-        data: "2099-08-21",
-        horarioInicial: "16:00",
-        local: "Sala do GECEP",
-        pautaInterna: `pauta estritamente interna ${sufixo}`,
-        situacao: "encerrada",
-        quantidadeParticipantesPublicada: true,
-        publicado: false,
-        ativo: true,
+    const reuniaoInterna = await requisicaoDominio(
+      cookie,
+      "/api/reunioes",
+      "POST",
+      {
+        dados: {
+          titulo: `Reunião interna HTTP ${sufixo}`,
+          tipo: "interna_gecep",
+          data: "2099-08-21",
+          horarioInicial: "16:00",
+          local: "Sala do GECEP",
+          pautaInterna: `pauta estritamente interna ${sufixo}`,
+          situacao: "encerrada",
+          quantidadeParticipantesPublicada: true,
+          publicado: false,
+          ativo: true,
+        },
       },
-    }, 201);
+      201,
+    );
     criados.reuniaoInterna = reuniaoInterna.item.id;
-    const presencaManual = await requisicaoDominio(cookie, "/api/reunioes", "POST", {
-      entidade: "presencas",
-      reuniaoId: criados.reuniaoInterna,
-      dados: {
-        nome: `Membro GECEP ${sufixo}`,
-        funcao: "membro",
-        situacao: "presente",
-        observacaoInterna: `não publicar presença interna ${sufixo}`,
-        publicado: true,
-        ativo: true,
+    const presencaManual = await requisicaoDominio(
+      cookie,
+      "/api/reunioes",
+      "POST",
+      {
+        entidade: "presencas",
+        reuniaoId: criados.reuniaoInterna,
+        dados: {
+          nome: `Membro GECEP ${sufixo}`,
+          funcao: "membro",
+          situacao: "presente",
+          observacaoInterna: `não publicar presença interna ${sufixo}`,
+          publicado: true,
+          ativo: true,
+        },
       },
-    }, 201);
+      201,
+    );
     criados.presencas.push(presencaManual.item.id);
     await requisicaoDominio(cookie, "/api/reunioes", "PUT", {
       id: criados.reuniaoInterna,
@@ -871,14 +1089,20 @@ async function testarSistemaEventos(cookie) {
     assert.ok(internaPublica.presencas.some((item) => item.id === presencaManual.item.id));
     afirmarSemCamposPrivados(internaPublica);
   } finally {
-    // todo registro temporário é despublicado e arquivado, inclusive filhos acessíveis pela API
+    // todo registro temporário é despublicado e arquivado, inclusive filhos acessíveis pela api
     await arquivarSistemaEventosSemFalhar(cookie, criados);
   }
 }
 
-// envia uma requisição autenticada e inclui o erro da API na falha do teste
+// envia uma requisição autenticada e inclui o erro da api na falha do teste
 async function requisicaoDominio(cookie, caminho, method = "GET", body, statusEsperado = 200) {
-  if (method === "DELETE" && caminho.startsWith("/api/conteudo?") && body === undefined && statusEsperado === 200) body = { senha: await lerSenhaLocal() };
+  if (
+    method === "DELETE" &&
+    caminho.startsWith("/api/conteudo?") &&
+    body === undefined &&
+    statusEsperado === 200
+  )
+    body = { senha: await lerSenhaLocal() };
   const resposta = await fetch(`${endereco}${caminho}`, {
     method,
     headers: {
@@ -899,18 +1123,57 @@ async function requisicaoDominio(cookie, caminho, method = "GET", body, statusEs
 async function testarTrocasComFolgas(cookie) {
   let id = 0;
   try {
-    const criado = await requisicaoDominio(cookie, "/api/interclasses", "POST", { dados: {
-      nome: `Teste de folgas ${Date.now()}`, modalidade: "Vôlei", formato: "mata_mata",
-      participantes: Array.from({ length: 2 }, (_, indice) => ({ nome: `${indice + 1}DS`, posicaoInicial: indice + 1 })),
-    } }, 201);
+    const criado = await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "POST",
+      {
+        dados: {
+          nome: `Teste de folgas ${Date.now()}`,
+          modalidade: "Vôlei",
+          formato: "mata_mata",
+          participantes: Array.from({ length: 2 }, (_, indice) => ({
+            nome: `${indice + 1}DS`,
+            posicaoInicial: indice + 1,
+          })),
+        },
+      },
+      201,
+    );
     id = criado.item.id;
-    const participantesEmLote = await requisicaoDominio(cookie, "/api/interclasses", "POST", {
-      acao: "adicionar_turmas", id, turmas: ["3DS", "6DS", "7DS"].map((nome) => ({ nome })),
-    }, 201);
-    assert.deepEqual(participantesEmLote.participantes.map((turma) => turma.nome), ["1DS", "2DS", "3DS", "6DS", "7DS"]);
-    assert.ok(participantesEmLote.participantes.every((turma) => turma.nomeExibicao === "" && turma.apelido === ""));
-    let detalhe = await requisicaoDominio(cookie, "/api/interclasses", "PUT", { acao: "gerar_chave", id });
-    assert.deepEqual(new Set(detalhe.partidas.filter((jogo) => jogo.faseId === detalhe.fases[0].id).flatMap((jogo) => [jogo.participanteANome, jogo.participanteBNome]).filter(Boolean)), new Set(["1DS", "2DS", "3DS", "6DS", "7DS"]));
+    const participantesEmLote = await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "POST",
+      {
+        acao: "adicionar_turmas",
+        id,
+        turmas: ["3DS", "6DS", "7DS"].map((nome) => ({ nome })),
+      },
+      201,
+    );
+    assert.deepEqual(
+      participantesEmLote.participantes.map((turma) => turma.nome),
+      ["1DS", "2DS", "3DS", "6DS", "7DS"],
+    );
+    assert.ok(
+      participantesEmLote.participantes.every(
+        (turma) => turma.nomeExibicao === "" && turma.apelido === "",
+      ),
+    );
+    let detalhe = await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+      acao: "gerar_chave",
+      id,
+    });
+    assert.deepEqual(
+      new Set(
+        detalhe.partidas
+          .filter((jogo) => jogo.faseId === detalhe.fases[0].id)
+          .flatMap((jogo) => [jogo.participanteANome, jogo.participanteBNome])
+          .filter(Boolean),
+      ),
+      new Set(["1DS", "2DS", "3DS", "6DS", "7DS"]),
+    );
     const iniciais = detalhe.partidas.filter((jogo) => jogo.faseId === detalhe.fases[0].id);
     const folgas = iniciais.filter((jogo) => jogo.formaVitoria === "bye");
     const confronto = iniciais.find((jogo) => jogo.participanteAId && jogo.participanteBId);
@@ -918,25 +1181,42 @@ async function testarTrocasComFolgas(cookie) {
     assert.equal(folgas.length, 3);
     const novaTurma = confronto.participanteBId;
     detalhe = await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
-      acao: "trocar_turmas", id,
-      origem: { partidaId: folgas[0].id, posicao: "a" }, destino: { partidaId: confronto.id, posicao: "b" },
+      acao: "trocar_turmas",
+      id,
+      origem: { partidaId: folgas[0].id, posicao: "a" },
+      destino: { partidaId: confronto.id, posicao: "b" },
     });
     const folgaAtual = detalhe.partidas.find((jogo) => jogo.id === folgas[0].id);
     const seguinte = detalhe.partidas.find((jogo) => jogo.id === folgaAtual.proximaPartidaId);
     assert.equal(folgaAtual.vencedorId, novaTurma);
-    assert.equal(seguinte[folgaAtual.proximaPosicao === "a" ? "participanteAId" : "participanteBId"], novaTurma);
+    assert.equal(
+      seguinte[folgaAtual.proximaPosicao === "a" ? "participanteAId" : "participanteBId"],
+      novaTurma,
+    );
     // a posição vazia também pode mudar de lado dentro do mesmo confronto
     detalhe = await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
-      acao: "trocar_turmas", id,
-      origem: { partidaId: folgaAtual.id, posicao: "a" }, destino: { partidaId: folgaAtual.id, posicao: "b" },
+      acao: "trocar_turmas",
+      id,
+      origem: { partidaId: folgaAtual.id, posicao: "a" },
+      destino: { partidaId: folgaAtual.id, posicao: "b" },
     });
-    assert.equal(detalhe.partidas.find((jogo) => jogo.id === folgaAtual.id).participanteBId, novaTurma);
+    assert.equal(
+      detalhe.partidas.find((jogo) => jogo.id === folgaAtual.id).participanteBId,
+      novaTurma,
+    );
     // mantém as folgas automáticas depois das trocas
     const depois = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
-    assert.ok(depois.partidas.filter((jogo) => jogo.faseId === depois.fases[0].id).every((jogo) => jogo.participanteAId || jogo.participanteBId));
+    assert.ok(
+      depois.partidas
+        .filter((jogo) => jogo.faseId === depois.fases[0].id)
+        .every((jogo) => jogo.participanteAId || jogo.participanteBId),
+    );
     assert.equal(depois.partidas.filter((jogo) => jogo.formaVitoria === "bye").length, 3);
   } finally {
-    if (id) await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", id, { chavePublicada: false });
+    if (id)
+      await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", id, {
+        chavePublicada: false,
+      });
   }
 }
 
@@ -944,32 +1224,67 @@ async function testarTrocasComFolgas(cookie) {
 async function testarAvancoComRodadaImpar(cookie) {
   let id = 0;
   try {
-    const criado = await requisicaoDominio(cookie, "/api/interclasses", "POST", { dados: {
-      nome: `Teste de chave antiga ${Date.now()}`, modalidade: "Futsal",
-      participantes: ["6A", "6B", "6C", "6D", "6E", "6F"].map((nome) => ({ nome })),
-    } }, 201);
+    const criado = await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "POST",
+      {
+        dados: {
+          nome: `Teste de chave antiga ${Date.now()}`,
+          modalidade: "Futsal",
+          participantes: ["6A", "6B", "6C", "6D", "6E", "6F"].map((nome) => ({ nome })),
+        },
+      },
+      201,
+    );
     id = criado.item.id;
     const { participantes } = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
-    const cadastrar = async (entidade, dados) => (await requisicaoDominio(cookie, "/api/interclasses", "POST", { entidade, campeonatoId: id, dados }, 201)).item;
+    const cadastrar = async (entidade, dados) =>
+      (
+        await requisicaoDominio(
+          cookie,
+          "/api/interclasses",
+          "POST",
+          { entidade, campeonatoId: id, dados },
+          201,
+        )
+      ).item;
     const quartas = await cadastrar("fases", { nome: "Quartas de final", ordem: 1 });
     const semis = await cadastrar("fases", { nome: "Semifinais", ordem: 2 });
     const faseFinal = await cadastrar("fases", { nome: "Final", ordem: 3 });
     const chegada = await cadastrar("partidas", { faseId: faseFinal.id, ordem: 1 });
-    const viaSemifinal = await cadastrar("partidas", { faseId: semis.id, ordem: 1, proximaPartidaId: chegada.id, proximaPosicao: "b" });
+    const viaSemifinal = await cadastrar("partidas", {
+      faseId: semis.id,
+      ordem: 1,
+      proximaPartidaId: chegada.id,
+      proximaPosicao: "b",
+    });
     const iniciais = [];
-    for (const [indice, destino, lado] of [[0, chegada, "a"], [1, viaSemifinal, "a"], [2, viaSemifinal, "b"]]) {
-      iniciais.push(await cadastrar("partidas", {
-        faseId: quartas.id, ordem: indice + 1, participanteAId: participantes[indice * 2].id,
-        participanteBId: participantes[indice * 2 + 1].id, proximaPartidaId: destino.id, proximaPosicao: lado,
-      }));
+    for (const [indice, destino, lado] of [
+      [0, chegada, "a"],
+      [1, viaSemifinal, "a"],
+      [2, viaSemifinal, "b"],
+    ]) {
+      iniciais.push(
+        await cadastrar("partidas", {
+          faseId: quartas.id,
+          ordem: indice + 1,
+          participanteAId: participantes[indice * 2].id,
+          participanteBId: participantes[indice * 2 + 1].id,
+          proximaPartidaId: destino.id,
+          proximaPosicao: lado,
+        }),
+      );
     }
     const avancoDireto = iniciais[0];
 
     // registra os três jogos e verifica quem chegou direto à final
-    for (const jogo of iniciais) await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
-      acao: "registrar_resultado", partidaId: jogo.id,
-      dados: { situacao: "wo", formaVitoria: "wo", vencedorId: jogo.participanteAId },
-    });
+    for (const jogo of iniciais)
+      await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+        acao: "registrar_resultado",
+        partidaId: jogo.id,
+        dados: { situacao: "wo", formaVitoria: "wo", vencedorId: jogo.participanteAId },
+      });
     let chave = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
     const semifinal = chave.partidas.find((jogo) => jogo.id === viaSemifinal.id);
     const final = chave.partidas.find((jogo) => jogo.id === chegada.id);
@@ -977,29 +1292,41 @@ async function testarAvancoComRodadaImpar(cookie) {
     assert.equal(final[campoDireto], avancoDireto.participanteAId);
     assert.ok(semifinal.participanteAId && semifinal.participanteBId);
     await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
-      acao: "registrar_resultado", partidaId: semifinal.id,
+      acao: "registrar_resultado",
+      partidaId: semifinal.id,
       dados: { situacao: "wo", formaVitoria: "wo", vencedorId: semifinal.participanteAId },
     });
     chave = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
     const finalCompleta = chave.partidas.find((jogo) => jogo.id === final.id);
     assert.ok(finalCompleta.participanteAId && finalCompleta.participanteBId);
     await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
-      acao: "registrar_resultado", partidaId: final.id,
+      acao: "registrar_resultado",
+      partidaId: final.id,
       dados: { situacao: "wo", formaVitoria: "wo", vencedorId: finalCompleta.participanteAId },
     });
 
     // a correção também passa pelo caminho direto e limpa o resultado da final
-    const correcao = { acao: "registrar_resultado", partidaId: avancoDireto.id,
-      dados: { situacao: "wo", formaVitoria: "wo", vencedorId: avancoDireto.participanteBId }, motivo: "Correção no teste da folga" };
+    const correcao = {
+      acao: "registrar_resultado",
+      partidaId: avancoDireto.id,
+      dados: { situacao: "wo", formaVitoria: "wo", vencedorId: avancoDireto.participanteBId },
+      motivo: "Correção no teste da folga",
+    };
     await requisicaoDominio(cookie, "/api/interclasses", "PUT", correcao, 409);
-    await requisicaoDominio(cookie, "/api/interclasses", "PUT", { ...correcao, confirmarImpacto: true });
+    await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+      ...correcao,
+      confirmarImpacto: true,
+    });
     chave = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
     const finalCorrigida = chave.partidas.find((jogo) => jogo.id === final.id);
     assert.equal(finalCorrigida[campoDireto], avancoDireto.participanteBId);
     assert.equal(finalCorrigida.vencedorId, null);
     assert.equal(chave.partidas.filter((jogo) => jogo.formaVitoria === "bye").length, 0);
   } finally {
-    if (id) await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", id, { chavePublicada: false });
+    if (id)
+      await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", id, {
+        chavePublicada: false,
+      });
   }
 }
 
@@ -1008,52 +1335,116 @@ async function testarAtualizacaoPublicada(cookie) {
   let id = 0;
   try {
     // começa com uma edição em rascunho e uma folga automática
-    const criado = await requisicaoDominio(cookie, "/api/interclasses", "POST", { dados: {
-      nome: `Teste de atualização publicada ${Date.now()}`, modalidade: "Futsal",
-      participantes: ["1A", "1B", "1C", "1D", "1E"].map((nome) => ({ nome })),
-    } }, 201);
+    const criado = await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "POST",
+      {
+        dados: {
+          nome: `Teste de atualização publicada ${Date.now()}`,
+          modalidade: "Futsal",
+          participantes: ["1A", "1B", "1C", "1D", "1E"].map((nome) => ({ nome })),
+        },
+      },
+      201,
+    );
     id = criado.item.id;
     assert.equal(criado.item.publicado, false);
-    let chave = await requisicaoDominio(cookie, "/api/interclasses", "PUT", { acao: "gerar_chave", id });
+    let chave = await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+      acao: "gerar_chave",
+      id,
+    });
     const jogo = chave.partidas.find((item) => item.participanteAId && item.participanteBId);
     const folga = chave.partidas.find((item) => item.formaVitoria === "bye");
-    const enviar = (partida, dados, extras = {}, status = 200) => requisicaoDominio(cookie, "/api/interclasses", "PUT", {
-      acao: "atualizar_jogo", id, partidaId: partida.id, dados, ...extras,
-    }, status);
+    const enviar = (partida, dados, extras = {}, status = 200) =>
+      requisicaoDominio(
+        cookie,
+        "/api/interclasses",
+        "PUT",
+        {
+          acao: "atualizar_jogo",
+          id,
+          partidaId: partida.id,
+          dados,
+          ...extras,
+        },
+        status,
+      );
     await enviar(jogo, { local: "Não salvar no rascunho" }, {}, 404);
     await requisicaoDominio(cookie, `/api/interclasses/${id}`, "GET", undefined, 404);
 
     // publica e mantém a edição publicada durante as atualizações
-    await requisicaoDominio(cookie, "/api/interclasses", "PUT", { id, dados: { publicado: true, chavePublicada: true } });
+    await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+      id,
+      dados: { publicado: true, chavePublicada: true },
+    });
     const agendado = await enviar(jogo, {
-      data: "2099-10-10", horario: "14:00", local: "Quadra de teste", situacao: "agendada",
-      publicado: false, placarPublicado: false, faseId: 999999, participanteAId: 999999,
-      proximaPartidaId: null, proximaPosicao: "", resumo: "Informações atualizadas", observacoesInternas: "Restrito ao painel",
+      data: "2099-10-10",
+      horario: "14:00",
+      local: "Quadra de teste",
+      situacao: "agendada",
+      publicado: false,
+      placarPublicado: false,
+      faseId: 999999,
+      participanteAId: 999999,
+      proximaPartidaId: null,
+      proximaPosicao: "",
+      resumo: "Informações atualizadas",
+      observacoesInternas: "Restrito ao painel",
     });
     assert.equal(agendado.item.publicado, true);
     assert.equal(agendado.item.placarPublicado, true);
-    for (const campo of ["faseId", "participanteAId", "participanteBId", "proximaPartidaId", "proximaPosicao"]) {
+    for (const campo of [
+      "faseId",
+      "participanteAId",
+      "participanteBId",
+      "proximaPartidaId",
+      "proximaPosicao",
+    ]) {
       assert.equal(agendado.item[campo], jogo[campo], `O envio simples não pode alterar ${campo}.`);
     }
     await enviar(jogo, { local: "Outro campeonato" }, { id: id + 999999 }, 404);
 
     // a folga permite detalhes sem perder o avanço automático
-    const folgaSalva = await enviar(folga, { resumo: "Avanço automático", situacao: "agendada", vencedorId: null });
+    const folgaSalva = await enviar(folga, {
+      resumo: "Avanço automático",
+      situacao: "agendada",
+      vencedorId: null,
+    });
     assert.equal(folgaSalva.item.formaVitoria, "bye");
     assert.equal(folgaSalva.item.vencedorId, folga.vencedorId);
     assert.equal(folgaSalva.item.situacao, "encerrada");
 
     // publica o placar ao vivo e depois encerra todos os jogos reais
     await enviar(jogo, { situacao: "em_andamento", placarA: 1, placarB: 0 });
-    await enviar(jogo, { situacao: "encerrada", vencedorId: jogo.participanteAId, placarA: null, placarB: null }, { motivo: "Placar ausente" }, 400);
+    await enviar(
+      jogo,
+      { situacao: "encerrada", vencedorId: jogo.participanteAId, placarA: null, placarB: null },
+      { motivo: "Placar ausente" },
+      400,
+    );
     let rodadas = 0;
     while (rodadas < 5) {
       chave = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
-      const prontos = chave.partidas.filter((item) => item.participanteAId && item.participanteBId && !["encerrada", "wo"].includes(item.situacao));
+      const prontos = chave.partidas.filter(
+        (item) =>
+          item.participanteAId &&
+          item.participanteBId &&
+          !["encerrada", "wo"].includes(item.situacao),
+      );
       if (!prontos.length) break;
-      for (const partida of prontos) await enviar(partida, {
-        situacao: "encerrada", placarA: 2, placarB: 1, vencedorId: partida.participanteAId, formaVitoria: "Placar",
-      }, { motivo: "Conclusão do jogo de teste" });
+      for (const partida of prontos)
+        await enviar(
+          partida,
+          {
+            situacao: "encerrada",
+            placarA: 2,
+            placarB: 1,
+            vencedorId: partida.participanteAId,
+            formaVitoria: "Placar",
+          },
+          { motivo: "Conclusão do jogo de teste" },
+        );
       rodadas += 1;
     }
     chave = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
@@ -1065,18 +1456,30 @@ async function testarAtualizacaoPublicada(cookie) {
     afirmarSemCamposPrivados(publico);
 
     // a atualização simples exige confirmar o impacto da correção
-    const correcao = { situacao: "wo", placarA: null, placarB: null, vencedorId: jogo.participanteBId, formaVitoria: "W.O." };
+    const correcao = {
+      situacao: "wo",
+      placarA: null,
+      placarB: null,
+      vencedorId: jogo.participanteBId,
+      formaVitoria: "W.O.",
+    };
     await enviar(jogo, correcao, {}, 400);
     const aviso = await enviar(jogo, correcao, { motivo: "Vencedor corrigido" }, 409);
     assert.equal(aviso.exigeConfirmacao, true);
     await enviar(jogo, correcao, { motivo: "Vencedor corrigido", confirmarImpacto: true });
     chave = await requisicaoDominio(cookie, `/api/interclasses/${id}?todos=1`);
     const destino = chave.partidas.find((partida) => partida.id === jogo.proximaPartidaId);
-    assert.equal(destino[jogo.proximaPosicao === "a" ? "participanteAId" : "participanteBId"], jogo.participanteBId);
+    assert.equal(
+      destino[jogo.proximaPosicao === "a" ? "participanteAId" : "participanteBId"],
+      jogo.participanteBId,
+    );
     assert.equal(destino.vencedorId, null);
     assert.equal(chave.item.publicado, true);
   } finally {
-    if (id) await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", id, { chavePublicada: false });
+    if (id)
+      await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", id, {
+        chavePublicada: false,
+      });
   }
 }
 
@@ -1084,49 +1487,128 @@ async function testarAtualizacaoPublicada(cookie) {
 async function testarLimiteSeries(cookie) {
   const ids = [];
   try {
-    const criado = await requisicaoDominio(cookie, "/api/interclasses", "POST", { dados: {
-      nome: `Teste de séries ${Date.now()}`, modalidade: "Futsal", diferencaMaximaAnos: 1,
-      participantes: ["6A", "6B", "3A", "3B"].map((nome, i) => ({ nome, nomeExibicao: `Equipe ${i + 1}` })),
-    } }, 201);
+    const criado = await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "POST",
+      {
+        dados: {
+          nome: `Teste de séries ${Date.now()}`,
+          modalidade: "Futsal",
+          diferencaMaximaAnos: 1,
+          participantes: ["6A", "6B", "3A", "3B"].map((nome, i) => ({
+            nome,
+            nomeExibicao: `Equipe ${i + 1}`,
+          })),
+        },
+      },
+      201,
+    );
     ids.push(criado.item.id);
     assert.equal(criado.item.diferencaMaximaAnos, 1);
-    const chave = await requisicaoDominio(cookie, "/api/interclasses", "PUT", { acao: "gerar_chave", id: criado.item.id });
+    const chave = await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+      acao: "gerar_chave",
+      id: criado.item.id,
+    });
     const jogos = chave.partidas.filter((jogo) => jogo.faseId === chave.fases[0].id);
     const ano = (id) => chave.participantes.find((p) => p.id === id).nome[0];
     assert.ok(jogos.every((jogo) => ano(jogo.participanteAId) === ano(jogo.participanteBId)));
-    await requisicaoDominio(cookie, "/api/interclasses", "PUT", { acao: "trocar_turmas", id: criado.item.id,
-      origem: { partidaId: jogos[0].id, posicao: "a" }, destino: { partidaId: jogos[1].id, posicao: "a" },
-    }, 400);
+    await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "PUT",
+      {
+        acao: "trocar_turmas",
+        id: criado.item.id,
+        origem: { partidaId: jogos[0].id, posicao: "a" },
+        destino: { partidaId: jogos[1].id, posicao: "a" },
+      },
+      400,
+    );
     // o editor não pode antecipar um confronto que ainda pode ser evitado
-    await requisicaoDominio(cookie, "/api/interclasses", "PUT", { acao: "registrar_resultado", partidaId: jogos[0].id,
-      dados: { participanteBId: jogos[1].participanteAId },
-    }, 400);
+    await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "PUT",
+      {
+        acao: "registrar_resultado",
+        partidaId: jogos[0].id,
+        dados: { participanteBId: jogos[1].participanteAId },
+      },
+      400,
+    );
     const depois = await requisicaoDominio(cookie, `/api/interclasses/${criado.item.id}?todos=1`);
     assert.deepEqual(depois.partidas, chave.partidas);
-    await requisicaoDominio(cookie, "/api/interclasses", "POST", { acao: "adicionar_turmas", id: criado.item.id, turmas: [{ nome: "1C" }, { nome: "4X" }] }, 400);
-    assert.equal((await requisicaoDominio(cookie, `/api/interclasses/${criado.item.id}?todos=1`)).participantes.length, 4);
-    const misto = await requisicaoDominio(cookie, "/api/interclasses", "POST", { dados: {
-      nome: `Teste de diferença ${Date.now()}`, modalidade: "Vôlei", diferencaMaximaAnos: 2,
-      participantes: [{ nome: "1J" }, { nome: "3C" }],
-    } }, 201);
+    await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "POST",
+      { acao: "adicionar_turmas", id: criado.item.id, turmas: [{ nome: "1C" }, { nome: "4X" }] },
+      400,
+    );
+    assert.equal(
+      (await requisicaoDominio(cookie, `/api/interclasses/${criado.item.id}?todos=1`)).participantes
+        .length,
+      4,
+    );
+    const misto = await requisicaoDominio(
+      cookie,
+      "/api/interclasses",
+      "POST",
+      {
+        dados: {
+          nome: `Teste de diferença ${Date.now()}`,
+          modalidade: "Vôlei",
+          diferencaMaximaAnos: 2,
+          participantes: [{ nome: "1J" }, { nome: "3C" }],
+        },
+      },
+      201,
+    );
     ids.push(misto.item.id);
-    await requisicaoDominio(cookie, "/api/interclasses", "PUT", { acao: "gerar_chave", id: misto.item.id });
-    await requisicaoDominio(cookie, "/api/interclasses", "PUT", { id: misto.item.id, dados: { diferencaMaximaAnos: 1 } });
+    await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+      acao: "gerar_chave",
+      id: misto.item.id,
+    });
+    await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+      id: misto.item.id,
+      dados: { diferencaMaximaAnos: 1 },
+    });
     // o campeonato continua mesmo quando só restam séries distantes
-    const inevitavel = await requisicaoDominio(cookie, "/api/interclasses", "PUT", { acao: "gerar_chave", id: misto.item.id, confirmar: true });
+    const inevitavel = await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+      acao: "gerar_chave",
+      id: misto.item.id,
+      confirmar: true,
+    });
     assert.equal(inevitavel.partidas.length, 1);
     assert.ok(inevitavel.partidas[0].participanteAId && inevitavel.partidas[0].participanteBId);
-    await requisicaoDominio(cookie, "/api/interclasses", "PUT", { acao: "registrar_resultado", partidaId: inevitavel.partidas[0].id,
-      dados: { situacao: "wo", formaVitoria: "wo", vencedorId: inevitavel.partidas[0].participanteAId },
+    await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+      acao: "registrar_resultado",
+      partidaId: inevitavel.partidas[0].id,
+      dados: {
+        situacao: "wo",
+        formaVitoria: "wo",
+        vencedorId: inevitavel.partidas[0].participanteAId,
+      },
     });
-    await requisicaoDominio(cookie, "/api/interclasses", "PUT", { id: misto.item.id, dados: { diferencaMaximaAnos: null } });
-    assert.equal((await requisicaoDominio(cookie, `/api/interclasses/${misto.item.id}?todos=1`)).item.diferencaMaximaAnos, null);
+    await requisicaoDominio(cookie, "/api/interclasses", "PUT", {
+      id: misto.item.id,
+      dados: { diferencaMaximaAnos: null },
+    });
+    assert.equal(
+      (await requisicaoDominio(cookie, `/api/interclasses/${misto.item.id}?todos=1`)).item
+        .diferencaMaximaAnos,
+      null,
+    );
   } finally {
-    for (const id of ids) await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", id, { chavePublicada: false });
+    for (const id of ids)
+      await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", id, {
+        chavePublicada: false,
+      });
   }
 }
 
-// lê uma resposta JSON pública e aceita um status específico para cenários negativos
+// lê uma resposta json pública e aceita um status específico para cenários negativos
 async function requisicaoPublica(caminho, statusEsperado = 200) {
   const resposta = await fetch(`${endereco}${caminho}`, { cache: "no-store" });
   const resultado = await resposta.json();
@@ -1138,7 +1620,7 @@ async function requisicaoPublica(caminho, statusEsperado = 200) {
   return resultado;
 }
 
-// percorre o DTO público para impedir regressões de privacidade em objetos aninhados
+// percorre o dto público para impedir regressões de privacidade em objetos aninhados
 function afirmarSemCamposPrivados(valor, caminho = "resposta") {
   const camposPrivados = new Set([
     "ativo",
@@ -1161,7 +1643,10 @@ function afirmarSemCamposPrivados(valor, caminho = "resposta") {
   }
   if (!valor || typeof valor !== "object") return;
   for (const [chave, item] of Object.entries(valor)) {
-    assert.ok(!camposPrivados.has(chave), `O campo privado ${caminho}.${chave} vazou no DTO público.`);
+    assert.ok(
+      !camposPrivados.has(chave),
+      `O campo privado ${caminho}.${chave} vazou no DTO público.`,
+    );
     afirmarSemCamposPrivados(item, `${caminho}.${chave}`);
   }
 }
@@ -1186,7 +1671,8 @@ async function arquivarSistemaEventosSemFalhar(cookie, criados) {
       ["votacoes", criados.votacoes],
       ["itens", criados.itensReuniao],
     ]) {
-      for (const id of new Set(ids)) await arquivarFilhoSemFalhar(cookie, "/api/reunioes", entidade, id);
+      for (const id of new Set(ids))
+        await arquivarFilhoSemFalhar(cookie, "/api/reunioes", entidade, id);
     }
     for (const reuniaoId of reunioesCriadas) {
       await despublicarEArquivarSemFalhar(cookie, "/api/reunioes", reuniaoId);
@@ -1196,25 +1682,36 @@ async function arquivarSistemaEventosSemFalhar(cookie, criados) {
   if (criados.campeonato) {
     // consulta novamente para também limpar filhos criados antes de uma eventual falha
     try {
-      const detalhe = await requisicaoDominio(cookie, `/api/interclasses/${criados.campeonato}?todos=1`);
+      const detalhe = await requisicaoDominio(
+        cookie,
+        `/api/interclasses/${criados.campeonato}?todos=1`,
+      );
       criados.fases.push(...detalhe.fases.map((item) => item.id));
       criados.participantes.push(...detalhe.participantes.map((item) => item.id));
     } catch {
       // a limpeza segue com os identificadores já conhecidos
     }
-    for (const id of new Set(criados.fases)) await arquivarFilhoSemFalhar(cookie, "/api/interclasses", "fases", id);
-    for (const id of new Set(criados.participantes)) await arquivarFilhoSemFalhar(cookie, "/api/interclasses", "participantes", id);
-    await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", criados.campeonato, { chavePublicada: false });
+    for (const id of new Set(criados.fases))
+      await arquivarFilhoSemFalhar(cookie, "/api/interclasses", "fases", id);
+    for (const id of new Set(criados.participantes))
+      await arquivarFilhoSemFalhar(cookie, "/api/interclasses", "participantes", id);
+    await despublicarEArquivarSemFalhar(cookie, "/api/interclasses", criados.campeonato, {
+      chavePublicada: false,
+    });
   }
 
   if (criados.evento) await despublicarEArquivarSemFalhar(cookie, "/api/eventos", criados.evento);
-  if (criados.representante) await despublicarEArquivarSemFalhar(cookie, "/api/representantes", criados.representante);
+  if (criados.representante)
+    await despublicarEArquivarSemFalhar(cookie, "/api/representantes", criados.representante);
 }
 
 // arquiva uma subentidade sem lançar erros durante o bloco finally
 async function arquivarFilhoSemFalhar(cookie, api, entidade, id) {
   try {
-    await fetch(`${endereco}${api}?entidade=${entidade}&id=${id}`, { method: "DELETE", headers: { cookie } });
+    await fetch(`${endereco}${api}?entidade=${entidade}&id=${id}`, {
+      method: "DELETE",
+      headers: { cookie },
+    });
   } catch {
     // a falha original continuará sendo apresentada pelo teste
   }
@@ -1263,7 +1760,9 @@ async function testarMapa(cookie) {
     assert.match((await alaInvalida.json()).erro ?? "", /ala/i);
 
     // exporta todos os dados do mapa
-    const respostaExportacao = await fetch(`${endereco}/api/mapa?todos=1&exportar=1`, { headers: { cookie } });
+    const respostaExportacao = await fetch(`${endereco}/api/mapa?todos=1&exportar=1`, {
+      headers: { cookie },
+    });
     assert.equal(respostaExportacao.status, 200);
     const exportacao = await respostaExportacao.json();
     assert.equal(exportacao.versao, 1);
@@ -1278,50 +1777,65 @@ async function testarMapa(cookie) {
     assert.equal(importacaoSemConfirmar.status, 400);
 
     // cria um local temporário
-    const local = await requisicaoMapa(cookie, "POST", {
-      entidade: "locais",
-      dados: {
-        nome: `Local temporário ${sufixo}`,
-        numero: `T${String(Date.now()).slice(-8)}`,
-        nomeAlternativo: `Apelido local ${sufixo}`,
-        tipo: "sala_aula",
-        ala: "Fora do prédio",
-        andar: "Andar de teste",
-        observacoes: "Observação exclusiva do local.",
-        ativo: true,
-        publicado: false,
+    const local = await requisicaoMapa(
+      cookie,
+      "POST",
+      {
+        entidade: "locais",
+        dados: {
+          nome: `Local temporário ${sufixo}`,
+          numero: `T${String(Date.now()).slice(-8)}`,
+          nomeAlternativo: `Apelido local ${sufixo}`,
+          tipo: "sala_aula",
+          ala: "Fora do prédio",
+          andar: "Andar de teste",
+          observacoes: "Observação exclusiva do local.",
+          ativo: true,
+          publicado: false,
+        },
       },
-    }, 201);
+      201,
+    );
     idLocal = local.item.id;
 
     // cria uma atividade temporária
-    const turma = await requisicaoMapa(cookie, "POST", {
-      entidade: "turmas",
-      dados: {
-        nome: `Atividade temporária ${sufixo}`,
-        aliases: `apelido ${sufixo}`,
-        turno: "tarde",
-        tipo: "outro",
-        observacoes: "Observação exclusiva da atividade.",
-        ativo: true,
-        publicado: false,
+    const turma = await requisicaoMapa(
+      cookie,
+      "POST",
+      {
+        entidade: "turmas",
+        dados: {
+          nome: `Atividade temporária ${sufixo}`,
+          aliases: `apelido ${sufixo}`,
+          turno: "tarde",
+          tipo: "outro",
+          observacoes: "Observação exclusiva da atividade.",
+          ativo: true,
+          publicado: false,
+        },
       },
-    }, 201);
+      201,
+    );
     idTurma = turma.item.id;
 
     // liga a atividade ao local
-    const ensalamento = await requisicaoMapa(cookie, "POST", {
-      entidade: "ensalamentos",
-      dados: {
-        turmaAtividadeId: idTurma,
-        localId: idLocal,
-        turno: "tarde",
-        tipo: "outro",
-        observacoes: "Observação exclusiva do ensalamento.",
-        ativo: true,
-        publicado: false,
+    const ensalamento = await requisicaoMapa(
+      cookie,
+      "POST",
+      {
+        entidade: "ensalamentos",
+        dados: {
+          turmaAtividadeId: idTurma,
+          localId: idLocal,
+          turno: "tarde",
+          tipo: "outro",
+          observacoes: "Observação exclusiva do ensalamento.",
+          ativo: true,
+          publicado: false,
+        },
       },
-    }, 201);
+      201,
+    );
     idEnsalamento = ensalamento.item.id;
 
     // confirma que rascunhos não aparecem no mapa público
@@ -1377,8 +1891,14 @@ async function testarMapa(cookie) {
 
     // confirma os dados publicados
     publico = await obterMapaPublico(sufixo);
-    assert.equal(publico.locais.find((item) => item.id === idLocal)?.observacoes, "Observação exclusiva do local.");
-    assert.equal(publico.turmas.find((item) => item.id === idTurma)?.observacoes, "Observação exclusiva da atividade.");
+    assert.equal(
+      publico.locais.find((item) => item.id === idLocal)?.observacoes,
+      "Observação exclusiva do local.",
+    );
+    assert.equal(
+      publico.turmas.find((item) => item.id === idTurma)?.observacoes,
+      "Observação exclusiva da atividade.",
+    );
     // encontra a ligação publicada
     const vinculo = publico.ensalamentos.find((item) => item.id === idEnsalamento);
     assert.equal(vinculo?.localId, idLocal);
@@ -1408,7 +1928,14 @@ async function testarMapa(cookie) {
     await requisicaoMapa(cookie, "PUT", {
       entidade: "turmas",
       id: idTurma,
-      dados: { ...turmaPublicada, ano: undefined, inicioValidade: "", fimValidade: "2000-01-01", ativo: true, publicado: true },
+      dados: {
+        ...turmaPublicada,
+        ano: undefined,
+        inicioValidade: "",
+        fimValidade: "2000-01-01",
+        ativo: true,
+        publicado: true,
+      },
     });
     publico = await obterMapaPublico(`${sufixo}-validade-expirada`);
     assert.ok(!publico.turmas.some((item) => item.id === idTurma));
@@ -1417,14 +1944,23 @@ async function testarMapa(cookie) {
     await requisicaoMapa(cookie, "PUT", {
       entidade: "turmas",
       id: idTurma,
-      dados: { ...turmaPublicada, ano: undefined, inicioValidade: "", fimValidade: "", ativo: true, publicado: true },
+      dados: {
+        ...turmaPublicada,
+        ano: undefined,
+        inicioValidade: "",
+        fimValidade: "",
+        ativo: true,
+        publicado: true,
+      },
     });
 
-    // importa uma atualização parcial
     const importacaoParcial = await requisicaoMapa(cookie, "POST", {
       acao: "importar",
       confirmar: true,
-      dados: { versao: 1, turmas: [{ ...turmaPublicada, turno: "noite", ativo: true, publicado: true }] },
+      dados: {
+        versao: 1,
+        turmas: [{ ...turmaPublicada, turno: "noite", ativo: true, publicado: true }],
+      },
     });
     assert.equal(importacaoParcial.importados.turmas, 1);
     publico = await obterMapaPublico(`${sufixo}-importacao`);
@@ -1434,7 +1970,10 @@ async function testarMapa(cookie) {
     await requisicaoMapa(cookie, "POST", {
       acao: "importar",
       confirmar: true,
-      dados: { versao: 1, turmas: [{ ...turmaPublicada, turno: "noite", ativo: true, publicado: true }] },
+      dados: {
+        versao: 1,
+        turmas: [{ ...turmaPublicada, turno: "noite", ativo: true, publicado: true }],
+      },
     });
 
     // devolve o turno original da atividade
@@ -1445,7 +1984,9 @@ async function testarMapa(cookie) {
     });
 
     // verifica a lista usada pelo painel
-    const dadosAdministrativos = await fetch(`${endereco}/api/mapa?todos=1`, { headers: { cookie } });
+    const dadosAdministrativos = await fetch(`${endereco}/api/mapa?todos=1`, {
+      headers: { cookie },
+    });
     assert.equal(dadosAdministrativos.status, 200);
     const mapaAdministrativo = await dadosAdministrativos.json();
     assert.equal(mapaAdministrativo.turmas.filter((item) => item.id === idTurma).length, 1);
@@ -1453,19 +1994,24 @@ async function testarMapa(cookie) {
     assert.ok(sala214?.id);
 
     // rejeita a troca para uma sala que já está ocupada
-    await requisicaoMapa(cookie, "PUT", {
-      entidade: "ensalamentos",
-      id: idEnsalamento,
-      dados: {
-        turmaAtividadeId: idTurma,
-        localId: sala214.id,
-        turno: "tarde",
-        tipo: "outro",
-        observacoes: "Sala alterada pelo teste local.",
-        ativo: true,
-        publicado: true,
+    await requisicaoMapa(
+      cookie,
+      "PUT",
+      {
+        entidade: "ensalamentos",
+        id: idEnsalamento,
+        dados: {
+          turmaAtividadeId: idTurma,
+          localId: sala214.id,
+          turno: "tarde",
+          tipo: "outro",
+          observacoes: "Sala alterada pelo teste local.",
+          ativo: true,
+          publicado: true,
+        },
       },
-    }, 409);
+      409,
+    );
     publico = await obterMapaPublico(`${sufixo}-troca`);
     assert.equal(publico.ensalamentos.find((item) => item.id === idEnsalamento)?.localId, idLocal);
 
@@ -1488,9 +2034,19 @@ async function testarMapa(cookie) {
     // exclui os dados temporários
     await excluirMapa(cookie, "ensalamentos", idEnsalamento);
     idEnsalamento = 0;
-    // arquiva a turma antes de permitir sua exclusão
-    await requisicaoMapa(cookie, "PUT", { entidade: "turmas", id: idTurma, dados: { ativo: false, publicado: false } });
-    await excluirMapa(cookie, "turmas", idTurma);
+    // arquiva a turma publicada e confere que o histórico continua protegido
+    await requisicaoMapa(cookie, "PUT", {
+      entidade: "turmas",
+      id: idTurma,
+      dados: { ativo: false, publicado: false },
+    });
+    const exclusaoTurma = await fetch(`${endereco}/api/mapa?entidade=turmas&id=${idTurma}`, {
+      method: "DELETE",
+      headers: { cookie },
+    });
+    assert.equal(exclusaoTurma.status, 409);
+    const turmaArquivada = await requisicaoDominio(cookie, "/api/mapa?todos=1");
+    assert.equal(turmaArquivada.turmas.find((turma) => turma.id === idTurma)?.ativo, false);
     idTurma = 0;
     await excluirMapa(cookie, "locais", idLocal);
     idLocal = 0;
@@ -1516,20 +2072,33 @@ async function requisicaoMapa(cookie, method, body, statusEsperado = 200) {
 
 // lê o mapa público sem usar o cache
 async function obterMapaPublico(chave) {
-  const resposta = await fetch(`${endereco}/api/mapa?teste=${encodeURIComponent(chave)}`, { cache: "no-store" });
+  const resposta = await fetch(`${endereco}/api/mapa?teste=${encodeURIComponent(chave)}`, {
+    cache: "no-store",
+  });
   assert.equal(resposta.status, 200);
   return resposta.json();
 }
 
 // tenta excluir um item durante a limpeza
 async function excluirMapaSemFalhar(cookie, entidade, id) {
-  if (entidade === "turmas") await fetch(`${endereco}/api/mapa`, { method: "PUT", headers: { cookie, "content-type": "application/json" }, body: JSON.stringify({ entidade, id, dados: { ativo: false, publicado: false } }) });
-  await fetch(`${endereco}/api/mapa?entidade=${entidade}&id=${id}`, { method: "DELETE", headers: { cookie } });
+  if (entidade === "turmas")
+    await fetch(`${endereco}/api/mapa`, {
+      method: "PUT",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ entidade, id, dados: { ativo: false, publicado: false } }),
+    });
+  await fetch(`${endereco}/api/mapa?entidade=${entidade}&id=${id}`, {
+    method: "DELETE",
+    headers: { cookie },
+  });
 }
 
 // exclui um item e confere o resultado
 async function excluirMapa(cookie, entidade, id) {
-  const resposta = await fetch(`${endereco}/api/mapa?entidade=${entidade}&id=${id}`, { method: "DELETE", headers: { cookie } });
+  const resposta = await fetch(`${endereco}/api/mapa?entidade=${entidade}&id=${id}`, {
+    method: "DELETE",
+    headers: { cookie },
+  });
   const resultado = await resposta.json();
   assert.equal(resposta.status, 200, resultado.erro || `Falha ao excluir ${entidade}`);
   assert.equal(resultado.removido, true);
@@ -1545,7 +2114,13 @@ async function testarConteudo(cookie) {
     body: JSON.stringify({
       tipo: "projetos",
       publicado: false,
-      dados: { titulo, categoria: "Teste", estado: "Rascunho", texto: "Registro temporário do teste local.", link: "" },
+      dados: {
+        titulo,
+        categoria: "Teste",
+        estado: "Rascunho",
+        texto: "Registro temporário do teste local.",
+        link: "",
+      },
     }),
   });
   assert.equal(respostaCriacao.status, 201);
@@ -1560,7 +2135,13 @@ async function testarConteudo(cookie) {
       id: criado.id,
       tipo: "projetos",
       publicado: false,
-      dados: { titulo: `${titulo} editado`, categoria: "Teste", estado: "Rascunho", texto: "Registro temporário atualizado.", link: "" },
+      dados: {
+        titulo: `${titulo} editado`,
+        categoria: "Teste",
+        estado: "Rascunho",
+        texto: "Registro temporário atualizado.",
+        link: "",
+      },
     }),
   });
   assert.equal(respostaEdicao.status, 200);
@@ -1577,12 +2158,40 @@ async function testarConteudo(cookie) {
 async function testarPublicacoes2027(cookie) {
   const criados = [];
   try {
-    const dados = { titulo: `Notícia temporária 2027 ${Date.now()}`, data: "2027-02-01", categoria: "Teste", resumo: "Resumo temporário", conteudo: "Conteúdo temporário completo", imagemUrl: "/noticias/patricia-ressurreicao.jpg", imagemAlt: "Descrição temporária", creditoImagem: "Crédito temporário", link: "https://www.cep.pr.gov.br/", cor: "azul", destaque: false };
-    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", dados: { ...dados, imagemAlt: "" } }, 400);
-    const noticia = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", dados }, 201)).item;
+    const dados = {
+      titulo: `Notícia temporária 2027 ${Date.now()}`,
+      data: "2027-02-01",
+      categoria: "Teste",
+      resumo: "Resumo temporário",
+      conteudo: "Conteúdo temporário completo",
+      imagemUrl: "/noticias/patricia-ressurreicao.jpg",
+      imagemAlt: "Descrição temporária",
+      creditoImagem: "Crédito temporário",
+      link: "https://www.cep.pr.gov.br/",
+      cor: "azul",
+      destaque: false,
+    };
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "POST",
+      { tipo: "noticias", dados: { ...dados, imagemAlt: "" } },
+      400,
+    );
+    const noticia = (
+      await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", dados }, 201)
+    ).item;
     criados.push(noticia.id);
-    assert.ok((await requisicaoPublica("/api/conteudo?tipo=noticias&ano=2027")).itens.some((item) => item.id === noticia.id));
-    assert.ok(!(await requisicaoPublica("/api/conteudo?tipo=noticias&ano=2026")).itens.some((item) => item.id === noticia.id));
+    assert.ok(
+      (await requisicaoPublica("/api/conteudo?tipo=noticias&ano=2027")).itens.some(
+        (item) => item.id === noticia.id,
+      ),
+    );
+    assert.ok(
+      !(await requisicaoPublica("/api/conteudo?tipo=noticias&ano=2026")).itens.some(
+        (item) => item.id === noticia.id,
+      ),
+    );
     const pagina = await fetch(`${endereco}/noticias/${noticia.id}`);
     assert.equal(pagina.status, 200);
     const html = await pagina.text();
@@ -1591,68 +2200,226 @@ async function testarPublicacoes2027(cookie) {
     assert.match(html, /Conteúdo temporário completo/);
 
     // aceita lançamentos somente no exercício em andamento
-    const anoAtual = new Intl.DateTimeFormat("pt-BR", { year: "numeric", timeZone: "America/Sao_Paulo" }).format(new Date());
-    const financeiro = { descricao: `Movimento temporário ${Date.now()}`, data: `${anoAtual}-03-02`, tipo: "entrada", categoria: "Teste", valor: 12.5, comprovanteUrl: "" };
-    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: { ...financeiro, exemplo: true } }, 400);
-    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: { ...financeiro, data: `${anoAtual}-02-30` } }, 400);
-    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: { ...financeiro, data: `${Number(anoAtual) + 1}-03-02` } }, 400);
-    const movimento = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "movimentos", dados: financeiro }, 201)).item;
+    const anoAtual = new Intl.DateTimeFormat("pt-BR", {
+      year: "numeric",
+      timeZone: "America/Sao_Paulo",
+    }).format(new Date());
+    const financeiro = {
+      descricao: `Movimento temporário ${Date.now()}`,
+      data: `${anoAtual}-03-02`,
+      tipo: "entrada",
+      categoria: "Teste",
+      valor: 12.5,
+      comprovanteUrl: "",
+    };
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "POST",
+      { tipo: "movimentos", dados: { ...financeiro, exemplo: true } },
+      400,
+    );
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "POST",
+      { tipo: "movimentos", dados: { ...financeiro, data: `${anoAtual}-02-30` } },
+      400,
+    );
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "POST",
+      { tipo: "movimentos", dados: { ...financeiro, data: `${Number(anoAtual) + 1}-03-02` } },
+      400,
+    );
+    const movimento = (
+      await requisicaoDominio(
+        cookie,
+        "/api/conteudo",
+        "POST",
+        { tipo: "movimentos", dados: financeiro },
+        201,
+      )
+    ).item;
     criados.push(movimento.id);
-    assert.ok((await requisicaoPublica(`/api/conteudo?tipo=movimentos&ano=${anoAtual}`)).itens.some((item) => item.id === movimento.id));
-    assert.equal((await requisicaoPublica(`/api/conteudo?tipo=movimentos&ano=${Number(anoAtual) - 1}`)).itens.length, 0);
-    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: movimento.id, tipo: "movimentos", dados: { ...financeiro, exemplo: true } }, 400);
+    assert.ok(
+      (await requisicaoPublica(`/api/conteudo?tipo=movimentos&ano=${anoAtual}`)).itens.some(
+        (item) => item.id === movimento.id,
+      ),
+    );
+    assert.equal(
+      (await requisicaoPublica(`/api/conteudo?tipo=movimentos&ano=${Number(anoAtual) - 1}`)).itens
+        .length,
+      0,
+    );
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "PUT",
+      { id: movimento.id, tipo: "movimentos", dados: { ...financeiro, exemplo: true } },
+      400,
+    );
     await requisicaoPublica("/api/conteudo?tipo=noticias&ano=errado", 400);
 
     // os canais podem ser publicados e editados pelo mesmo painel
-    const canal = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "canais", dados: { titulo: `Canal temporário ${Date.now()}`, descricao: "Descrição do canal temporário", link: "https://example.com/canal", icone: "◉" } }, 201)).item;
+    const canal = (
+      await requisicaoDominio(
+        cookie,
+        "/api/conteudo",
+        "POST",
+        {
+          tipo: "canais",
+          dados: {
+            titulo: `Canal temporário ${Date.now()}`,
+            descricao: "Descrição do canal temporário",
+            link: "https://example.com/canal",
+            icone: "◉",
+          },
+        },
+        201,
+      )
+    ).item;
     criados.push(canal.id);
-    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: canal.id, tipo: "canais", dados: { ...canal.dados, link: "https://example.com/novo" } });
-    assert.equal((await requisicaoPublica("/api/conteudo?tipo=canais")).itens.find((item) => item.id === canal.id).dados.link, "https://example.com/novo");
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", {
+      id: canal.id,
+      tipo: "canais",
+      dados: { ...canal.dados, link: "https://example.com/novo" },
+    });
+    assert.equal(
+      (await requisicaoPublica("/api/conteudo?tipo=canais")).itens.find(
+        (item) => item.id === canal.id,
+      ).dados.link,
+      "https://example.com/novo",
+    );
     for (const rota of ["/contato", "/noticias?ano=2027", "/transparencia?ano=2027"]) {
       const resposta = await fetch(`${endereco}${rota}`);
       assert.equal(resposta.status, 200);
       const texto = await resposta.text();
-      if (rota === "/contato") { assert.doesNotMatch(texto, /name="mensagem"/); assert.match(texto, /href="\/sugestoes"/); }
-      if (rota.startsWith("/transparencia")) assert.doesNotMatch(texto, /Valores demonstrativos|primeira versão são fictícios/);
+      if (rota === "/contato") {
+        assert.doesNotMatch(texto, /name="mensagem"/);
+        assert.match(texto, /href="\/sugestoes"/);
+      }
+      if (rota.startsWith("/transparencia"))
+        assert.doesNotMatch(texto, /Valores demonstrativos|primeira versão são fictícios/);
     }
     console.log("Notícias com foto, canais editáveis e publicações de 2027: OK");
   } finally {
-    for (const id of criados) await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, acao: "arquivar" });
+    for (const id of criados)
+      await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, acao: "arquivar" });
   }
 }
 
 async function testarDatasEPeriodos(cookie) {
-  const dados = { titulo: `Notícia de datas ${Date.now()}`, data: "2024-02-29", categoria: "Teste", resumo: "Notícia temporária." };
-  const invalidas = ["2026-99-99", "2026-02-29", "2026-04-31", "1900-02-29", "2026-00-10", "2026-11-00", "10/11/2026", "2026-11-10T00:00:00Z"];
+  const dados = {
+    titulo: `Notícia de datas ${Date.now()}`,
+    data: "2024-02-29",
+    categoria: "Teste",
+    resumo: "Notícia temporária.",
+  };
+  const invalidas = [
+    "2026-99-99",
+    "2026-02-29",
+    "2026-04-31",
+    "1900-02-29",
+    "2026-00-10",
+    "2026-11-00",
+    "10/11/2026",
+    "2026-11-10T00:00:00Z",
+  ];
   const antes = await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1");
   for (const data of invalidas) {
-    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados: { ...dados, data } }, 400);
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "POST",
+      { tipo: "noticias", publicado: false, dados: { ...dados, data } },
+      400,
+    );
   }
   assert.deepEqual(await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1"), antes);
-  const noticia = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados }, 201)).item;
+  const noticia = (
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "POST",
+      { tipo: "noticias", publicado: false, dados },
+      201,
+    )
+  ).item;
   try {
     for (const data of invalidas) {
-      await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: noticia.id, tipo: "noticias", publicado: false, dados: { ...dados, data } }, 400);
+      await requisicaoDominio(
+        cookie,
+        "/api/conteudo",
+        "PUT",
+        { id: noticia.id, tipo: "noticias", publicado: false, dados: { ...dados, data } },
+        400,
+      );
     }
     const depois = await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1");
-    assert.deepEqual(depois.itens.find((item) => item.id === noticia.id), noticia);
-    const editada = await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: noticia.id, tipo: "noticias", publicado: false, dados: { ...dados, data: "2000-02-29" } });
+    assert.deepEqual(
+      depois.itens.find((item) => item.id === noticia.id),
+      noticia,
+    );
+    const editada = await requisicaoDominio(cookie, "/api/conteudo", "PUT", {
+      id: noticia.id,
+      tipo: "noticias",
+      publicado: false,
+      dados: { ...dados, data: "2000-02-29" },
+    });
     assert.equal(editada.item.dados.data, "2000-02-29");
-  } finally { await requisicaoDominio(cookie, `/api/conteudo?id=${noticia.id}`, "DELETE"); }
-
-  const evento = { titulo: `Evento de horários ${Date.now()}`, dataInicial: "2026-11-10", horarioInicial: "16:00", horarioFinal: "08:00", publicado: false };
-  for (const dataFinal of ["2026-11-10", "2026-11-09", ""]) {
-    await requisicaoDominio(cookie, "/api/eventos", "POST", { dados: { ...evento, dataFinal } }, 400);
+  } finally {
+    await requisicaoDominio(cookie, `/api/conteudo?id=${noticia.id}`, "DELETE");
   }
-  const criado = (await requisicaoDominio(cookie, "/api/eventos", "POST", { dados: { ...evento, dataFinal: "2026-11-11" } }, 201)).item;
+
+  const evento = {
+    titulo: `Evento de horários ${Date.now()}`,
+    dataInicial: "2026-11-10",
+    horarioInicial: "16:00",
+    horarioFinal: "08:00",
+    publicado: false,
+  };
+  for (const dataFinal of ["2026-11-10", "2026-11-09", ""]) {
+    await requisicaoDominio(
+      cookie,
+      "/api/eventos",
+      "POST",
+      { dados: { ...evento, dataFinal } },
+      400,
+    );
+  }
+  const criado = (
+    await requisicaoDominio(
+      cookie,
+      "/api/eventos",
+      "POST",
+      { dados: { ...evento, dataFinal: "2026-11-11" } },
+      201,
+    )
+  ).item;
   try {
     for (const dataFinal of ["2026-11-10", "2026-11-09", ""]) {
-      await requisicaoDominio(cookie, "/api/eventos", "PUT", { id: criado.id, dados: { dataFinal } }, 400);
+      await requisicaoDominio(
+        cookie,
+        "/api/eventos",
+        "PUT",
+        { id: criado.id, dados: { dataFinal } },
+        400,
+      );
     }
-    assert.deepEqual((await requisicaoDominio(cookie, `/api/eventos/${criado.id}?todos=1`)).item, criado);
-    const editado = await requisicaoDominio(cookie, "/api/eventos", "PUT", { id: criado.id, dados: { dataFinal: "2026-11-10", horarioFinal: "18:00" } });
+    assert.deepEqual(
+      (await requisicaoDominio(cookie, `/api/eventos/${criado.id}?todos=1`)).item,
+      criado,
+    );
+    const editado = await requisicaoDominio(cookie, "/api/eventos", "PUT", {
+      id: criado.id,
+      dados: { dataFinal: "2026-11-10", horarioFinal: "18:00" },
+    });
     assert.equal(editado.item.horarioFinal, "18:00");
-  } finally { await requisicaoDominio(cookie, `/api/eventos?id=${criado.id}`, "DELETE"); }
+  } finally {
+    await requisicaoDominio(cookie, `/api/eventos?id=${criado.id}`, "DELETE");
+  }
 }
 
 async function testarJsonInvalido(cookie) {
@@ -1660,7 +2427,12 @@ async function testarJsonInvalido(cookie) {
     for (const method of ["POST", "PUT"]) {
       for (const body of ['{"titulo":', "", "null", "[]"]) {
         const resposta = await fetch(`${endereco}${rota}`, {
-          method, headers: { ...(rota === "/api/mensagens" && method === "POST" ? {} : { cookie }), "content-type": "application/json" }, body,
+          method,
+          headers: {
+            ...(rota === "/api/mensagens" && method === "POST" ? {} : { cookie }),
+            "content-type": "application/json",
+          },
+          body,
         });
         assert.equal(resposta.status, 400, `${method} ${rota} deve rejeitar JSON inválido`);
         assert.match((await resposta.json()).erro, /JSON válido/);
@@ -1671,7 +2443,13 @@ async function testarJsonInvalido(cookie) {
 
 // testa o recebimento e a administração de mensagens
 async function testarMensagens(cookie) {
-  const inexistente = await requisicaoDominio(cookie, "/api/mensagens", "PUT", { id: 999999999, status: "respondida" }, 404);
+  const inexistente = await requisicaoDominio(
+    cookie,
+    "/api/mensagens",
+    "PUT",
+    { id: 999999999, status: "respondida" },
+    404,
+  );
   assert.equal(inexistente.atualizado, undefined);
   // cria títulos únicos para as mensagens
   const titulo = `Mensagem de teste ${Date.now()}`;
@@ -1747,7 +2525,10 @@ async function testarMensagens(cookie) {
   assert.equal(mensagemSemContato.contato, "");
 
   // busca uma mensagem pelo protocolo
-  const respostaBusca = await fetch(`${endereco}/api/mensagens?busca=${encodeURIComponent(mensagem.protocolo)}`, { headers: { cookie } });
+  const respostaBusca = await fetch(
+    `${endereco}/api/mensagens?busca=${encodeURIComponent(mensagem.protocolo)}`,
+    { headers: { cookie } },
+  );
   assert.equal(respostaBusca.status, 200);
   const resultadoBusca = await respostaBusca.json();
   assert.equal(resultadoBusca.total, 1);
@@ -1778,14 +2559,18 @@ async function testarMensagens(cookie) {
   }
 
   // verifica a primeira página de mensagens
-  const respostaPrimeiraPagina = await fetch(`${endereco}/api/mensagens?pagina=1`, { headers: { cookie } });
+  const respostaPrimeiraPagina = await fetch(`${endereco}/api/mensagens?pagina=1`, {
+    headers: { cookie },
+  });
   assert.equal(respostaPrimeiraPagina.status, 200);
   const primeiraPagina = await respostaPrimeiraPagina.json();
   assert.equal(primeiraPagina.mensagens.length, 6);
   assert.ok(primeiraPagina.totalPaginas >= 2);
 
   // verifica a segunda página de mensagens
-  const respostaSegundaPagina = await fetch(`${endereco}/api/mensagens?pagina=2`, { headers: { cookie } });
+  const respostaSegundaPagina = await fetch(`${endereco}/api/mensagens?pagina=2`, {
+    headers: { cookie },
+  });
   assert.equal(respostaSegundaPagina.status, 200);
   const segundaPagina = await respostaSegundaPagina.json();
   assert.equal(segundaPagina.pagina, 2);
@@ -1798,7 +2583,10 @@ async function testarMensagens(cookie) {
     body: JSON.stringify({ id: mensagem.id, status: "em_analise" }),
   });
   assert.equal(respostaEstado.status, 200);
-  const repeticao = await requisicaoDominio(cookie, "/api/mensagens", "PUT", { id: mensagem.id, status: "em_analise" });
+  const repeticao = await requisicaoDominio(cookie, "/api/mensagens", "PUT", {
+    id: mensagem.id,
+    status: "em_analise",
+  });
   assert.equal(repeticao.atualizado, true);
 
   // arquiva a mensagem
@@ -1810,11 +2598,17 @@ async function testarMensagens(cookie) {
   assert.equal(respostaArquivamento.status, 200);
 
   // esconde a mensagem arquivada da lista ativa
-  const respostaBuscaAtivas = await fetch(`${endereco}/api/mensagens?busca=${encodeURIComponent(mensagem.protocolo)}`, { headers: { cookie } });
+  const respostaBuscaAtivas = await fetch(
+    `${endereco}/api/mensagens?busca=${encodeURIComponent(mensagem.protocolo)}`,
+    { headers: { cookie } },
+  );
   assert.equal((await respostaBuscaAtivas.json()).total, 0);
 
   // encontra a mensagem na lista arquivada
-  const respostaBuscaArquivadas = await fetch(`${endereco}/api/mensagens?arquivadas=1&busca=${encodeURIComponent(mensagem.protocolo)}`, { headers: { cookie } });
+  const respostaBuscaArquivadas = await fetch(
+    `${endereco}/api/mensagens?arquivadas=1&busca=${encodeURIComponent(mensagem.protocolo)}`,
+    { headers: { cookie } },
+  );
   assert.equal(respostaBuscaArquivadas.status, 200);
   const resultadoArquivadas = await respostaBuscaArquivadas.json();
   assert.equal(resultadoArquivadas.total, 1);
@@ -1822,10 +2616,14 @@ async function testarMensagens(cookie) {
 
   // mesmo a administração não consegue apagar uma mensagem
   const respostaExclusao = await fetch(`${endereco}/api/mensagens?id=${mensagem.id}`, {
-    method: "DELETE", headers: { cookie },
+    method: "DELETE",
+    headers: { cookie },
   });
   assert.equal(respostaExclusao.status, 405);
-  const preservada = await requisicaoDominio(cookie, `/api/mensagens?status=todas&busca=${encodeURIComponent(mensagem.protocolo)}`);
+  const preservada = await requisicaoDominio(
+    cookie,
+    `/api/mensagens?status=todas&busca=${encodeURIComponent(mensagem.protocolo)}`,
+  );
   assert.equal(preservada.mensagens[0]?.id, mensagem.id);
 
   // guarda os demais envios de teste no arquivo
@@ -1842,34 +2640,107 @@ async function testarBiblioteca(cookie) {
   const paginas = await requisicaoDominio(cookie, "/api/paginas");
   assert.ok(paginas.itens.some((item) => item.url === "/estatuto"));
   const upload = new FormData();
-  upload.append("arquivo", new File([await readFile("public/logo-gecep.png")], "biblioteca-http.png", { type: "image/png" }));
+  upload.append(
+    "arquivo",
+    new File([await readFile("public/logo-gecep.png")], "biblioteca-http.png", {
+      type: "image/png",
+    }),
+  );
   upload.append("visibilidade", "publica");
-  const resposta = await fetch(`${endereco}/api/arquivos`, { method: "POST", headers: { cookie }, body: upload });
+  const resposta = await fetch(`${endereco}/api/arquivos`, {
+    method: "POST",
+    headers: { cookie },
+    body: upload,
+  });
   assert.equal(resposta.status, 201);
   const arquivo = await resposta.json();
   assert.equal(arquivo.visibilidade, "privada");
   const criados = [];
-  const dados = { titulo: `Notícia da biblioteca ${Date.now()}`, data: "2027-01-10", categoria: "Teste", resumo: "Resumo temporário", imagemUrl: arquivo.url, imagemAlt: "Logo usado no teste", creditoImagem: "GECEP", botaoInternoAtivo: true, botaoInternoUrl: "/estatuto", botaoInternoTexto: "Ver Estatuto", botaoExternoAtivo: true, botaoExternoUrl: "https://www.cep.pr.gov.br/", botaoExternoTexto: "Abrir site do CEP" };
+  const dados = {
+    titulo: `Notícia da biblioteca ${Date.now()}`,
+    data: "2027-01-10",
+    categoria: "Teste",
+    resumo: "Resumo temporário",
+    imagemUrl: arquivo.url,
+    imagemAlt: "Logo usado no teste",
+    creditoImagem: "GECEP",
+    botaoInternoAtivo: true,
+    botaoInternoUrl: "/estatuto",
+    botaoInternoTexto: "Ver Estatuto",
+    botaoExternoAtivo: true,
+    botaoExternoUrl: "https://www.cep.pr.gov.br/",
+    botaoExternoTexto: "Abrir site do CEP",
+  };
   try {
     assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 401);
     await requisicaoDominio(cookie, arquivo.url, "PUT", { visibilidade: "publica" }, 400);
-    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", dados: { ...dados, botaoInternoUrl: "//example.com" } }, 400);
-    await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", dados: { ...dados, botaoExternoUrl: "javascript:alert(1)" } }, 400);
-    await requisicaoDominio(cookie, "/api/documentos-oficiais", "PUT", { chave: "estatuto", arquivoUrl: arquivo.url }, 400);
-    const primeiro = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados }, 201)).item;
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "POST",
+      { tipo: "noticias", dados: { ...dados, botaoInternoUrl: "//example.com" } },
+      400,
+    );
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "POST",
+      { tipo: "noticias", dados: { ...dados, botaoExternoUrl: "javascript:alert(1)" } },
+      400,
+    );
+    await requisicaoDominio(
+      cookie,
+      "/api/documentos-oficiais",
+      "PUT",
+      { chave: "estatuto", arquivoUrl: arquivo.url },
+      400,
+    );
+    const primeiro = (
+      await requisicaoDominio(
+        cookie,
+        "/api/conteudo",
+        "POST",
+        { tipo: "noticias", publicado: false, dados },
+        201,
+      )
+    ).item;
     criados.push(primeiro.id);
     assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 401);
-    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: primeiro.id, tipo: "noticias", publicado: true, dados });
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", {
+      id: primeiro.id,
+      tipo: "noticias",
+      publicado: true,
+      dados,
+    });
     assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 200);
     await requisicaoDominio(cookie, arquivo.url, "DELETE", undefined, 409);
-    const segundo = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: true, dados: { ...dados, titulo: `${dados.titulo} compartilhada` } }, 201)).item;
+    const segundo = (
+      await requisicaoDominio(
+        cookie,
+        "/api/conteudo",
+        "POST",
+        {
+          tipo: "noticias",
+          publicado: true,
+          dados: { ...dados, titulo: `${dados.titulo} compartilhada` },
+        },
+        201,
+      )
+    ).item;
     criados.push(segundo.id);
-    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: primeiro.id, tipo: "noticias", publicado: false, dados });
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", {
+      id: primeiro.id,
+      tipo: "noticias",
+      publicado: false,
+      dados,
+    });
     assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 200);
     await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id: segundo.id, acao: "arquivar" });
     assert.equal((await fetch(`${endereco}${arquivo.url}`)).status, 401);
     const biblioteca = await requisicaoDominio(cookie, "/api/arquivos");
-    assert.ok(biblioteca.itens.some((item) => item.chave === arquivo.chave && item.publico === false));
+    assert.ok(
+      biblioteca.itens.some((item) => item.chave === arquivo.chave && item.publico === false),
+    );
     const oficiais = await requisicaoPublica("/api/documentos-oficiais");
     assert.equal(oficiais.itens.length, 2);
     const catalogo = await requisicaoDominio(cookie, "/api/conteudo?tipo=documentos&todos=1");
@@ -1879,9 +2750,12 @@ async function testarBiblioteca(cookie) {
     const leitor = await fetch(`${endereco}/estatuto`);
     assert.equal(leitor.status, 200);
     assert.match(await leitor.text(), /src="\/api\/documentos-oficiais\/estatuto"/);
-    console.log("Biblioteca privada, publicação compartilhada, PDFs protegidos e botões de notícias: OK");
+    console.log(
+      "Biblioteca privada, publicação compartilhada, PDFs protegidos e botões de notícias: OK",
+    );
   } finally {
-    for (const id of criados) await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, acao: "arquivar" });
+    for (const id of criados)
+      await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, acao: "arquivar" });
     await requisicaoDominio(cookie, arquivo.url, "DELETE", undefined, 409);
   }
 }
@@ -1889,7 +2763,10 @@ async function testarBiblioteca(cookie) {
 async function testarArquivos(cookie) {
   // rejeita um arquivo cujo tipo declarado não corresponde ao conteúdo
   const formularioFalso = new FormData();
-  formularioFalso.append("arquivo", new File(["não é uma imagem"], "falso.png", { type: "image/png" }));
+  formularioFalso.append(
+    "arquivo",
+    new File(["não é uma imagem"], "falso.png", { type: "image/png" }),
+  );
   const respostaFalsa = await fetch(`${endereco}/api/arquivos`, {
     method: "POST",
     headers: { cookie },
@@ -1920,13 +2797,16 @@ async function testarArquivos(cookie) {
   assert.match(respostaLeitura.headers.get("content-type") ?? "", /image\/png/);
 
   // exclui a imagem enviada
-  const respostaExclusao = await fetch(`${endereco}/api/arquivos/${encodeURIComponent(arquivo.chave)}`, {
-    method: "DELETE",
-    headers: { cookie },
-  });
+  const respostaExclusao = await fetch(
+    `${endereco}/api/arquivos/${encodeURIComponent(arquivo.chave)}`,
+    {
+      method: "DELETE",
+      headers: { cookie },
+    },
+  );
   assert.equal(respostaExclusao.status, 200);
 
-  // um anexo privado continua protegido mesmo para quem conhece sua URL
+  // um anexo privado continua protegido mesmo para quem conhece sua url
   const formularioPrivado = new FormData();
   formularioPrivado.append("arquivo", new File([bytes], "logo-privado.png", { type: "image/png" }));
   formularioPrivado.append("visibilidade", "privada");
@@ -1953,7 +2833,10 @@ async function testarArquivos(cookie) {
 
   // duas publicações podem usar o mesmo arquivo sem liberar um rascunho
   const formularioCompartilhado = new FormData();
-  formularioCompartilhado.append("arquivo", new File([bytes], "capa-compartilhada.png", { type: "image/png" }));
+  formularioCompartilhado.append(
+    "arquivo",
+    new File([bytes], "capa-compartilhada.png", { type: "image/png" }),
+  );
   formularioCompartilhado.append("visibilidade", "privada");
   const envioCompartilhado = await fetch(`${endereco}/api/arquivos`, {
     method: "POST",
@@ -1966,23 +2849,45 @@ async function testarArquivos(cookie) {
   let eventoCopia = 0;
   try {
     const sufixo = `${Date.now().toString(36)}-${Math.floor(Math.random() * 1_000_000)}`;
-    const origem = await requisicaoDominio(cookie, "/api/eventos", "POST", {
-      dados: {
-        titulo: `Evento com capa compartilhada ${sufixo}`,
-        dataInicial: "2099-11-01",
-        situacao: "proximo",
-        imagemCapaUrl: compartilhado.url,
-        publicado: true,
-        ativo: true,
+    const origem = await requisicaoDominio(
+      cookie,
+      "/api/eventos",
+      "POST",
+      {
+        dados: {
+          titulo: `Evento com capa compartilhada ${sufixo}`,
+          dataInicial: "2099-11-01",
+          situacao: "proximo",
+          imagemCapaUrl: compartilhado.url,
+          publicado: true,
+          ativo: true,
+        },
       },
-    }, 201);
+      201,
+    );
     eventoOrigem = origem.item.id;
     assert.equal((await fetch(`${endereco}${compartilhado.url}`)).status, 200);
 
-    await requisicaoDominio(cookie, "/api/eventos", "POST", { acao: "duplicar", id: eventoOrigem }, 400);
-    const copia = await requisicaoDominio(cookie, "/api/eventos", "POST", {
-      dados: { titulo: `Rascunho com capa compartilhada ${sufixo}`, imagemCapaUrl: compartilhado.url, publicado: false },
-    }, 201);
+    await requisicaoDominio(
+      cookie,
+      "/api/eventos",
+      "POST",
+      { acao: "duplicar", id: eventoOrigem },
+      400,
+    );
+    const copia = await requisicaoDominio(
+      cookie,
+      "/api/eventos",
+      "POST",
+      {
+        dados: {
+          titulo: `Rascunho com capa compartilhada ${sufixo}`,
+          imagemCapaUrl: compartilhado.url,
+          publicado: false,
+        },
+      },
+      201,
+    );
     eventoCopia = copia.item.id;
     assert.equal(copia.item.publicado, false);
     assert.equal(
@@ -2020,30 +2925,125 @@ async function testarArquivos(cookie) {
 // verifica rascunho destaque arquivamento e senha na exclusão definitiva
 async function testarGestaoNoticias(cookie) {
   const titulo = `Notícia temporária da gestão ${Date.now()}`;
-  const rascunho = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados: { titulo } }, 201)).item;
+  const rascunho = (
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "POST",
+      { tipo: "noticias", publicado: false, dados: { titulo } },
+      201,
+    )
+  ).item;
   const id = rascunho.id;
   try {
     assert.equal(rascunho.dados.jaPublicada, false);
     const ano = rascunho.dados.data.slice(0, 4);
-    assert.ok((await requisicaoDominio(cookie, `/api/conteudo?tipo=noticias&todos=1&visao=rascunhos&ano=${ano}`)).itens.some((item) => item.id === id));
-    const dados = { ...rascunho.dados, categoria: "Teste", resumo: "Registro temporário para conferir as proteções", destaque: true };
-    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "noticias", publicado: true, dados }, 400);
-    const publicada = (await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "noticias", publicado: true, dados: { ...dados, destaqueAte: "2199-12-31" } })).item;
+    assert.ok(
+      (
+        await requisicaoDominio(
+          cookie,
+          `/api/conteudo?tipo=noticias&todos=1&visao=rascunhos&ano=${ano}`,
+        )
+      ).itens.some((item) => item.id === id),
+    );
+    const dados = {
+      ...rascunho.dados,
+      categoria: "Teste",
+      resumo: "Registro temporário para conferir as proteções",
+      destaque: true,
+    };
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "PUT",
+      { id, tipo: "noticias", publicado: true, dados },
+      400,
+    );
+    const publicada = (
+      await requisicaoDominio(cookie, "/api/conteudo", "PUT", {
+        id,
+        tipo: "noticias",
+        publicado: true,
+        dados: { ...dados, destaqueAte: "2199-12-31" },
+      })
+    ).item;
     assert.equal(publicada.dados.jaPublicada, true);
-    assert.ok((await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1&visao=destaques")).itens.some((item) => item.id === id));
-    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "noticias", publicado: true, dados: { ...publicada.dados, destaque: false } });
-    assert.ok(!(await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1&visao=destaques")).itens.some((item) => item.id === id));
-    assert.ok((await requisicaoPublica("/api/conteudo?tipo=noticias")).itens.some((item) => item.id === id));
-    await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE", { senha: "senha errada do teste" }, 409);
-    const arquivada = (await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "noticias", publicado: false, dados: { ...publicada.dados, jaPublicada: false, destaque: false } })).item;
+    assert.ok(
+      (
+        await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1&visao=destaques")
+      ).itens.some((item) => item.id === id),
+    );
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", {
+      id,
+      tipo: "noticias",
+      publicado: true,
+      dados: { ...publicada.dados, destaque: false },
+    });
+    assert.ok(
+      !(
+        await requisicaoDominio(cookie, "/api/conteudo?tipo=noticias&todos=1&visao=destaques")
+      ).itens.some((item) => item.id === id),
+    );
+    assert.ok(
+      (await requisicaoPublica("/api/conteudo?tipo=noticias")).itens.some((item) => item.id === id),
+    );
+    await requisicaoDominio(
+      cookie,
+      `/api/conteudo?id=${id}`,
+      "DELETE",
+      { senha: "senha errada do teste" },
+      409,
+    );
+    const arquivada = (
+      await requisicaoDominio(cookie, "/api/conteudo", "PUT", {
+        id,
+        tipo: "noticias",
+        publicado: false,
+        dados: { ...publicada.dados, jaPublicada: false, destaque: false },
+      })
+    ).item;
     assert.equal(arquivada.dados.jaPublicada, true);
-    assert.ok((await requisicaoDominio(cookie, `/api/conteudo?tipo=noticias&todos=1&visao=arquivadas&ano=${ano}`)).itens.some((item) => item.id === id));
-    assert.ok(!(await requisicaoPublica("/api/conteudo?tipo=noticias")).itens.some((item) => item.id === id));
+    assert.ok(
+      (
+        await requisicaoDominio(
+          cookie,
+          `/api/conteudo?tipo=noticias&todos=1&visao=arquivadas&ano=${ano}`,
+        )
+      ).itens.some((item) => item.id === id),
+    );
+    assert.ok(
+      !(await requisicaoPublica("/api/conteudo?tipo=noticias")).itens.some(
+        (item) => item.id === id,
+      ),
+    );
     await requisicaoDominio(cookie, `/api/conteudo?id=${id}`, "DELETE", {}, 409);
-    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, tipo: "projetos", dados: { titulo, categoria: "Teste", estado: "Planejado", texto: "Teste" } }, 400);
-    const outro = (await requisicaoDominio(cookie, "/api/conteudo", "POST", { tipo: "noticias", publicado: false, dados: { titulo: `${titulo} rascunho` } }, 201)).item;
-    const exclusao = await fetch(`${endereco}/api/conteudo?id=${outro.id}`, { method: "DELETE", headers: { cookie } });
+    await requisicaoDominio(
+      cookie,
+      "/api/conteudo",
+      "PUT",
+      {
+        id,
+        tipo: "projetos",
+        dados: { titulo, categoria: "Teste", estado: "Planejado", texto: "Teste" },
+      },
+      400,
+    );
+    const outro = (
+      await requisicaoDominio(
+        cookie,
+        "/api/conteudo",
+        "POST",
+        { tipo: "noticias", publicado: false, dados: { titulo: `${titulo} rascunho` } },
+        201,
+      )
+    ).item;
+    const exclusao = await fetch(`${endereco}/api/conteudo?id=${outro.id}`, {
+      method: "DELETE",
+      headers: { cookie },
+    });
     assert.equal(exclusao.status, 200);
     console.log("Gestão de notícias: rascunhos, destaque, arquivo e proteção do histórico: OK");
-  } finally { await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, acao: "arquivar" }); }
+  } finally {
+    await requisicaoDominio(cookie, "/api/conteudo", "PUT", { id, acao: "arquivar" });
+  }
 }

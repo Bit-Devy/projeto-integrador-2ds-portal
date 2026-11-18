@@ -1,4 +1,3 @@
-// importa o componente de link
 import Link from "next/link";
 
 // mostra o cabeçalho padrão das páginas

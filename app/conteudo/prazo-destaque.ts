@@ -6,5 +6,9 @@ export function tempoRestanteDestaque(prazo: string, agora = new Date()) {
   const restante = inicio.getTime() + 24 * 60 * 60 * 1000 - agora.getTime();
   if (restante <= 0) return null;
   const totalHoras = Math.floor(restante / 3600000);
-  return { dias: Math.floor(totalHoras / 24), horas: totalHoras % 24, menosDeUmaHora: totalHoras === 0 };
+  return {
+    dias: Math.floor(totalHoras / 24),
+    horas: totalHoras % 24,
+    menosDeUmaHora: totalHoras === 0,
+  };
 }

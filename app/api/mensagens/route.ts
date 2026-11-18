@@ -1,12 +1,13 @@
-// importa o acesso direto ao banco
 import { getD1 } from "../../../db";
-// importa a preparação das tabelas
 import { garantirBanco } from "../../../db/inicializar";
-// importa as verificações de administrador e origem
 import { exigirAdministradorApi, origemValida } from "../../lib/autorizacao";
 import { ErroJsonInvalido, lerObjetoJson } from "../../lib/corpo-json";
-// importa os limites de envio por navegador
-import { consumirTentativa, devolverTentativaMensagem, guardarNavegador, identificarNavegador } from "../../lib/limites";
+import {
+  consumirTentativa,
+  devolverTentativaMensagem,
+  guardarNavegador,
+  identificarNavegador,
+} from "../../lib/limites";
 
 // define o formato de uma mensagem no banco
 type LinhaMensagem = {
@@ -38,8 +39,11 @@ export async function GET(request: Request) {
     // prepara o banco e lê os filtros
     await garantirBanco();
     const parametrosUrl = new URL(request.url).searchParams;
-    const filtro = parametrosUrl.get("status") || (parametrosUrl.get("arquivadas") === "1" ? "arquivada" : "nova");
-    if (filtro !== "todas" && !estados.includes(filtro)) return Response.json({ erro: "Escolha um filtro de mensagens válido." }, { status: 400 });
+    const filtro =
+      parametrosUrl.get("status") ||
+      (parametrosUrl.get("arquivadas") === "1" ? "arquivada" : "nova");
+    if (filtro !== "todas" && !estados.includes(filtro))
+      return Response.json({ erro: "Escolha um filtro de mensagens válido." }, { status: 400 });
     const busca = normalizarBusca(parametrosUrl.get("busca"));
     const paginaSolicitada = inteiroPositivo(parametrosUrl.get("pagina"));
     // abre pelas novas e permite consultar cada etapa ou todas juntas
@@ -48,7 +52,9 @@ export async function GET(request: Request) {
 
     // adiciona a busca por protocolo
     if (busca) {
-      condicoes.push("UPPER('GECEP-' || substr(criado_em, 1, 4) || '-' || printf('%05d', id)) LIKE ?");
+      condicoes.push(
+        "UPPER('GECEP-' || substr(criado_em, 1, 4) || '-' || printf('%05d', id)) LIKE ?",
+      );
       parametros.push(`%${busca}%`);
     }
 
@@ -67,7 +73,9 @@ export async function GET(request: Request) {
 
     // busca somente as mensagens da página
     const resultado = await d1
-      .prepare(`SELECT * FROM mensagens WHERE ${onde} ORDER BY criado_em DESC, id DESC LIMIT ? OFFSET ?`)
+      .prepare(
+        `SELECT * FROM mensagens WHERE ${onde} ORDER BY criado_em DESC, id DESC LIMIT ? OFFSET ?`,
+      )
       .bind(...parametros, mensagensPorPagina, deslocamento)
       .all<LinhaMensagem>();
     return Response.json({
@@ -107,7 +115,10 @@ export async function POST(request: Request) {
 
     // confirma os campos obrigatórios
     if ((!anonimo && (!nome || !turma)) || !assunto || !titulo || mensagem.length < 10) {
-      return Response.json({ erro: "Preencha todos os campos e detalhe um pouco mais a mensagem." }, { status: 400 });
+      return Response.json(
+        { erro: "Preencha todos os campos e detalhe um pouco mais a mensagem." },
+        { status: 400 },
+      );
     }
 
     // valida o contato opcional
@@ -118,19 +129,38 @@ export async function POST(request: Request) {
     const navegador = identificarNavegador(request);
     const tentativa = await consumirTentativa("mensagens", navegador);
     if (!tentativa.permitido) {
-      return guardarNavegador(Response.json({ erro: tentativa.limite.aviso, limite: tentativa.limite }, {
-        status: 429, headers: { "retry-after": String(tentativa.limite.tentarEm) },
-      }), request, navegador);
+      return guardarNavegador(
+        Response.json(
+          { erro: tentativa.limite.aviso, limite: tentativa.limite },
+          {
+            status: 429,
+            headers: { "retry-after": String(tentativa.limite.tentarEm) },
+          },
+        ),
+        request,
+        navegador,
+      );
     }
 
     // salva a mensagem e devolve seu protocolo
     let resultado;
     try {
       resultado = await getD1()
-      .prepare(`INSERT INTO mensagens (nome, turma, assunto, titulo, mensagem, tipo_contato, contato, anonimo)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, criado_em`)
-      .bind(nome, turma, assunto, titulo, mensagem, tipoContato || null, contato || null, anonimo ? 1 : 0)
-      .first<{ id: number; criado_em: string }>();
+        .prepare(
+          `INSERT INTO mensagens (nome, turma, assunto, titulo, mensagem, tipo_contato, contato, anonimo)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, criado_em`,
+        )
+        .bind(
+          nome,
+          turma,
+          assunto,
+          titulo,
+          mensagem,
+          tipoContato || null,
+          contato || null,
+          anonimo ? 1 : 0,
+        )
+        .first<{ id: number; criado_em: string }>();
       if (!resultado) throw new Error("A mensagem não foi salva.");
     } catch (erro) {
       // devolve a tentativa quando o banco não consegue salvar a mensagem
@@ -139,7 +169,14 @@ export async function POST(request: Request) {
     }
 
     const protocolo = formatarProtocolo(resultado?.id ?? 0, resultado?.criado_em);
-    return guardarNavegador(Response.json({ enviado: true, protocolo, criadoEm: resultado?.criado_em, limite: tentativa.limite }, { status: 201 }), request, navegador);
+    return guardarNavegador(
+      Response.json(
+        { enviado: true, protocolo, criadoEm: resultado?.criado_em, limite: tentativa.limite },
+        { status: 201 },
+      ),
+      request,
+      navegador,
+    );
   } catch (erro) {
     return respostaErro(erro);
   }
@@ -163,8 +200,10 @@ export async function PUT(request: Request) {
       return Response.json({ erro: "Dados inválidos." }, { status: 400 });
     }
     // atualiza o estado da mensagem
-    const resultado = await getD1().prepare("UPDATE mensagens SET status = ? WHERE id = ? RETURNING id")
-      .bind(status, id).first<{ id: number }>();
+    const resultado = await getD1()
+      .prepare("UPDATE mensagens SET status = ? WHERE id = ? RETURNING id")
+      .bind(status, id)
+      .first<{ id: number }>();
     if (!resultado) return Response.json({ erro: "Mensagem não encontrada." }, { status: 404 });
     return Response.json({ atualizado: true });
   } catch (erro) {
@@ -179,12 +218,17 @@ export async function DELETE(request: Request) {
   const { resposta } = await exigirAdministradorApi("mensagens", request.method !== "GET");
   if (resposta) return resposta;
 
-  return Response.json({ erro: "As mensagens não podem ser apagadas. Arquive a mensagem para mantê-la no histórico." }, { status: 405, headers: { Allow: "GET, POST, PUT" } });
+  return Response.json(
+    { erro: "As mensagens não podem ser apagadas. Arquive a mensagem para mantê-la no histórico." },
+    { status: 405, headers: { Allow: "GET, POST, PUT" } },
+  );
 }
 
 // transforma um valor em texto curto
 function texto(valor: unknown, limite: number) {
-  return String(valor ?? "").trim().slice(0, limite);
+  return String(valor ?? "")
+    .trim()
+    .slice(0, limite);
 }
 
 // transforma uma linha do banco em resposta da api
@@ -197,8 +241,8 @@ function formatarMensagem(linha: LinhaMensagem) {
     titulo: linha.titulo,
     mensagem: linha.mensagem,
     protocolo: formatarProtocolo(linha.id, linha.criado_em),
-    tipoContato: linha.anonimo ? "" : linha.tipo_contato ?? "",
-    contato: linha.anonimo ? "" : linha.contato ?? "",
+    tipoContato: linha.anonimo ? "" : (linha.tipo_contato ?? ""),
+    contato: linha.anonimo ? "" : (linha.contato ?? ""),
     anonimo: Boolean(linha.anonimo),
     status: linha.status,
     criadoEm: linha.criado_em,
@@ -215,7 +259,11 @@ function formatarProtocolo(id: number, criadoEm?: string) {
 // limpa o texto usado para buscar um protocolo
 function normalizarBusca(valor: string | null) {
   // mantém somente letras números e traços
-  return String(valor ?? "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 40);
+  return String(valor ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, "")
+    .slice(0, 40);
 }
 
 // transforma a página recebida em número positivo
@@ -234,7 +282,10 @@ function validarContato(tipo: string, contato: string) {
   if (tipo === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contato)) {
     return "Informe um endereço de e-mail válido.";
   }
-  if ((tipo === "whatsapp" || tipo === "telefone") && !/^\d{10,11}$/.test(contato.replace(/\D/g, ""))) {
+  if (
+    (tipo === "whatsapp" || tipo === "telefone") &&
+    !/^\d{10,11}$/.test(contato.replace(/\D/g, ""))
+  ) {
     return "Informe um telefone com DDD e 10 ou 11 dígitos.";
   }
   if (tipo === "instagram" && !/^@[A-Za-z0-9._]{1,30}$/.test(contato)) {
@@ -245,7 +296,8 @@ function validarContato(tipo: string, contato: string) {
 
 // transforma erros em respostas da api
 function respostaErro(erro: unknown) {
-  if (erro instanceof ErroJsonInvalido) return Response.json({ erro: erro.message }, { status: 400 });
+  if (erro instanceof ErroJsonInvalido)
+    return Response.json({ erro: erro.message }, { status: 400 });
   console.error("Erro na API de mensagens:", erro);
   return Response.json({ erro: "Não foi possível concluir a operação." }, { status: 500 });
 }

@@ -1,6 +1,5 @@
 // usa o ano local do portal no cadastro escolar
 import { anoDoPortal } from "../conteudo/periodos";
-// importa as funções de normalização do mapa
 import {
   aliasesNormalizados,
   normalizarNumeroSala,
@@ -8,7 +7,6 @@ import {
   normalizarTextoBusca,
   normalizarTurno,
 } from "./normalizacao";
-// importa as alas e os tipos do mapa
 import { alasMapa, type AlaMapa, type GrupoCategoriaMapa, type TurnoMapa } from "./tipos";
 import { diasDeAula, type DiaDeAula } from "./dias-de-aula";
 
@@ -17,7 +15,10 @@ export class ErroMapa extends Error {
   // informa quais ocupações precisam de confirmação no painel
   conflitos?: Array<{ id: number; nome: string }>;
   // guarda a mensagem e o estado da resposta
-  constructor(mensagem: string, public status = 400) {
+  constructor(
+    mensagem: string,
+    public status = 400,
+  ) {
     super(mensagem);
     this.name = "ErroMapa";
   }
@@ -196,7 +197,8 @@ export function validarTurmaMapa(valor: unknown, manterValidade = false): TurmaM
   const fimAntigo = data(dados.fimValidade, "fim da validade");
   validarPeriodo(inicioAntigo, fimAntigo);
   const ano = Number(dados.ano ?? (inicioAntigo ? inicioAntigo.slice(0, 4) : anoDoPortal()));
-  if (!Number.isInteger(ano) || ano < 1900 || ano > 2199) throw new ErroMapa("Informe um ano escolar válido.");
+  if (!Number.isInteger(ano) || ano < 1900 || ano > 2199)
+    throw new ErroMapa("Informe um ano escolar válido.");
   const usarDatasInformadas = dados.ano === undefined || manterValidade;
   const inicioValidade = usarDatasInformadas ? inicioAntigo : `${ano}-01-01`;
   const fimValidade = usarDatasInformadas ? fimAntigo : `${ano}-12-31`;
@@ -205,13 +207,20 @@ export function validarTurmaMapa(valor: unknown, manterValidade = false): TurmaM
   const horarioInicial = parcial ? texto(dados.horarioInicial, 12) : "";
   const horarioFinal = parcial ? texto(dados.horarioFinal, 12) : "";
   const horaValida = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
-  if (parcial && (!horaValida.test(horarioInicial) || !horaValida.test(horarioFinal) || horarioInicial >= horarioFinal)) {
+  if (
+    parcial &&
+    (!horaValida.test(horarioInicial) ||
+      !horaValida.test(horarioFinal) ||
+      horarioInicial >= horarioFinal)
+  ) {
     throw new ErroMapa("Informe os horários do turno parcial. O fim deve ser depois do início.");
   }
   // limita e organiza todos os campos da turma
   return {
     ano,
-    nivelEnsino: ["medio", "fundamental", "outro"].includes(String(dados.nivelEnsino)) ? String(dados.nivelEnsino) : "medio",
+    nivelEnsino: ["medio", "fundamental", "outro"].includes(String(dados.nivelEnsino))
+      ? String(dados.nivelEnsino)
+      : "medio",
     nome,
     nomeNormalizado,
     aliases,
@@ -237,7 +246,12 @@ export function validarTurmaMapa(valor: unknown, manterValidade = false): TurmaM
 // conserva a ocupação anterior quando um cadastro antigo não informa os dias
 function validarDiasDeAula(valor: unknown): DiaDeAula[] {
   if (valor === undefined) return diasDeAula.map((dia) => dia.chave);
-  if (!Array.isArray(valor) || !valor.length || valor.length > diasDeAula.length || valor.some((chave) => !diasDeAula.some((dia) => dia.chave === chave))) {
+  if (
+    !Array.isArray(valor) ||
+    !valor.length ||
+    valor.length > diasDeAula.length ||
+    valor.some((chave) => !diasDeAula.some((dia) => dia.chave === chave))
+  ) {
     throw new ErroMapa("Selecione pelo menos um dia válido da semana para o turno parcial.");
   }
   return diasDeAula.filter((dia) => valor.includes(dia.chave)).map((dia) => dia.chave);
@@ -249,9 +263,10 @@ export function validarEnsalamentoMapa(valor: unknown): EnsalamentoMapaValidado 
   const dados = objetoRecebido(valor);
   const turmaAtividadeId = idPositivo(dados.turmaAtividadeId, "turma ou atividade");
   // transforma o local vazio em valor nulo
-  const localId = dados.localId === null || dados.localId === "" || dados.localId === undefined
-    ? null
-    : idPositivo(dados.localId, "sala ou local");
+  const localId =
+    dados.localId === null || dados.localId === "" || dados.localId === undefined
+      ? null
+      : idPositivo(dados.localId, "sala ou local");
   // valida turno tipo e período
   const turno = normalizarTurno(dados.turno);
   const tipo = normalizarSlug(dados.tipo);

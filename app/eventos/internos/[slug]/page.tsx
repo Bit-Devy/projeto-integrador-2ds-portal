@@ -8,7 +8,11 @@ export const metadata: Metadata = {
   description: "Informações públicas de um evento interno.",
 };
 
-export default async function PaginaEventoInterno({ params }: { params: Promise<{ slug: string }> }) {
+export default async function PaginaEventoInterno({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   await exigirPublicacao(() => obterEvento(slug));
   return <DetalheEventoInterno slug={slug} />;

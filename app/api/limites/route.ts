@@ -1,4 +1,3 @@
-// importa a identificação e a consulta dos limites por navegador
 import { consultarLimite, guardarNavegador, identificarNavegador } from "../../lib/limites";
 
 // prepara o navegador e informa quando um novo envio será permitido

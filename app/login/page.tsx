@@ -1,10 +1,6 @@
-// importa o tipo dos dados da página
 import type { Metadata } from "next";
-// importa os links entre páginas
 import Link from "next/link";
-// importa o formulário com limite de tentativas
 import FormularioLogin from "../componentes/FormularioLogin";
-// importa a verificação do destino de retorno
 import { caminhoSeguro } from "../lib/sessao";
 
 // define os dados da página de entrada
@@ -33,7 +29,11 @@ export default async function PaginaLogin({
         <h1>Entrar no painel</h1>
         <p>Informe a senha do seu cargo para acessar o painel.</p>
         {/* formulário de acesso */}
-        <FormularioLogin retorno={retorno} erro={parametros.erro} geralInicial={parametros.geral === "1"} />
+        <FormularioLogin
+          retorno={retorno}
+          erro={parametros.erro}
+          geralInicial={parametros.geral === "1"}
+        />
         <Link href="/">Voltar ao portal</Link>
       </section>
     </main>

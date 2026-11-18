@@ -18,7 +18,11 @@ export const esportesInterclasse = [
 
 // encontra o símbolo do esporte escolhido
 export function simboloEsporte(modalidade?: string) {
-  return esportesInterclasse.find((item) => normalizarTurma(item.nome) === normalizarTurma(modalidade || ""))?.simbolo || "🏆";
+  return (
+    esportesInterclasse.find(
+      (item) => normalizarTurma(item.nome) === normalizarTurma(modalidade || ""),
+    )?.simbolo || "🏆"
+  );
 }
 
 // aceita a série e de uma a três letras
@@ -40,7 +44,11 @@ export function anoEscolarTurma(nome: string): number | null {
 
 // separa cada turma quando encontra um espaço ou uma linha nova
 export function separarTurmas(texto: string): string[] {
-  return texto.trim().split(/[\s,;]+/).filter(Boolean).map(normalizarNomeTurma);
+  return texto
+    .trim()
+    .split(/[\s,;]+/)
+    .filter(Boolean)
+    .map(normalizarNomeTurma);
 }
 
 export type JogoPosicionado = {
@@ -54,26 +62,41 @@ export type ModoChave = "dois-lados" | "um-lado";
 type PontoChave = { x: number; y: number };
 
 // usa a fase informada ou encontra a primeira rodada com jogos pendentes
-export function indiceFaseParaAbrir(fases: Array<{ nome?: string; jogos: JogoPublico[] }>, atual: string) {
+export function indiceFaseParaAbrir(
+  fases: Array<{ nome?: string; jogos: JogoPublico[] }>,
+  atual: string,
+) {
   const nomeAtual = normalizarBusca(atual);
-  const cadastrada = fases.findIndex(({ nome, jogos }) => nomeAtual && jogos.length && normalizarBusca(nome || "") === nomeAtual);
+  const cadastrada = fases.findIndex(
+    ({ nome, jogos }) => nomeAtual && jogos.length && normalizarBusca(nome || "") === nomeAtual,
+  );
   if (cadastrada >= 0) return cadastrada;
 
   const concluidas = new Set(["encerrada", "wo", "cancelada"]);
-  const pendente = fases.findIndex(({ jogos }) => jogos.some((jogo) => jogo.formaVitoria !== "bye" && !concluidas.has(jogo.situacao || "")));
+  const pendente = fases.findIndex(({ jogos }) =>
+    jogos.some((jogo) => jogo.formaVitoria !== "bye" && !concluidas.has(jogo.situacao || "")),
+  );
   return pendente >= 0 ? pendente : fases.findLastIndex(({ jogos }) => jogos.length > 0);
 }
 
 // deixa uma margem em volta de toda a chave na visão inicial
 export const margemDaChave = 24;
-export function calcularZoomDaChave(larguraVisor: number, alturaVisor: number, larguraChave: number, alturaChave: number) {
+export function calcularZoomDaChave(
+  larguraVisor: number,
+  alturaVisor: number,
+  larguraChave: number,
+  alturaChave: number,
+) {
   const larguraDisponivel = Math.max(1, larguraVisor - margemDaChave * 2);
   const alturaDisponivel = Math.max(1, alturaVisor - margemDaChave * 2);
   return Math.min(1, larguraDisponivel / larguraChave, alturaDisponivel / alturaChave);
 }
 
 // organiza cada grupo de jogos pelo caminho até a final
-export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos: T[]; nome?: string; tipo?: string }>, modo: ModoChave = "um-lado") {
+export function posicionarChave<T extends JogoPosicionado>(
+  fases: Array<{ jogos: T[]; nome?: string; tipo?: string }>,
+  modo: ModoChave = "um-lado",
+) {
   // usa cartões iguais e deixa espaço para as linhas
   const alturaJogo = 184;
   const larguraJogo = 280;
@@ -109,24 +132,35 @@ export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos:
 
   // mantém o lado de cada vaga ao organizar os confrontos
   for (const grupo of origens.values()) {
-    const lado = (jogo: T) => jogo.proximaPosicao === "a" ? 0 : jogo.proximaPosicao === "b" ? 1 : 2;
+    const lado = (jogo: T) =>
+      jogo.proximaPosicao === "a" ? 0 : jogo.proximaPosicao === "b" ? 1 : 2;
     grupo.sort((a, b) => lado(a) - lado(b) || (a.ordem ?? 0) - (b.ordem ?? 0));
   }
 
-  const faseFinal = fases.findIndex((fase) => fase.tipo !== "terceiro_lugar" && normalizarTurma(fase.nome || "") === "final");
-  const colunaFinal = faseFinal >= 0 ? faseFinal : fases.findLastIndex((fase) => fase.jogos.length > 0 && fase.tipo !== "terceiro_lugar");
+  const faseFinal = fases.findIndex(
+    (fase) => fase.tipo !== "terceiro_lugar" && normalizarTurma(fase.nome || "") === "final",
+  );
+  const colunaFinal =
+    faseFinal >= 0
+      ? faseFinal
+      : fases.findLastIndex((fase) => fase.jogos.length > 0 && fase.tipo !== "terceiro_lugar");
   const raizes = jogos.filter((jogo) => !destinos.has(jogo));
-  const espelhada = modo === "dois-lados" && raizes.some((jogo) => colunas.get(jogo) === colunaFinal && origens.has(jogo));
+  const espelhada =
+    modo === "dois-lados" &&
+    raizes.some((jogo) => colunas.get(jogo) === colunaFinal && origens.has(jogo));
 
   // deixa as fases posteriores fora do espaço usado pelos dois lados da final
-  const colunaX = (coluna: number) => (espelhada && coluna > colunaFinal ? coluna + colunaFinal : coluna) * passoColuna;
+  const colunaX = (coluna: number) =>
+    (espelhada && coluna > colunaFinal ? coluna + colunaFinal : coluna) * passoColuna;
 
   // coloca os jogos iniciais juntos e centraliza seus destinos
   const proximaLinha = { indice: 0 };
   function posicionar(jogo: T, direcao: -1 | 1, quadro = posicoes, linha = proximaLinha): number {
     const grupo = origens.get(jogo) ?? [];
     const linhas = grupo.map((origem) => posicionar(origem, direcao, quadro, linha));
-    const y = linhas.length ? (Math.min(...linhas) + Math.max(...linhas)) / 2 : linha.indice++ * passoLinha;
+    const y = linhas.length
+      ? (Math.min(...linhas) + Math.max(...linhas)) / 2
+      : linha.indice++ * passoLinha;
     const coluna = colunas.get(jogo)!;
     const x = direcao === 1 ? colunaX(coluna) : (2 * colunaFinal - coluna) * passoColuna;
     quadro.set(jogo, { x, y });
@@ -139,7 +173,12 @@ export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos:
     const linha = { indice: 0 };
     const centros = grupo.map((jogo) => posicionar(jogo, direcao, quadro, linha));
     const centro = centros.length ? (Math.min(...centros) + Math.max(...centros)) / 2 : 0;
-    return { quadro, centro, acima: centro, abaixo: Math.max(0, (linha.indice - 1) * passoLinha - centro) };
+    return {
+      quadro,
+      centro,
+      acima: centro,
+      abaixo: Math.max(0, (linha.indice - 1) * passoLinha - centro),
+    };
   }
 
   // coloca cada ramo da final no lado da vaga para a qual ele avança
@@ -164,13 +203,13 @@ export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos:
       for (const [partida, ponto] of lado.quadro) {
         const distancia = ponto.y - lado.centro;
         const espaco = distancia < 0 ? lado.acima : lado.abaixo;
-        const y = yFinal + (espaco ? distancia * raio / espaco : 0);
+        const y = yFinal + (espaco ? (distancia * raio) / espaco : 0);
         posicoes.set(partida, { x: ponto.x, y });
         jogosEspelhados.add(partida);
       }
     }
     posicoes.set(jogo, { x: colunaX(colunaFinal), y: yFinal });
-    proximaLinha.indice += Math.ceil(raio * 2 / passoLinha) + 1;
+    proximaLinha.indice += Math.ceil((raio * 2) / passoLinha) + 1;
   }
 
   // liga os cartões pelas bordas voltadas para o próximo jogo
@@ -180,8 +219,11 @@ export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos:
     const fim = posicoes.get(destino)!;
     const avancaParaDireita = inicio.x < fim.x;
     const entrada = fim.x + (avancaParaDireita ? 0 : larguraJogo);
-    const meio = entrada + (passoColuna - larguraJogo) / 2 * (avancaParaDireita ? -1 : 1);
-    const saida = { x: inicio.x + (avancaParaDireita ? larguraJogo : 0), y: inicio.y + alturaJogo / 2 };
+    const meio = entrada + ((passoColuna - larguraJogo) / 2) * (avancaParaDireita ? -1 : 1);
+    const saida = {
+      x: inicio.x + (avancaParaDireita ? larguraJogo : 0),
+      y: inicio.y + alturaJogo / 2,
+    };
     const chegada = { x: entrada, y: fim.y + alturaJogo / 2 };
     const faseOrigem = colunas.get(origem)!;
     const faseDestino = colunas.get(destino)!;
@@ -193,15 +235,31 @@ export function posicionarChave<T extends JogoPosicionado>(fases: Array<{ jogos:
       }
     }
     const alinhada = saida.y === chegada.y;
-    const pontos = alinhada ? [saida, chegada] : [saida, { x: meio, y: saida.y }, { x: meio, y: chegada.y }, chegada];
+    const pontos = alinhada
+      ? [saida, chegada]
+      : [saida, { x: meio, y: saida.y }, { x: meio, y: chegada.y }, chegada];
     const caminho = alinhada
       ? `M ${saida.x} ${saida.y} H ${chegada.x}`
       : `M ${saida.x} ${saida.y} H ${meio} V ${chegada.y} H ${chegada.x}`;
     return { origem, destino, pontos, pulaFase: faseDestino > faseOrigem + 1, caminho };
   });
   return {
-    posicoes, conexoes, avancos, alturaAvanco, alturaJogo, larguraJogo, passoColuna, topoFases, colunaFinal, colunaX, espelhada,
-    largura: Math.max(larguraJogo, colunaX(fases.length - 1) + larguraJogo, espelhada ? 2 * colunaFinal * passoColuna + larguraJogo : 0),
+    posicoes,
+    conexoes,
+    avancos,
+    alturaAvanco,
+    alturaJogo,
+    larguraJogo,
+    passoColuna,
+    topoFases,
+    colunaFinal,
+    colunaX,
+    espelhada,
+    largura: Math.max(
+      larguraJogo,
+      colunaX(fases.length - 1) + larguraJogo,
+      espelhada ? 2 * colunaFinal * passoColuna + larguraJogo : 0,
+    ),
     altura: Math.max(alturaJogo, ...Array.from(posicoes.values(), (ponto) => ponto.y + alturaJogo)),
   };
 }

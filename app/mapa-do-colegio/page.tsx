@@ -1,8 +1,5 @@
-// importa o tipo dos dados da página
 import type { Metadata } from "next";
-// importa o cabeçalho da página
 import CabecalhoPagina from "../componentes/CabecalhoPagina";
-// importa o mapa que recebe interação
 import MapaColegioInterativo from "../componentes/MapaColegioInterativo";
 
 // define os dados da página do mapa
@@ -13,9 +10,14 @@ export const metadata: Metadata = {
 };
 
 // monta a página do mapa do colégio
-export default async function PaginaMapaDoColegio({ searchParams }: { searchParams: Promise<{ turmaId?: string | string[] }> }) {
+export default async function PaginaMapaDoColegio({
+  searchParams,
+}: {
+  searchParams: Promise<{ turmaId?: string | string[] }>;
+}) {
   const { turmaId } = await searchParams;
-  const turmaInicial = typeof turmaId === "string" && /^[1-9]\d{0,14}$/.test(turmaId) ? Number(turmaId) : undefined;
+  const turmaInicial =
+    typeof turmaId === "string" && /^[1-9]\d{0,14}$/.test(turmaId) ? Number(turmaId) : undefined;
   return (
     <main id="conteudo">
       {/* cabeçalho da página */}

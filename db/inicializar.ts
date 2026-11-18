@@ -1,10 +1,6 @@
-// importa os conteúdos usados na primeira execução
 import { dadosIniciais, canaisIniciais, documentosIniciais } from "../app/conteudo/dados-iniciais";
-// importa os tipos de conteúdo
 import type { TipoConteudo } from "../app/conteudo/tipos";
-// importa o acesso direto ao banco
 import { getD1 } from ".";
-// importa os dados iniciais do mapa de 2026
 import {
   categoriasMapaIniciais,
   CHAVE_CARGA_MAPA_2026,
@@ -12,18 +8,18 @@ import {
   locaisMapa2026,
   turmasMapa2026,
 } from "./dados-mapa-2026";
-// importa a mesma estrutura aditiva da migração do sistema de eventos
 import { comandosEstruturaEventos } from "./estrutura-eventos";
-// importa a proteção contra ocupações repetidas das salas
 import { comandosHistoricoSalas, comandosProtecaoSalas } from "./estrutura-salas";
-// importa as tabelas do acesso por cargo
 import { comandosEstruturaAcessos, garantirColunasLogin } from "./estrutura-acessos";
-// importa as entradas e as ações feitas no painel
 import { comandosEstruturaHistorico } from "./estrutura-historico";
 // prepara os serviços e os calendários enviados para 2026
 import { comandosEstruturaServicos } from "./estrutura-servicos";
 import { calendarioInicial2026 } from "../app/servicos/calendarios-2026";
-import { prepararAnosEscolares, prepararDetalhesEscolares, arquivarCiclosEscolares } from "./ciclos-anuais";
+import {
+  prepararAnosEscolares,
+  prepararDetalhesEscolares,
+  arquivarCiclosEscolares,
+} from "./ciclos-anuais";
 import { prepararHistoricoPublicacao } from "./estrutura-publicacao";
 
 // guarda uma única inicialização em andamento
@@ -48,7 +44,15 @@ async function prepararBanco() {
 
   // acrescenta os serviços sem substituir calendários que a gestão já alterou
   await d1.batch(comandosEstruturaServicos.map((comando) => d1.prepare(comando)));
-  await d1.batch((["anual", "semestral"] as const).map((modalidade) => d1.prepare("INSERT OR IGNORE INTO calendarios_escolares (ano, modalidade, dados_json, publicado) VALUES (2026, ?, ?, 1)").bind(modalidade, JSON.stringify(calendarioInicial2026(modalidade)))));
+  await d1.batch(
+    (["anual", "semestral"] as const).map((modalidade) =>
+      d1
+        .prepare(
+          "INSERT OR IGNORE INTO calendarios_escolares (ano, modalidade, dados_json, publicado) VALUES (2026, ?, ?, 1)",
+        )
+        .bind(modalidade, JSON.stringify(calendarioInicial2026(modalidade))),
+    ),
+  );
 
   // cria todas as tabelas e índices que ainda não existem
   await d1.batch([
@@ -100,8 +104,12 @@ async function prepararBanco() {
       criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`),
-    d1.prepare("CREATE UNIQUE INDEX IF NOT EXISTS categorias_mapa_grupo_slug_uq ON categorias_mapa (grupo, slug)"),
-    d1.prepare("CREATE INDEX IF NOT EXISTS categorias_mapa_grupo_ativo_idx ON categorias_mapa (grupo, ativo)"),
+    d1.prepare(
+      "CREATE UNIQUE INDEX IF NOT EXISTS categorias_mapa_grupo_slug_uq ON categorias_mapa (grupo, slug)",
+    ),
+    d1.prepare(
+      "CREATE INDEX IF NOT EXISTS categorias_mapa_grupo_ativo_idx ON categorias_mapa (grupo, ativo)",
+    ),
     d1.prepare(`CREATE TABLE IF NOT EXISTS locais_colegio (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       chave_importacao TEXT,
@@ -130,10 +138,18 @@ async function prepararBanco() {
       criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`),
-    d1.prepare("CREATE UNIQUE INDEX IF NOT EXISTS locais_colegio_chave_importacao_uq ON locais_colegio (chave_importacao)"),
-    d1.prepare("CREATE INDEX IF NOT EXISTS locais_colegio_nome_idx ON locais_colegio (nome_normalizado)"),
-    d1.prepare("CREATE INDEX IF NOT EXISTS locais_colegio_numero_idx ON locais_colegio (numero_normalizado)"),
-    d1.prepare("CREATE INDEX IF NOT EXISTS locais_colegio_publicacao_idx ON locais_colegio (publicado, ativo)"),
+    d1.prepare(
+      "CREATE UNIQUE INDEX IF NOT EXISTS locais_colegio_chave_importacao_uq ON locais_colegio (chave_importacao)",
+    ),
+    d1.prepare(
+      "CREATE INDEX IF NOT EXISTS locais_colegio_nome_idx ON locais_colegio (nome_normalizado)",
+    ),
+    d1.prepare(
+      "CREATE INDEX IF NOT EXISTS locais_colegio_numero_idx ON locais_colegio (numero_normalizado)",
+    ),
+    d1.prepare(
+      "CREATE INDEX IF NOT EXISTS locais_colegio_publicacao_idx ON locais_colegio (publicado, ativo)",
+    ),
     d1.prepare(`CREATE TABLE IF NOT EXISTS turmas_atividades (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       chave_importacao TEXT,
@@ -156,10 +172,18 @@ async function prepararBanco() {
       criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`),
-    d1.prepare("CREATE UNIQUE INDEX IF NOT EXISTS turmas_atividades_chave_importacao_uq ON turmas_atividades (chave_importacao)"),
-    d1.prepare("CREATE INDEX IF NOT EXISTS turmas_atividades_nome_idx ON turmas_atividades (nome_normalizado)"),
-    d1.prepare("CREATE INDEX IF NOT EXISTS turmas_atividades_filtros_idx ON turmas_atividades (turno, tipo)"),
-    d1.prepare("CREATE INDEX IF NOT EXISTS turmas_atividades_publicacao_idx ON turmas_atividades (publicado, ativo)"),
+    d1.prepare(
+      "CREATE UNIQUE INDEX IF NOT EXISTS turmas_atividades_chave_importacao_uq ON turmas_atividades (chave_importacao)",
+    ),
+    d1.prepare(
+      "CREATE INDEX IF NOT EXISTS turmas_atividades_nome_idx ON turmas_atividades (nome_normalizado)",
+    ),
+    d1.prepare(
+      "CREATE INDEX IF NOT EXISTS turmas_atividades_filtros_idx ON turmas_atividades (turno, tipo)",
+    ),
+    d1.prepare(
+      "CREATE INDEX IF NOT EXISTS turmas_atividades_publicacao_idx ON turmas_atividades (publicado, ativo)",
+    ),
     d1.prepare(`CREATE TABLE IF NOT EXISTS ensalamentos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       chave_importacao TEXT,
@@ -178,11 +202,17 @@ async function prepararBanco() {
       FOREIGN KEY (turma_atividade_id) REFERENCES turmas_atividades(id) ON UPDATE CASCADE ON DELETE RESTRICT,
       FOREIGN KEY (local_id) REFERENCES locais_colegio(id) ON UPDATE CASCADE ON DELETE RESTRICT
     )`),
-    d1.prepare("CREATE UNIQUE INDEX IF NOT EXISTS ensalamentos_chave_importacao_uq ON ensalamentos (chave_importacao)"),
-    d1.prepare("CREATE INDEX IF NOT EXISTS ensalamentos_turma_idx ON ensalamentos (turma_atividade_id)"),
+    d1.prepare(
+      "CREATE UNIQUE INDEX IF NOT EXISTS ensalamentos_chave_importacao_uq ON ensalamentos (chave_importacao)",
+    ),
+    d1.prepare(
+      "CREATE INDEX IF NOT EXISTS ensalamentos_turma_idx ON ensalamentos (turma_atividade_id)",
+    ),
     d1.prepare("CREATE INDEX IF NOT EXISTS ensalamentos_local_idx ON ensalamentos (local_id)"),
     d1.prepare("CREATE INDEX IF NOT EXISTS ensalamentos_filtros_idx ON ensalamentos (turno, tipo)"),
-    d1.prepare("CREATE INDEX IF NOT EXISTS ensalamentos_publicacao_idx ON ensalamentos (publicado, ativo)"),
+    d1.prepare(
+      "CREATE INDEX IF NOT EXISTS ensalamentos_publicacao_idx ON ensalamentos (publicado, ativo)",
+    ),
     d1.prepare(`CREATE TABLE IF NOT EXISTS cargas_iniciais (
       chave TEXT PRIMARY KEY NOT NULL,
       aplicado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -202,30 +232,53 @@ async function prepararBanco() {
   for (const tabela of ["eventos_internos", "reunioes"]) {
     const colunas = await d1.prepare(`PRAGMA table_info(${tabela})`).all<{ name: string }>();
     if (!colunas.results.some((coluna) => coluna.name === "area_responsavel")) {
-      try { await d1.prepare(`ALTER TABLE ${tabela} ADD COLUMN area_responsavel TEXT NOT NULL DEFAULT 'geral'`).run(); }
-      catch (erro) { if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro; }
+      try {
+        await d1
+          .prepare(
+            `ALTER TABLE ${tabela} ADD COLUMN area_responsavel TEXT NOT NULL DEFAULT 'geral'`,
+          )
+          .run();
+      } catch (erro) {
+        if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro;
+      }
     }
   }
 
   // guarda os membros presentes sem alterar os campos antigos das reuniões
   const colunasReunioes = await d1.prepare("PRAGMA table_info(reunioes)").all<{ name: string }>();
   if (!colunasReunioes.results.some((coluna) => coluna.name === "membros_gecep_json")) {
-    try { await d1.prepare("ALTER TABLE reunioes ADD COLUMN membros_gecep_json TEXT NOT NULL DEFAULT '[]'").run(); }
-    catch (erro) { if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro; }
+    try {
+      await d1
+        .prepare("ALTER TABLE reunioes ADD COLUMN membros_gecep_json TEXT NOT NULL DEFAULT '[]'")
+        .run();
+    } catch (erro) {
+      if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro;
+    }
   }
 
   // aplica ajustes e a carga do mapa
   // acrescenta a opção de dia inteiro sem modificar os horários já cadastrados
-  const colunasEventos = await d1.prepare("PRAGMA table_info(eventos_internos)").all<{ name: string }>();
+  const colunasEventos = await d1
+    .prepare("PRAGMA table_info(eventos_internos)")
+    .all<{ name: string }>();
   if (!colunasEventos.results.some((coluna) => coluna.name === "dia_todo")) {
-    try { await d1.prepare("ALTER TABLE eventos_internos ADD COLUMN dia_todo INTEGER NOT NULL DEFAULT 0").run(); }
-    catch (erro) { if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro; }
+    try {
+      await d1
+        .prepare("ALTER TABLE eventos_internos ADD COLUMN dia_todo INTEGER NOT NULL DEFAULT 0")
+        .run();
+    } catch (erro) {
+      if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro;
+    }
   }
 
-  const colunasCampeonato = await d1.prepare("PRAGMA table_info(campeonatos)").all<{ name: string }>();
+  const colunasCampeonato = await d1
+    .prepare("PRAGMA table_info(campeonatos)")
+    .all<{ name: string }>();
   if (!colunasCampeonato.results.some((coluna) => coluna.name === "premiacao")) {
     try {
-      await d1.prepare("ALTER TABLE campeonatos ADD COLUMN premiacao TEXT NOT NULL DEFAULT ''").run();
+      await d1
+        .prepare("ALTER TABLE campeonatos ADD COLUMN premiacao TEXT NOT NULL DEFAULT ''")
+        .run();
     } catch (erro) {
       if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro;
     }
@@ -240,66 +293,122 @@ async function prepararBanco() {
   await adicionarColunasContato(d1);
 
   // acrescenta o nível de ensino sem apagar turmas de bancos antigos
-  const colunasTurmas = await d1.prepare("PRAGMA table_info(turmas_atividades)").all<{ name: string }>();
+  const colunasTurmas = await d1
+    .prepare("PRAGMA table_info(turmas_atividades)")
+    .all<{ name: string }>();
   if (!colunasTurmas.results.some((coluna) => coluna.name === "nivel_ensino")) {
     try {
-      await d1.prepare("ALTER TABLE turmas_atividades ADD COLUMN nivel_ensino TEXT NOT NULL DEFAULT 'medio'").run();
+      await d1
+        .prepare(
+          "ALTER TABLE turmas_atividades ADD COLUMN nivel_ensino TEXT NOT NULL DEFAULT 'medio'",
+        )
+        .run();
     } catch (erro) {
       if (!(erro instanceof Error) || !/duplicate column name/i.test(erro.message)) throw erro;
     }
-    await d1.prepare(`UPDATE turmas_atividades SET nivel_ensino = CASE
+    await d1
+      .prepare(
+        `UPDATE turmas_atividades SET nivel_ensino = CASE
       WHEN CAST(serie AS INTEGER) BETWEEN 6 AND 9 THEN 'fundamental'
-      WHEN tipo NOT IN ('aula_regular', 'curso_tecnico') THEN 'outro' ELSE 'medio' END`).run();
+      WHEN tipo NOT IN ('aula_regular', 'curso_tecnico') THEN 'outro' ELSE 'medio' END`,
+      )
+      .run();
   }
   await prepararAnosEscolares(d1);
   await prepararDetalhesEscolares(d1);
   await prepararHistoricoPublicacao(d1);
   await carregarMapa2026(d1);
   // atualiza a regra de ocupação e publica os mandatos ativos que já estavam cadastrados
-  await d1.batch([
-    "DROP TRIGGER IF EXISTS salas_sem_conflito_insert",
-    "DROP TRIGGER IF EXISTS salas_sem_conflito_update",
-    "DROP TRIGGER IF EXISTS salas_por_horario_insert",
-    "DROP TRIGGER IF EXISTS salas_por_horario_update",
-    ...comandosProtecaoSalas,
-    ...comandosHistoricoSalas,
-    "UPDATE representantes SET publicado = 1 WHERE ativo = 1 AND arquivado_em IS NULL AND publicado = 0",
-  ].map((comando) => d1.prepare(comando)));
+  await d1.batch(
+    [
+      "DROP TRIGGER IF EXISTS salas_sem_conflito_insert",
+      "DROP TRIGGER IF EXISTS salas_sem_conflito_update",
+      "DROP TRIGGER IF EXISTS salas_por_horario_insert",
+      "DROP TRIGGER IF EXISTS salas_por_horario_update",
+      ...comandosProtecaoSalas,
+      ...comandosHistoricoSalas,
+      "UPDATE representantes SET publicado = 1 WHERE ativo = 1 AND arquivado_em IS NULL AND publicado = 0",
+    ].map((comando) => d1.prepare(comando)),
+  );
 
   // retira do catálogo antigo a documentação interna que não é publicada no portal
-  await d1.prepare(`DELETE FROM conteudos WHERE tipo = 'documentos'
+  await d1
+    .prepare(
+      `DELETE FROM conteudos WHERE tipo = 'documentos'
     AND ja_publicado = 0 AND publicado = 0
-    AND json_valid(dados_json) = 1 AND json_extract(dados_json, '$.link') LIKE '/documentacao/%'`).run();
+    AND json_valid(dados_json) = 1 AND json_extract(dados_json, '$.link') LIKE '/documentacao/%'`,
+    )
+    .run();
 
   // guarda os dois documentos atuais sem trocar uma versão já enviada pela gestão
-  await d1.batch(documentosIniciais.map((documento, indice) => d1.prepare(`INSERT OR IGNORE INTO documentos_oficiais
-    (chave, titulo, arquivo_url, versao) VALUES (?, ?, ?, ?)`)
-    .bind(indice === 0 ? "estatuto" : "regimento", indice === 0 ? "Estatuto do GECEP" : "Regimento Escolar do CEP", documento.link, indice === 0 ? "2023" : "2022")));
+  await d1.batch(
+    documentosIniciais.map((documento, indice) =>
+      d1
+        .prepare(
+          `INSERT OR IGNORE INTO documentos_oficiais
+    (chave, titulo, arquivo_url, versao) VALUES (?, ?, ?, ?)`,
+        )
+        .bind(
+          indice === 0 ? "estatuto" : "regimento",
+          indice === 0 ? "Estatuto do GECEP" : "Regimento Escolar do CEP",
+          documento.link,
+          indice === 0 ? "2023" : "2022",
+        ),
+    ),
+  );
   // identifica os documentos antigos para que todos os links acompanhem a troca do pdf
-  await d1.batch(documentosIniciais.map((documento, indice) => d1.prepare(`UPDATE conteudos SET dados_json = json_set(dados_json,
-    '$.documentoOficial', ?, '$.link', ?) WHERE tipo = 'documentos' AND json_extract(dados_json, '$.link') = ?`)
-    .bind(indice === 0 ? "estatuto" : "regimento", `/api/documentos-oficiais/${indice === 0 ? "estatuto" : "regimento"}`, documento.link)));
+  await d1.batch(
+    documentosIniciais.map((documento, indice) =>
+      d1
+        .prepare(
+          `UPDATE conteudos SET dados_json = json_set(dados_json,
+    '$.documentoOficial', ?, '$.link', ?) WHERE tipo = 'documentos' AND json_extract(dados_json, '$.link') = ?`,
+        )
+        .bind(
+          indice === 0 ? "estatuto" : "regimento",
+          `/api/documentos-oficiais/${indice === 0 ? "estatuto" : "regimento"}`,
+          documento.link,
+        ),
+    ),
+  );
 
   // registra as notícias que já estavam públicas antes deste recurso
-  await d1.prepare("UPDATE conteudos SET dados_json = json_set(dados_json, '$.jaPublicada', json('true')) WHERE tipo = 'noticias' AND publicado = 1 AND COALESCE(json_extract(dados_json, '$.jaPublicada'), 0) = 0").run();
+  await d1
+    .prepare(
+      "UPDATE conteudos SET dados_json = json_set(dados_json, '$.jaPublicada', json('true')) WHERE tipo = 'noticias' AND publicado = 1 AND COALESCE(json_extract(dados_json, '$.jaPublicada'), 0) = 0",
+    )
+    .run();
 
   // evita repetir os conteúdos iniciais
-  const quantidade = await d1.prepare("SELECT COUNT(*) AS total FROM conteudos").first<{ total: number }>();
+  const quantidade = await d1
+    .prepare("SELECT COUNT(*) AS total FROM conteudos")
+    .first<{ total: number }>();
   if ((quantidade?.total ?? 0) > 0) {
     // adiciona os canais uma única vez sem sobrescrever os endereços da gestão
-    const carga = await d1.prepare("SELECT chave FROM cargas_iniciais WHERE chave = 'canais-contato-v1'").first();
-    if (!carga) await d1.batch([
-      ...canaisIniciais.map(({ publicado, ...dados }) => d1.prepare(`INSERT INTO conteudos (tipo, titulo, dados_json, publicado)
-        SELECT 'canais', ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM conteudos WHERE tipo = 'canais' AND titulo = ?)`)
-        .bind(dados.titulo, JSON.stringify(dados), publicado ? 1 : 0, dados.titulo)),
-      d1.prepare("INSERT OR IGNORE INTO cargas_iniciais (chave) VALUES ('canais-contato-v1')"),
-    ]);
+    const carga = await d1
+      .prepare("SELECT chave FROM cargas_iniciais WHERE chave = 'canais-contato-v1'")
+      .first();
+    if (!carga)
+      await d1.batch([
+        ...canaisIniciais.map(({ publicado, ...dados }) =>
+          d1
+            .prepare(
+              `INSERT INTO conteudos (tipo, titulo, dados_json, publicado)
+        SELECT 'canais', ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM conteudos WHERE tipo = 'canais' AND titulo = ?)`,
+            )
+            .bind(dados.titulo, JSON.stringify(dados), publicado ? 1 : 0, dados.titulo),
+        ),
+        d1.prepare("INSERT OR IGNORE INTO cargas_iniciais (chave) VALUES ('canais-contato-v1')"),
+      ]);
     return;
   }
 
   // prepara um comando para cada conteúdo inicial
   const comandos: ReturnType<typeof d1.prepare>[] = [];
-  for (const [tipo, itens] of Object.entries(dadosIniciais) as [TipoConteudo, Array<Record<string, unknown>>][]) {
+  for (const [tipo, itens] of Object.entries(dadosIniciais) as [
+    TipoConteudo,
+    Array<Record<string, unknown>>,
+  ][]) {
     itens.forEach((item) => {
       // separa o estado de publicação dos outros dados
       const { publicado = true, ...dados } = item;
@@ -313,7 +422,9 @@ async function prepararBanco() {
       const titulo = obterTitulo(tipo, dados);
       comandos.push(
         d1
-          .prepare("INSERT INTO conteudos (tipo, titulo, dados_json, publicado) VALUES (?, ?, ?, ?)")
+          .prepare(
+            "INSERT INTO conteudos (tipo, titulo, dados_json, publicado) VALUES (?, ?, ?, ?)",
+          )
           .bind(tipo, titulo, JSON.stringify(dados), publicado ? 1 : 0),
       );
     });
@@ -333,58 +444,87 @@ export async function carregarMapa2026(d1 = getD1()) {
   if (marcador) return false;
 
   // insere as categorias que ainda não existem
-  await executarEmLotes(d1, categoriasMapaIniciais.map((categoria) => d1
-    .prepare(`INSERT INTO categorias_mapa (grupo, slug, nome, ordem)
+  await executarEmLotes(
+    d1,
+    categoriasMapaIniciais.map((categoria) =>
+      d1
+        .prepare(
+          `INSERT INTO categorias_mapa (grupo, slug, nome, ordem)
       VALUES (?, ?, ?, ?)
-      ON CONFLICT (grupo, slug) DO NOTHING`)
-    .bind(categoria.grupo, categoria.slug, categoria.nome, categoria.ordem)));
+      ON CONFLICT (grupo, slug) DO NOTHING`,
+        )
+        .bind(categoria.grupo, categoria.slug, categoria.nome, categoria.ordem),
+    ),
+  );
 
   // insere os locais que ainda não existem
-  await executarEmLotes(d1, locaisMapa2026.map((local) => d1
-    .prepare(`INSERT INTO locais_colegio (
+  await executarEmLotes(
+    d1,
+    locaisMapa2026.map((local) =>
+      d1
+        .prepare(
+          `INSERT INTO locais_colegio (
         chave_importacao, nome, nome_normalizado, numero, numero_normalizado,
         nome_alternativo, nome_alternativo_normalizado, tipo, ala, andar, ordem
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT (chave_importacao) DO NOTHING`)
-    .bind(
-      local.chaveImportacao,
-      local.nome,
-      local.nomeNormalizado,
-      local.numero,
-      local.numeroNormalizado,
-      local.nomeAlternativo,
-      local.nomeAlternativoNormalizado,
-      local.tipo,
-      local.ala,
-      local.andar,
-      local.ordem,
-    )));
+      ON CONFLICT (chave_importacao) DO NOTHING`,
+        )
+        .bind(
+          local.chaveImportacao,
+          local.nome,
+          local.nomeNormalizado,
+          local.numero,
+          local.numeroNormalizado,
+          local.nomeAlternativo,
+          local.nomeAlternativoNormalizado,
+          local.tipo,
+          local.ala,
+          local.andar,
+          local.ordem,
+        ),
+    ),
+  );
 
   // insere as turmas que ainda não existem
-  await executarEmLotes(d1, turmasMapa2026.map((turma) => d1
-    .prepare(`INSERT INTO turmas_atividades (
+  await executarEmLotes(
+    d1,
+    turmasMapa2026.map((turma) =>
+      d1
+        .prepare(
+          `INSERT INTO turmas_atividades (
         chave_importacao, nivel_ensino, nome, nome_normalizado, aliases, aliases_normalizados,
         turno, tipo, curso, serie, turma, ordem
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT (chave_importacao) DO NOTHING`)
-    .bind(
-      turma.chaveImportacao,
-      Number(turma.serie) >= 6 ? "fundamental" : ["aula_regular", "curso_tecnico"].includes(turma.tipo) ? "medio" : "outro",
-      turma.nome,
-      turma.nomeNormalizado,
-      turma.aliases,
-      turma.aliasesNormalizados,
-      turma.turno,
-      turma.tipo,
-      turma.curso,
-      turma.serie,
-      turma.turma,
-      turma.ordem,
-    )));
+      ON CONFLICT (chave_importacao) DO NOTHING`,
+        )
+        .bind(
+          turma.chaveImportacao,
+          Number(turma.serie) >= 6
+            ? "fundamental"
+            : ["aula_regular", "curso_tecnico"].includes(turma.tipo)
+              ? "medio"
+              : "outro",
+          turma.nome,
+          turma.nomeNormalizado,
+          turma.aliases,
+          turma.aliasesNormalizados,
+          turma.turno,
+          turma.tipo,
+          turma.curso,
+          turma.serie,
+          turma.turma,
+          turma.ordem,
+        ),
+    ),
+  );
 
   // insere os ensalamentos ligando suas chaves
-  await executarEmLotes(d1, ensalamentosMapa2026.map((ensalamento) => d1
-    .prepare(`INSERT INTO ensalamentos (
+  await executarEmLotes(
+    d1,
+    ensalamentosMapa2026.map((ensalamento) =>
+      d1
+        .prepare(
+          `INSERT INTO ensalamentos (
         chave_importacao, turma_atividade_id, local_id, turno, tipo, ordem
       ) VALUES (
         ?,
@@ -392,15 +532,18 @@ export async function carregarMapa2026(d1 = getD1()) {
         (SELECT id FROM locais_colegio WHERE chave_importacao = ?),
         ?, ?, ?
       )
-      ON CONFLICT (chave_importacao) DO NOTHING`)
-    .bind(
-      ensalamento.chaveImportacao,
-      ensalamento.chaveTurma,
-      ensalamento.chaveLocal,
-      ensalamento.turno,
-      ensalamento.tipo,
-      ensalamento.ordem,
-    )));
+      ON CONFLICT (chave_importacao) DO NOTHING`,
+        )
+        .bind(
+          ensalamento.chaveImportacao,
+          ensalamento.chaveTurma,
+          ensalamento.chaveLocal,
+          ensalamento.turno,
+          ensalamento.tipo,
+          ensalamento.ordem,
+        ),
+    ),
+  );
 
   // corrige registros importados que ainda estavam como outro
   await d1.batch([
@@ -432,7 +575,8 @@ export async function carregarMapa2026(d1 = getD1()) {
   }
 
   // marca esta versão da carga como concluída
-  await d1.prepare("INSERT OR IGNORE INTO cargas_iniciais (chave) VALUES (?)")
+  await d1
+    .prepare("INSERT OR IGNORE INTO cargas_iniciais (chave) VALUES (?)")
     .bind(CHAVE_CARGA_MAPA_2026)
     .run();
   return true;
@@ -452,9 +596,14 @@ async function executarEmLotes(d1: BancoD1, comandos: InstrucaoD1[]) {
 }
 
 // conta registros importados por um começo de chave
-async function contarChaves(d1: BancoD1, tabela: "locais_colegio" | "turmas_atividades" | "ensalamentos", prefixo: string) {
+async function contarChaves(
+  d1: BancoD1,
+  tabela: "locais_colegio" | "turmas_atividades" | "ensalamentos",
+  prefixo: string,
+) {
   // usa somente nomes de tabela permitidos pelo tipo
-  const resultado = await d1.prepare(`SELECT COUNT(*) AS total FROM ${tabela} WHERE chave_importacao LIKE ?`)
+  const resultado = await d1
+    .prepare(`SELECT COUNT(*) AS total FROM ${tabela} WHERE chave_importacao LIKE ?`)
     .bind(prefixo)
     .first<{ total: number }>();
   return Number(resultado?.total ?? 0);

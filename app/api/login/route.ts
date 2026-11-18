@@ -1,13 +1,14 @@
-// importa a resposta com redirecionamento
 import { NextResponse } from "next/server";
-// importa os recursos da sessão administrativa
 import { criarTokenSessao, caminhoSeguro, NOME_COOKIE_SESSAO } from "../../lib/sessao";
 import { registrarEntradaPainel } from "../../lib/historico-painel";
 import { autenticarSenha } from "../../lib/senhas-painel";
-// importa a verificação da origem da chamada
 import { origemValida } from "../../lib/autorizacao";
-// importa os limites de tentativas por navegador
-import { consumirTentativa, guardarNavegador, identificarNavegador, limparTentativasLogin } from "../../lib/limites";
+import {
+  consumirTentativa,
+  guardarNavegador,
+  identificarNavegador,
+  limparTentativasLogin,
+} from "../../lib/limites";
 
 // valida o login e cria a sessão
 export async function POST(request: Request) {
@@ -52,7 +53,8 @@ export async function POST(request: Request) {
     if (formulario.get("geral") === "1") destino.searchParams.set("geral", "1");
     destino.searchParams.set("returnTo", retorno);
     const resposta = NextResponse.redirect(destino, 303);
-    if (tentativa.limite.bloqueado) resposta.headers.set("retry-after", String(tentativa.limite.tentarEm));
+    if (tentativa.limite.bloqueado)
+      resposta.headers.set("retry-after", String(tentativa.limite.tentarEm));
     return guardarNavegador(resposta, request, navegador);
   }
 }

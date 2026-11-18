@@ -37,27 +37,46 @@ type JogoInicial = [TurmaSorteada, TurmaSorteada?];
 
 // conta quantos pares próximos podem jogar na mesma rodada
 export function quantidadeParesProximos(nomes: string[], limite: number) {
-  const anos = nomes.map(anoEscolarTurma).filter((ano): ano is number => ano !== null).sort((a, b) => a - b);
+  const anos = nomes
+    .map(anoEscolarTurma)
+    .filter((ano): ano is number => ano !== null)
+    .sort((a, b) => a - b);
   let pares = 0;
   for (let indice = 0; indice < anos.length - 1; indice++) {
-    if (anos[indice + 1] - anos[indice] <= limite) { pares++; indice++; }
+    if (anos[indice + 1] - anos[indice] <= limite) {
+      pares++;
+      indice++;
+    }
   }
   return pares;
 }
 
 // sorteia uma chave com folgas na entrada e as mesmas fases nos dois lados
-export function planejarChaveMataMata(participantesRecebidos: ParticipanteChave[], diferencaMaximaAnos: number | null = null) {
+export function planejarChaveMataMata(
+  participantesRecebidos: ParticipanteChave[],
+  diferencaMaximaAnos: number | null = null,
+) {
   // confere a lista antes de montar os jogos
   const participantes = embaralhar(participantesRecebidos);
-  if (participantes.length < 2) throw new ErroEventos("Adicione pelo menos dois participantes antes de gerar a chave.");
-  if (participantes.length > 128) throw new ErroEventos("A chave aceita no máximo 128 participantes.");
-  if (new Set(participantes.map((item) => item.id)).size !== participantes.length) throw new ErroEventos("A lista da chave contém participantes repetidos.");
-  if (diferencaMaximaAnos !== null && (!Number.isInteger(diferencaMaximaAnos) || diferencaMaximaAnos < 1 || diferencaMaximaAnos > 3)) throw new ErroEventos("Escolha uma diferença máxima de 1 a 3 anos.");
+  if (participantes.length < 2)
+    throw new ErroEventos("Adicione pelo menos dois participantes antes de gerar a chave.");
+  if (participantes.length > 128)
+    throw new ErroEventos("A chave aceita no máximo 128 participantes.");
+  if (new Set(participantes.map((item) => item.id)).size !== participantes.length)
+    throw new ErroEventos("A lista da chave contém participantes repetidos.");
+  if (
+    diferencaMaximaAnos !== null &&
+    (!Number.isInteger(diferencaMaximaAnos) || diferencaMaximaAnos < 1 || diferencaMaximaAnos > 3)
+  )
+    throw new ErroEventos("Escolha uma diferença máxima de 1 a 3 anos.");
 
   // usa a série cadastrada e mantém o nome público separado
   const turmas = participantes.map((participante) => {
     const ano = anoEscolarTurma(participante.nomeCadastrado ?? participante.nome);
-    if (diferencaMaximaAnos !== null && ano === null) throw new ErroEventos(`Revise o nome cadastrado da turma ${participante.nomeCadastrado ?? participante.nome}. Use a série e de 1 a 3 letras, como 6A ou 2DS.`);
+    if (diferencaMaximaAnos !== null && ano === null)
+      throw new ErroEventos(
+        `Revise o nome cadastrado da turma ${participante.nomeCadastrado ?? participante.nome}. Use a série e de 1 a 3 letras, como 6A ou 2DS.`,
+      );
     return { participante, ano: ano ?? 0 };
   });
 
@@ -108,8 +127,16 @@ function paresProximos(ordenadas: TurmaSorteada[], limite: number): ParSorteado[
 }
 
 // escolhe pares próximos antes de marcar confrontos entre séries distantes
-function sortearPares(turmas: TurmaSorteada[], total: number, limite: number | null): ParSorteado[] {
-  if (limite === null) return Array.from({ length: total }, (_, indice) => [turmas[indice * 2], turmas[indice * 2 + 1]]);
+function sortearPares(
+  turmas: TurmaSorteada[],
+  total: number,
+  limite: number | null,
+): ParSorteado[] {
+  if (limite === null)
+    return Array.from({ length: total }, (_, indice) => [
+      turmas[indice * 2],
+      turmas[indice * 2 + 1],
+    ]);
   const ordenadas = [...turmas].sort((a, b) => a.ano - b.ano);
   const pares = embaralhar(paresProximos(ordenadas, limite)).slice(0, total);
   const escolhidas = new Set(pares.flat());
@@ -117,7 +144,11 @@ function sortearPares(turmas: TurmaSorteada[], total: number, limite: number | n
   while (pares.length < total) {
     let maisProximo = 0;
     for (let indice = 1; indice < restantes.length - 1; indice++) {
-      if (restantes[indice + 1].ano - restantes[indice].ano < restantes[maisProximo + 1].ano - restantes[maisProximo].ano) maisProximo = indice;
+      if (
+        restantes[indice + 1].ano - restantes[indice].ano <
+        restantes[maisProximo + 1].ano - restantes[maisProximo].ano
+      )
+        maisProximo = indice;
     }
     const [a, b] = restantes.splice(maisProximo, 2);
     pares.push([a, b]);
@@ -131,18 +162,29 @@ function separarPorSerie(turmas: TurmaSorteada[], jogos: number, limite: number)
   const metade = jogos / 2;
   const totalPares = turmas.length - jogos;
   const ideal = Math.min(totalPares, paresProximos(ordenadas, limite).length);
-  const cortes = embaralhar([...new Set([Math.floor(turmas.length / 2), Math.ceil(turmas.length / 2)])]);
-  cortes.sort((a, b) => (ordenadas[b].ano - ordenadas[b - 1].ano) - (ordenadas[a].ano - ordenadas[a - 1].ano));
+  const cortes = embaralhar([
+    ...new Set([Math.floor(turmas.length / 2), Math.ceil(turmas.length / 2)]),
+  ]);
+  cortes.sort(
+    (a, b) => ordenadas[b].ano - ordenadas[b - 1].ano - (ordenadas[a].ano - ordenadas[a - 1].ano),
+  );
   for (const corte of cortes) {
     const lados = [ordenadas.slice(0, corte), ordenadas.slice(corte)];
-    const proximos = lados.reduce((total, lado) => total + Math.min(lado.length - metade, paresProximos(lado, limite).length), 0);
+    const proximos = lados.reduce(
+      (total, lado) => total + Math.min(lado.length - metade, paresProximos(lado, limite).length),
+      0,
+    );
     if (proximos === ideal) return Math.random() < 0.5 ? lados : lados.reverse();
   }
   return null;
 }
 
 // distribui partidas e folgas entre as metades de cada fase
-function sortearPrimeiraRodada(turmas: TurmaSorteada[], jogos: number, limite: number | null): JogoInicial[] {
+function sortearPrimeiraRodada(
+  turmas: TurmaSorteada[],
+  jogos: number,
+  limite: number | null,
+): JogoInicial[] {
   if (limite !== null && jogos > 1) {
     const lados = separarPorSerie(turmas, jogos, limite);
     if (lados) return lados.flatMap((lado) => sortearPrimeiraRodada(lado, jogos / 2, limite));
@@ -175,13 +217,19 @@ function sortearPrimeiraRodada(turmas: TurmaSorteada[], jogos: number, limite: n
 }
 
 // valida uma ligação manual entre duas partidas da mesma chave
-export function validarLigacaoPartida(partidaId: number, proximaPartidaId: number | null, posicao: string) {
+export function validarLigacaoPartida(
+  partidaId: number,
+  proximaPartidaId: number | null,
+  posicao: string,
+) {
   if (!proximaPartidaId) {
     if (posicao) throw new ErroEventos("Remova a posição quando não houver próxima partida.");
     return;
   }
-  if (partidaId === proximaPartidaId) throw new ErroEventos("Uma partida não pode avançar para ela mesma.");
-  if (posicao !== "a" && posicao !== "b") throw new ErroEventos("Escolha a posição A ou B na próxima partida.");
+  if (partidaId === proximaPartidaId)
+    throw new ErroEventos("Uma partida não pode avançar para ela mesma.");
+  if (posicao !== "a" && posicao !== "b")
+    throw new ErroEventos("Escolha a posição A ou B na próxima partida.");
 }
 
 // dá o nome da fase pelo tamanho da rodada

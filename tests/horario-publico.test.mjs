@@ -3,8 +3,12 @@ import test from "node:test";
 import { formatarData, formatarDataHora } from "../app/eventos/modelo-publico.ts";
 
 for (const timestamp of [
-  "2026-11-01 00:46:12", "2026-11-01T00:46:12", "2026-11-01T00:46:12Z",
-  "2026-11-01T00:46:12.123Z", "2026-10-31T21:46:12-03:00", "2026-11-01T03:46:12+03:00",
+  "2026-11-01 00:46:12",
+  "2026-11-01T00:46:12",
+  "2026-11-01T00:46:12Z",
+  "2026-11-01T00:46:12.123Z",
+  "2026-10-31T21:46:12-03:00",
+  "2026-11-01T03:46:12+03:00",
 ]) {
   test(`converte o instante ${timestamp} para São Paulo`, () => {
     assert.equal(formatarDataHora(timestamp), "31/10/2026, 21:46");

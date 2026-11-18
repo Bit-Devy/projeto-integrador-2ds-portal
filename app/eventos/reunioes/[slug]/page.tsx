@@ -9,9 +9,17 @@ export const metadata: Metadata = {
 };
 
 type Busca = Record<string, string | string[] | undefined>;
-function primeiro(valor: string | string[] | undefined) { return Array.isArray(valor) ? valor[0] || "" : valor || ""; }
+function primeiro(valor: string | string[] | undefined) {
+  return Array.isArray(valor) ? valor[0] || "" : valor || "";
+}
 
-export default async function PaginaReuniao({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Busca> }) {
+export default async function PaginaReuniao({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Busca>;
+}) {
   const { slug } = await params;
   await exigirPublicacao(() => obterReuniao(slug));
   return <DetalheReuniaoPublica slug={slug} guiaInicial={primeiro((await searchParams).guia)} />;

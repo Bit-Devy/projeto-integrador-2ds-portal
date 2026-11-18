@@ -1,5 +1,10 @@
 // confere os horários e procura um dia de aula dentro da validade comum
-export function condicaoConflitoSala(ocupacao: string, novaOcupacao: string, turma: string, novaTurma: string) {
+export function condicaoConflitoSala(
+  ocupacao: string,
+  novaOcupacao: string,
+  turma: string,
+  novaTurma: string,
+) {
   const inicio = `max(COALESCE(NULLIF(${ocupacao}.inicio_validade, ''), '0001-01-01'), COALESCE(NULLIF(${novaOcupacao}.inicio_validade, ''), '0001-01-01'))`;
   const fim = `min(COALESCE(NULLIF(${ocupacao}.fim_validade, ''), '9999-12-31'), COALESCE(NULLIF(${novaOcupacao}.fim_validade, ''), '9999-12-31'))`;
   const diasEmComum = `(${turma}.dias_semana & ${novaTurma}.dias_semana)`;
@@ -17,7 +22,8 @@ export function condicaoConflitoSala(ocupacao: string, novaOcupacao: string, tur
 }
 
 // impede ocupações simultâneas mesmo em gravações que chegam juntas
-export const comandosProtecaoSalas = ["INSERT", "UPDATE"].map((operacao) => `
+export const comandosProtecaoSalas = ["INSERT", "UPDATE"].map(
+  (operacao) => `
   CREATE TRIGGER IF NOT EXISTS salas_por_dia_${operacao.toLowerCase()}
   BEFORE ${operacao} ON ensalamentos
   WHEN NEW.ativo = 1 AND NEW.publicado = 1 AND NEW.local_id IS NOT NULL
@@ -31,7 +37,8 @@ export const comandosProtecaoSalas = ["INSERT", "UPDATE"].map((operacao) => `
         AND ${condicaoConflitoSala("e", "NEW", "existente", "nova").replaceAll("\n", "\n    ")}
     );
   END
-`);
+`,
+);
 
 // salva o nome da sala quando um vínculo seria sobrescrito ou removido
 export const comandosHistoricoSalas = [
@@ -42,12 +49,14 @@ export const comandosHistoricoSalas = [
     encerrado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   "CREATE INDEX IF NOT EXISTS historico_salas_turma_idx ON historico_salas_turma (turma_atividade_id)",
-  ...["UPDATE", "DELETE"].map((operacao) => `CREATE TRIGGER IF NOT EXISTS guardar_sala_${operacao.toLowerCase()}
+  ...["UPDATE", "DELETE"].map(
+    (operacao) => `CREATE TRIGGER IF NOT EXISTS guardar_sala_${operacao.toLowerCase()}
     BEFORE ${operacao} ON ensalamentos
     WHEN OLD.local_id IS NOT NULL ${operacao === "UPDATE" ? "AND (OLD.local_id IS NOT NEW.local_id OR OLD.turma_atividade_id <> NEW.turma_atividade_id OR OLD.turno <> NEW.turno)" : ""}
     BEGIN
       INSERT INTO historico_salas_turma (turma_atividade_id, sala, turno, vinculado_em)
       SELECT OLD.turma_atividade_id, COALESCE(NULLIF(l.nome, ''), l.numero), OLD.turno, OLD.criado_em
       FROM locais_colegio l WHERE l.id = OLD.local_id;
-    END`),
+    END`,
+  ),
 ];

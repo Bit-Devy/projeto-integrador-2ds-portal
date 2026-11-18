@@ -8,12 +8,12 @@ import {
 export const normalizarTextoBusca = normalizarTextoBuscaBase;
 export const normalizarTurno = normalizarTurnoBase;
 
-// gera slugs estáveis para URLs, com hífens em vez do sublinhado usado em enums
+// gera slugs estáveis para urls, com hífens em vez do sublinhado usado em enums
 export function normalizarSlugPublico(valor: unknown) {
   return normalizarSlugBase(valor).replaceAll("_", "-").slice(0, 100);
 }
 
-// mantém a forma canônica que faz 3º J, 3° J, 3 J e 3J coincidirem
+// mantém a forma canônica que faz 3º j, 3° j, 3 j e 3j coincidirem
 export function normalizarTurma(valor: unknown) {
   return normalizarTextoBuscaBase(valor);
 }

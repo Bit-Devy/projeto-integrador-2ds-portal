@@ -7,6 +7,12 @@ export function condicaoMandatoVigente(alias = "r", data = dataSqlDoPortal()) {
 }
 
 // confere o mesmo período nos resumos do painel
-export function mandatoVigenteEm(item: { inicioMandato: string; fimMandato: string }, data = dataDoPortal()) {
-  return (!item.inicioMandato || item.inicioMandato <= data) && (!item.fimMandato || item.fimMandato >= data);
+export function mandatoVigenteEm(
+  item: { inicioMandato: string; fimMandato: string },
+  data = dataDoPortal(),
+) {
+  return (
+    (!item.inicioMandato || item.inicioMandato <= data) &&
+    (!item.fimMandato || item.fimMandato >= data)
+  );
 }

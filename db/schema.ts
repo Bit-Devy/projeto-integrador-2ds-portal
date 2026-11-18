@@ -1,28 +1,53 @@
-// importa os valores sql usados pelas tabelas
 import { sql } from "drizzle-orm";
-// importa os tipos de colunas tabelas e índices
-import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+  type AnySQLiteColumn,
+} from "drizzle-orm/sqlite-core";
 
 // guarda as chaves das páginas e os calendários de cada ano
 export const modulosPortal = sqliteTable("modulos_portal", {
-  chave: text("chave").primaryKey().notNull(), dadosJson: text("dados_json").notNull(),
-  atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+  chave: text("chave").primaryKey().notNull(),
+  dadosJson: text("dados_json").notNull(),
+  atualizadoEm: text("atualizado_em")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
-export const calendariosEscolares = sqliteTable("calendarios_escolares", {
-  ano: integer("ano").notNull(), modalidade: text("modalidade").notNull(), dadosJson: text("dados_json").notNull(),
-  publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
-  jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
-  atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-}, (tabela) => [primaryKey({ columns: [tabela.ano, tabela.modalidade] }), check("calendarios_modalidade_ck", sql`${tabela.modalidade} IN ('anual', 'semestral')`)]);
+export const calendariosEscolares = sqliteTable(
+  "calendarios_escolares",
+  {
+    ano: integer("ano").notNull(),
+    modalidade: text("modalidade").notNull(),
+    dadosJson: text("dados_json").notNull(),
+    publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
+    jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (tabela) => [
+    primaryKey({ columns: [tabela.ano, tabela.modalidade] }),
+    check("calendarios_modalidade_ck", sql`${tabela.modalidade} IN ('anual', 'semestral')`),
+  ],
+);
 
 // guarda as tentativas e os prazos de cada navegador
-export const limitesNavegador = sqliteTable("limites_navegador", {
-  navegador: text("navegador").notNull(),
-  acao: text("acao").notNull(),
-  tentativas: integer("tentativas").notNull().default(0),
-  expiraEm: integer("expira_em").notNull(),
-  bloqueadoAte: integer("bloqueado_ate").notNull().default(0),
-}, (tabela) => [primaryKey({ columns: [tabela.navegador, tabela.acao] })]);
+export const limitesNavegador = sqliteTable(
+  "limites_navegador",
+  {
+    navegador: text("navegador").notNull(),
+    acao: text("acao").notNull(),
+    tentativas: integer("tentativas").notNull().default(0),
+    expiraEm: integer("expira_em").notNull(),
+    bloqueadoAte: integer("bloqueado_ate").notNull().default(0),
+  },
+  (tabela) => [primaryKey({ columns: [tabela.navegador, tabela.acao] })],
+);
 
 // conteúdos que aparecem no portal
 export const conteudos = sqliteTable(
@@ -35,8 +60,12 @@ export const conteudos = sqliteTable(
     jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(true),
     ordem: integer("ordem").notNull().default(0),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   // cria índices para os filtros de conteúdo
   (tabela) => [
@@ -68,7 +97,9 @@ export const mensagens = sqliteTable(
     contato: text("contato"),
     anonimo: integer("anonimo", { mode: "boolean" }).notNull().default(false),
     status: text("status").notNull().default("nova"),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   // cria o índice usado para filtrar pelo estado
   (tabela) => [index("mensagens_status_idx").on(tabela.status)],
@@ -84,8 +115,12 @@ export const categoriasMapa = sqliteTable(
     nome: text("nome").notNull(),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
     ordem: integer("ordem").notNull().default(0),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   // impede categorias repetidas e acelera seus filtros
   (tabela) => [
@@ -122,8 +157,12 @@ export const locaisColegio = sqliteTable(
     ordem: integer("ordem").notNull().default(0),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   // cria índices para chaves buscas e publicação
   (tabela) => [
@@ -162,8 +201,12 @@ export const turmasAtividades = sqliteTable(
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
     jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   // cria índices para chaves filtros e publicação
   (tabela) => [
@@ -197,8 +240,12 @@ export const ensalamentos = sqliteTable(
     ordem: integer("ordem").notNull().default(0),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   // cria índices para relações filtros e publicação
   (tabela) => [
@@ -211,22 +258,32 @@ export const ensalamentos = sqliteTable(
 );
 
 // preserva salas de vínculos editados ou removidos do mapa
-export const historicoSalasTurma = sqliteTable("historico_salas_turma", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  turmaAtividadeId: integer("turma_atividade_id").notNull().references(() => turmasAtividades.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  sala: text("sala").notNull(),
-  turno: text("turno").notNull(),
-  vinculadoEm: text("vinculado_em").notNull(),
-  encerradoEm: text("encerrado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-}, (tabela) => [index("historico_salas_turma_idx").on(tabela.turmaAtividadeId)]);
+export const historicoSalasTurma = sqliteTable(
+  "historico_salas_turma",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    turmaAtividadeId: integer("turma_atividade_id")
+      .notNull()
+      .references(() => turmasAtividades.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    sala: text("sala").notNull(),
+    turno: text("turno").notNull(),
+    vinculadoEm: text("vinculado_em").notNull(),
+    encerradoEm: text("encerrado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (tabela) => [index("historico_salas_turma_idx").on(tabela.turmaAtividadeId)],
+);
 
 // cargas iniciais que já foram aplicadas
 export const cargasIniciais = sqliteTable("cargas_iniciais", {
   chave: text("chave").primaryKey(),
-  aplicadoEm: text("aplicado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+  aplicadoEm: text("aplicado_em")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
-// eventos realizados no colégio ou organizados pelo GECEP
+// eventos realizados no colégio ou organizados pelo gecep
 export const eventosInternos = sqliteTable(
   "eventos_internos",
   {
@@ -258,14 +315,21 @@ export const eventosInternos = sqliteTable(
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
     arquivadoEm: text("arquivado_em"),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [
     uniqueIndex("eventos_internos_slug_uq").on(tabela.slug),
     index("eventos_internos_publicacao_idx").on(tabela.publicado, tabela.ativo, tabela.dataInicial),
     index("eventos_internos_filtros_idx").on(tabela.situacao, tabela.categoria, tabela.turno),
-    check("eventos_internos_situacao_ck", sql`${tabela.situacao} IN ('proximo', 'em_andamento', 'encerrado', 'adiado', 'cancelado')`),
+    check(
+      "eventos_internos_situacao_ck",
+      sql`${tabela.situacao} IN ('proximo', 'em_andamento', 'encerrado', 'adiado', 'cancelado')`,
+    ),
   ],
 );
 
@@ -274,7 +338,9 @@ export const documentosEventos = sqliteTable(
   "documentos_eventos",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    eventoId: integer("evento_id").notNull().references(() => eventosInternos.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    eventoId: integer("evento_id")
+      .notNull()
+      .references(() => eventosInternos.id, { onDelete: "restrict", onUpdate: "cascade" }),
     titulo: text("titulo").notNull(),
     tipo: text("tipo").notNull().default("anexo"),
     descricao: text("descricao").notNull().default(""),
@@ -286,8 +352,12 @@ export const documentosEventos = sqliteTable(
     jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [
     index("documentos_eventos_evento_idx").on(tabela.eventoId, tabela.ordem),
@@ -326,15 +396,31 @@ export const campeonatos = sqliteTable(
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
     arquivadoEm: text("arquivado_em"),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [
     uniqueIndex("campeonatos_slug_uq").on(tabela.slug),
     index("campeonatos_publicacao_idx").on(tabela.publicado, tabela.ativo, tabela.dataInicial),
-    index("campeonatos_filtros_idx").on(tabela.situacao, tabela.ano, tabela.modalidade, tabela.categoria, tabela.turno),
-    check("campeonatos_formato_ck", sql`${tabela.formato} IN ('mata_mata', 'personalizada', 'grupos', 'pontos_corridos', 'grupos_mata_mata')`),
-    check("campeonatos_situacao_ck", sql`${tabela.situacao} IN ('proximo', 'em_andamento', 'encerrado', 'adiado', 'cancelado')`),
+    index("campeonatos_filtros_idx").on(
+      tabela.situacao,
+      tabela.ano,
+      tabela.modalidade,
+      tabela.categoria,
+      tabela.turno,
+    ),
+    check(
+      "campeonatos_formato_ck",
+      sql`${tabela.formato} IN ('mata_mata', 'personalizada', 'grupos', 'pontos_corridos', 'grupos_mata_mata')`,
+    ),
+    check(
+      "campeonatos_situacao_ck",
+      sql`${tabela.situacao} IN ('proximo', 'em_andamento', 'encerrado', 'adiado', 'cancelado')`,
+    ),
   ],
 );
 
@@ -343,8 +429,13 @@ export const participantesCampeonato = sqliteTable(
   "participantes_campeonato",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    campeonatoId: integer("campeonato_id").notNull().references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
-    turmaAtividadeId: integer("turma_atividade_id").references(() => turmasAtividades.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    campeonatoId: integer("campeonato_id")
+      .notNull()
+      .references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    turmaAtividadeId: integer("turma_atividade_id").references(() => turmasAtividades.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
     nome: text("nome").notNull(),
     nomeNormalizado: text("nome_normalizado").notNull(),
     nomeExibicao: text("nome_exibicao").notNull().default(""),
@@ -352,8 +443,12 @@ export const participantesCampeonato = sqliteTable(
     posicaoInicial: integer("posicao_inicial").notNull().default(0),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
     arquivadoEm: text("arquivado_em"),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [
     index("participantes_campeonato_campeonato_idx").on(tabela.campeonatoId, tabela.ativo),
@@ -366,20 +461,33 @@ export const fasesCampeonato = sqliteTable(
   "fases_campeonato",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    campeonatoId: integer("campeonato_id").notNull().references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    campeonatoId: integer("campeonato_id")
+      .notNull()
+      .references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
     nome: text("nome").notNull(),
     ordem: integer("ordem").notNull().default(0),
     tipo: text("tipo").notNull().default("eliminatoria"),
     quantidadeJogos: integer("quantidade_jogos").notNull().default(0),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [
     uniqueIndex("fases_campeonato_ordem_uq").on(tabela.campeonatoId, tabela.ordem),
-    index("fases_campeonato_publicacao_idx").on(tabela.campeonatoId, tabela.publicado, tabela.ativo),
-    check("fases_campeonato_tipo_ck", sql`${tabela.tipo} IN ('eliminatoria', 'grupos', 'classificacao', 'terceiro_lugar', 'personalizada')`),
+    index("fases_campeonato_publicacao_idx").on(
+      tabela.campeonatoId,
+      tabela.publicado,
+      tabela.ativo,
+    ),
+    check(
+      "fases_campeonato_tipo_ck",
+      sql`${tabela.tipo} IN ('eliminatoria', 'grupos', 'classificacao', 'terceiro_lugar', 'personalizada')`,
+    ),
   ],
 );
 
@@ -388,17 +496,30 @@ export const partidas = sqliteTable(
   "partidas",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    campeonatoId: integer("campeonato_id").notNull().references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
-    faseId: integer("fase_id").notNull().references(() => fasesCampeonato.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    campeonatoId: integer("campeonato_id")
+      .notNull()
+      .references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    faseId: integer("fase_id")
+      .notNull()
+      .references(() => fasesCampeonato.id, { onDelete: "restrict", onUpdate: "cascade" }),
     rodada: text("rodada").notNull().default(""),
     ordem: integer("ordem").notNull().default(0),
-    participanteAId: integer("participante_a_id").references(() => participantesCampeonato.id, { onDelete: "restrict", onUpdate: "cascade" }),
-    participanteBId: integer("participante_b_id").references(() => participantesCampeonato.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    participanteAId: integer("participante_a_id").references(() => participantesCampeonato.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
+    participanteBId: integer("participante_b_id").references(() => participantesCampeonato.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
     participanteANome: text("participante_a_nome").notNull().default(""),
     participanteBNome: text("participante_b_nome").notNull().default(""),
     placarA: integer("placar_a"),
     placarB: integer("placar_b"),
-    vencedorId: integer("vencedor_id").references(() => participantesCampeonato.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    vencedorId: integer("vencedor_id").references(() => participantesCampeonato.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
     vencedorNome: text("vencedor_nome").notNull().default(""),
     formaVitoria: text("forma_vitoria").notNull().default(""),
     data: text("data").notNull().default(""),
@@ -410,22 +531,35 @@ export const partidas = sqliteTable(
     destaques: text("destaques").notNull().default(""),
     observacoesPublicas: text("observacoes_publicas").notNull().default(""),
     observacoesInternas: text("observacoes_internas").notNull().default(""),
-    proximaPartidaId: integer("proxima_partida_id").references((): AnySQLiteColumn => partidas.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    proximaPartidaId: integer("proxima_partida_id").references((): AnySQLiteColumn => partidas.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
     proximaPosicao: text("proxima_posicao").notNull().default(""),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
     arquivadoEm: text("arquivado_em"),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [
     uniqueIndex("partidas_fase_ordem_uq").on(tabela.faseId, tabela.ordem),
     index("partidas_campeonato_idx").on(tabela.campeonatoId, tabela.situacao, tabela.data),
     index("partidas_proxima_idx").on(tabela.proximaPartidaId),
     index("partidas_publicacao_idx").on(tabela.publicado, tabela.ativo),
-    check("partidas_situacao_ck", sql`${tabela.situacao} IN ('agendada', 'em_andamento', 'encerrada', 'adiada', 'cancelada', 'wo', 'data_a_definir')`),
+    check(
+      "partidas_situacao_ck",
+      sql`${tabela.situacao} IN ('agendada', 'em_andamento', 'encerrada', 'adiada', 'cancelada', 'wo', 'data_a_definir')`,
+    ),
     check("partidas_proxima_posicao_ck", sql`${tabela.proximaPosicao} IN ('', 'a', 'b')`),
-    check("partidas_placares_ck", sql`(${tabela.placarA} IS NULL OR ${tabela.placarA} >= 0) AND (${tabela.placarB} IS NULL OR ${tabela.placarB} >= 0)`),
+    check(
+      "partidas_placares_ck",
+      sql`(${tabela.placarA} IS NULL OR ${tabela.placarA} >= 0) AND (${tabela.placarB} IS NULL OR ${tabela.placarB} >= 0)`,
+    ),
   ],
 );
 
@@ -434,24 +568,37 @@ export const historicoResultadosPartida = sqliteTable(
   "historico_resultados_partida",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    partidaId: integer("partida_id").notNull().references(() => partidas.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    partidaId: integer("partida_id")
+      .notNull()
+      .references(() => partidas.id, { onDelete: "restrict", onUpdate: "cascade" }),
     resultadoAnteriorJson: text("resultado_anterior_json").notNull(),
     resultadoNovoJson: text("resultado_novo_json").notNull(),
     impactoJson: text("impacto_json").notNull().default("[]"),
     motivo: text("motivo").notNull().default(""),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
-  (tabela) => [index("historico_resultados_partida_partida_idx").on(tabela.partidaId, tabela.criadoEm)],
+  (tabela) => [
+    index("historico_resultados_partida_partida_idx").on(tabela.partidaId, tabela.criadoEm),
+  ],
 );
 
 // campeão preservado com seu nome histórico
 export const campeoesCampeonato = sqliteTable(
   "campeoes_campeonato",
   {
-    campeonatoId: integer("campeonato_id").primaryKey().references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
-    participanteId: integer("participante_id").references(() => participantesCampeonato.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    campeonatoId: integer("campeonato_id")
+      .primaryKey()
+      .references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    participanteId: integer("participante_id").references(() => participantesCampeonato.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
     nome: text("nome").notNull(),
-    definidoEm: text("definido_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    definidoEm: text("definido_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [index("campeoes_campeonato_participante_idx").on(tabela.participanteId)],
 );
@@ -461,7 +608,9 @@ export const documentosCampeonato = sqliteTable(
   "documentos_campeonato",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    campeonatoId: integer("campeonato_id").notNull().references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    campeonatoId: integer("campeonato_id")
+      .notNull()
+      .references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
     titulo: text("titulo").notNull(),
     tipo: text("tipo").notNull().default("anexo"),
     descricao: text("descricao").notNull().default(""),
@@ -472,8 +621,12 @@ export const documentosCampeonato = sqliteTable(
     jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [index("documentos_campeonato_campeonato_idx").on(tabela.campeonatoId, tabela.ordem)],
 );
@@ -483,7 +636,9 @@ export const atualizacoesCampeonato = sqliteTable(
   "atualizacoes_campeonato",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    campeonatoId: integer("campeonato_id").notNull().references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    campeonatoId: integer("campeonato_id")
+      .notNull()
+      .references(() => campeonatos.id, { onDelete: "restrict", onUpdate: "cascade" }),
     titulo: text("titulo").notNull(),
     texto: text("texto").notNull().default(""),
     data: text("data").notNull().default(""),
@@ -491,10 +646,16 @@ export const atualizacoesCampeonato = sqliteTable(
     jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
-  (tabela) => [index("atualizacoes_campeonato_campeonato_idx").on(tabela.campeonatoId, tabela.data)],
+  (tabela) => [
+    index("atualizacoes_campeonato_campeonato_idx").on(tabela.campeonatoId, tabela.data),
+  ],
 );
 
 // representantes atuais e históricos das turmas
@@ -503,7 +664,10 @@ export const representantes = sqliteTable(
   {
     ano: integer("ano").notNull().default(2026),
     id: integer("id").primaryKey({ autoIncrement: true }),
-    turmaAtividadeId: integer("turma_atividade_id").references(() => turmasAtividades.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    turmaAtividadeId: integer("turma_atividade_id").references(() => turmasAtividades.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
     nome: text("nome").notNull(),
     nomeExibicao: text("nome_exibicao").notNull().default(""),
     nomeNormalizado: text("nome_normalizado").notNull(),
@@ -525,19 +689,33 @@ export const representantes = sqliteTable(
     jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     arquivadoEm: text("arquivado_em"),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [
     index("representantes_nome_idx").on(tabela.nomeNormalizado),
     index("representantes_turma_idx").on(tabela.turmaNormalizada),
-    index("representantes_filtros_idx").on(tabela.publicado, tabela.ativo, tabela.turno, tabela.nivelEnsino, tabela.serie, tabela.funcao),
+    index("representantes_filtros_idx").on(
+      tabela.publicado,
+      tabela.ativo,
+      tabela.turno,
+      tabela.nivelEnsino,
+      tabela.serie,
+      tabela.funcao,
+    ),
     check("representantes_turno_ck", sql`${tabela.turno} IN ('manha', 'tarde', 'noite')`),
-    check("representantes_funcao_ck", sql`${tabela.funcao} IN ('titular', 'vice', 'suplente', 'outra')`),
+    check(
+      "representantes_funcao_ck",
+      sql`${tabela.funcao} IN ('titular', 'vice', 'suplente', 'outra')`,
+    ),
   ],
 );
 
-// reuniões de representantes ou internas do GECEP
+// reuniões de representantes ou internas do gecep
 export const reunioes = sqliteTable(
   "reunioes",
   {
@@ -566,21 +744,32 @@ export const reunioes = sqliteTable(
     transcricao: text("transcricao").notNull().default(""),
     observacoesPublicas: text("observacoes_publicas").notNull().default(""),
     observacoesInternas: text("observacoes_internas").notNull().default(""),
-    quantidadeParticipantesPublicada: integer("quantidade_participantes_publicada", { mode: "boolean" }).notNull().default(false),
+    quantidadeParticipantesPublicada: integer("quantidade_participantes_publicada", {
+      mode: "boolean",
+    })
+      .notNull()
+      .default(false),
     situacao: text("situacao").notNull().default("agendada"),
     jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
     arquivadoEm: text("arquivado_em"),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [
     uniqueIndex("reunioes_slug_uq").on(tabela.slug),
     index("reunioes_publicacao_idx").on(tabela.publicado, tabela.ativo, tabela.data),
     index("reunioes_filtros_idx").on(tabela.tipo, tabela.situacao, tabela.turno),
     check("reunioes_tipo_ck", sql`${tabela.tipo} IN ('representantes', 'interna_gecep')`),
-    check("reunioes_situacao_ck", sql`${tabela.situacao} IN ('agendada', 'em_andamento', 'encerrada', 'adiada', 'cancelada')`),
+    check(
+      "reunioes_situacao_ck",
+      sql`${tabela.situacao} IN ('agendada', 'em_andamento', 'encerrada', 'adiada', 'cancelada')`,
+    ),
   ],
 );
 
@@ -589,7 +778,9 @@ export const itensReuniao = sqliteTable(
   "itens_reuniao",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    reuniaoId: integer("reuniao_id").notNull().references(() => reunioes.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    reuniaoId: integer("reuniao_id")
+      .notNull()
+      .references(() => reunioes.id, { onDelete: "restrict", onUpdate: "cascade" }),
     tipo: text("tipo").notNull(),
     titulo: text("titulo").notNull().default(""),
     conteudo: text("conteudo").notNull().default(""),
@@ -599,8 +790,12 @@ export const itensReuniao = sqliteTable(
     jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [index("itens_reuniao_reuniao_idx").on(tabela.reuniaoId, tabela.tipo, tabela.ordem)],
 );
@@ -610,7 +805,9 @@ export const votacoesReuniao = sqliteTable(
   "votacoes_reuniao",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    reuniaoId: integer("reuniao_id").notNull().references(() => reunioes.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    reuniaoId: integer("reuniao_id")
+      .notNull()
+      .references(() => reunioes.id, { onDelete: "restrict", onUpdate: "cascade" }),
     titulo: text("titulo").notNull(),
     pergunta: text("pergunta").notNull().default(""),
     contexto: text("contexto").notNull().default(""),
@@ -624,8 +821,12 @@ export const votacoesReuniao = sqliteTable(
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     interno: integer("interno", { mode: "boolean" }).notNull().default(true),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [
     index("votacoes_reuniao_reuniao_idx").on(tabela.reuniaoId, tabela.ordem),
@@ -638,7 +839,9 @@ export const opcoesVotacaoReuniao = sqliteTable(
   "opcoes_votacao_reuniao",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    votacaoId: integer("votacao_id").notNull().references(() => votacoesReuniao.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    votacaoId: integer("votacao_id")
+      .notNull()
+      .references(() => votacoesReuniao.id, { onDelete: "restrict", onUpdate: "cascade" }),
     texto: text("texto").notNull(),
     quantidadeVotos: integer("quantidade_votos").notNull().default(0),
     ordem: integer("ordem").notNull().default(0),
@@ -655,7 +858,9 @@ export const documentosReuniao = sqliteTable(
   "documentos_reuniao",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    reuniaoId: integer("reuniao_id").notNull().references(() => reunioes.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    reuniaoId: integer("reuniao_id")
+      .notNull()
+      .references(() => reunioes.id, { onDelete: "restrict", onUpdate: "cascade" }),
     titulo: text("titulo").notNull(),
     tipo: text("tipo").notNull(),
     descricao: text("descricao").notNull().default(""),
@@ -667,10 +872,16 @@ export const documentosReuniao = sqliteTable(
     jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
-  (tabela) => [index("documentos_reuniao_reuniao_idx").on(tabela.reuniaoId, tabela.tipo, tabela.ordem)],
+  (tabela) => [
+    index("documentos_reuniao_reuniao_idx").on(tabela.reuniaoId, tabela.tipo, tabela.ordem),
+  ],
 );
 
 // lista histórica de presença com cópias dos dados exibidos na data da reunião
@@ -678,8 +889,13 @@ export const presencasReuniao = sqliteTable(
   "presencas_reuniao",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    reuniaoId: integer("reuniao_id").notNull().references(() => reunioes.id, { onDelete: "restrict", onUpdate: "cascade" }),
-    representanteId: integer("representante_id").references(() => representantes.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    reuniaoId: integer("reuniao_id")
+      .notNull()
+      .references(() => reunioes.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    representanteId: integer("representante_id").references(() => representantes.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
     nomeSnapshot: text("nome_snapshot").notNull(),
     nivelEnsinoSnapshot: text("nivel_ensino_snapshot").notNull().default(""),
     serieSnapshot: text("serie_snapshot").notNull().default(""),
@@ -693,53 +909,113 @@ export const presencasReuniao = sqliteTable(
     jaPublicado: integer("ja_publicado", { mode: "boolean" }).notNull().default(false),
     publicado: integer("publicado", { mode: "boolean" }).notNull().default(false),
     ativo: integer("ativo", { mode: "boolean" }).notNull().default(true),
-    criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-    atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (tabela) => [
     uniqueIndex("presencas_reuniao_representante_uq").on(tabela.reuniaoId, tabela.representanteId),
-    index("presencas_reuniao_filtros_idx").on(tabela.reuniaoId, tabela.situacao, tabela.turnoSnapshot, tabela.nivelEnsinoSnapshot),
-    check("presencas_reuniao_situacao_ck", sql`${tabela.situacao} IN ('presente', 'ausente', 'justificada', 'nao_se_aplica', 'nao_informada')`),
+    index("presencas_reuniao_filtros_idx").on(
+      tabela.reuniaoId,
+      tabela.situacao,
+      tabela.turnoSnapshot,
+      tabela.nivelEnsinoSnapshot,
+    ),
+    check(
+      "presencas_reuniao_situacao_ck",
+      sql`${tabela.situacao} IN ('presente', 'ausente', 'justificada', 'nao_se_aplica', 'nao_informada')`,
+    ),
   ],
 );
 
 // guarda as senhas protegidas e o histórico das alterações
-export const acessosPainel = sqliteTable("acessos_painel", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  cargo: text("cargo").notNull(), vaga: integer("vaga").notNull(), nome: text("nome").notNull(),
-  login: text("login").notNull().default(""), loginAmbiente: integer("login_ambiente", { mode: "boolean" }).notNull().default(false),
-  resumo: text("resumo").notNull(), sal: text("sal").notNull(), busca: text("busca").notNull().unique(),
-  versao: integer("versao").notNull().default(1),
-  criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-  atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-}, (tabela) => [uniqueIndex("acessos_painel_cargo_vaga_uq").on(tabela.cargo, tabela.vaga),
-  uniqueIndex("acessos_painel_login_uq").on(tabela.login).where(sql`${tabela.login} <> ''`),
-  uniqueIndex("acessos_painel_login_ambiente_uq").on(tabela.loginAmbiente).where(sql`${tabela.loginAmbiente} = 1`),
-  check("acessos_painel_vaga_ck", sql`${tabela.vaga} >= 1 AND ${tabela.vaga} <= CASE WHEN ${tabela.cargo} = 'geral' THEN 3 ELSE 2 END`)]);
+export const acessosPainel = sqliteTable(
+  "acessos_painel",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    cargo: text("cargo").notNull(),
+    vaga: integer("vaga").notNull(),
+    nome: text("nome").notNull(),
+    login: text("login").notNull().default(""),
+    loginAmbiente: integer("login_ambiente", { mode: "boolean" }).notNull().default(false),
+    resumo: text("resumo").notNull(),
+    sal: text("sal").notNull(),
+    busca: text("busca").notNull().unique(),
+    versao: integer("versao").notNull().default(1),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    atualizadoEm: text("atualizado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (tabela) => [
+    uniqueIndex("acessos_painel_cargo_vaga_uq").on(tabela.cargo, tabela.vaga),
+    uniqueIndex("acessos_painel_login_uq")
+      .on(tabela.login)
+      .where(sql`${tabela.login} <> ''`),
+    uniqueIndex("acessos_painel_login_ambiente_uq")
+      .on(tabela.loginAmbiente)
+      .where(sql`${tabela.loginAmbiente} = 1`),
+    check(
+      "acessos_painel_vaga_ck",
+      sql`${tabela.vaga} >= 1 AND ${tabela.vaga} <= CASE WHEN ${tabela.cargo} = 'geral' THEN 3 ELSE 2 END`,
+    ),
+  ],
+);
 export const auditoriaAcessos = sqliteTable("auditoria_acessos", {
-  id: integer("id").primaryKey({ autoIncrement: true }), autorId: integer("autor_id").notNull(),
-  autorNome: text("autor_nome").notNull(), acao: text("acao").notNull(), cargo: text("cargo").notNull(), acessoId: integer("acesso_id"),
-  criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  autorId: integer("autor_id").notNull(),
+  autorNome: text("autor_nome").notNull(),
+  acao: text("acao").notNull(),
+  cargo: text("cargo").notNull(),
+  acessoId: integer("acesso_id"),
+  criadoEm: text("criado_em")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 // guarda apenas os acessos que a administração personalizou por cargo
 export const permissoesCargos = sqliteTable("permissoes_cargos", {
   cargo: text("cargo").primaryKey().notNull(),
-  editarJson: text("editar_json").notNull(), consultarJson: text("consultar_json").notNull(),
-  atualizadoEm: text("atualizado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
+  editarJson: text("editar_json").notNull(),
+  consultarJson: text("consultar_json").notNull(),
+  atualizadoEm: text("atualizado_em")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 // guarda cada entrada sem depender de a senha continuar cadastrada
-export const entradasPainel = sqliteTable("entradas_painel", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  acessoId: integer("acesso_id").notNull(), nome: text("nome").notNull(), cargo: text("cargo").notNull(),
-  entradaEm: text("entrada_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-}, (tabela) => [index("entradas_painel_data_idx").on(tabela.entradaEm, tabela.id)]);
+export const entradasPainel = sqliteTable(
+  "entradas_painel",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    acessoId: integer("acesso_id").notNull(),
+    nome: text("nome").notNull(),
+    cargo: text("cargo").notNull(),
+    entradaEm: text("entrada_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (tabela) => [index("entradas_painel_data_idx").on(tabela.entradaEm, tabela.id)],
+);
 
 // relaciona as alterações concluídas com a entrada que as realizou
-export const acoesPainel = sqliteTable("acoes_painel", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  entradaId: integer("entrada_id").notNull().references(() => entradasPainel.id, { onDelete: "restrict" }),
-  resumo: text("resumo").notNull(), recurso: text("recurso").notNull(),
-  criadoEm: text("criado_em").notNull().default(sql`CURRENT_TIMESTAMP`),
-}, (tabela) => [index("acoes_painel_entrada_idx").on(tabela.entradaId, tabela.id)]);
+export const acoesPainel = sqliteTable(
+  "acoes_painel",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    entradaId: integer("entrada_id")
+      .notNull()
+      .references(() => entradasPainel.id, { onDelete: "restrict" }),
+    resumo: text("resumo").notNull(),
+    recurso: text("recurso").notNull(),
+    criadoEm: text("criado_em")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (tabela) => [index("acoes_painel_entrada_idx").on(tabela.entradaId, tabela.id)],
+);

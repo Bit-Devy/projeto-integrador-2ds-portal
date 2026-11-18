@@ -1,6 +1,8 @@
-// importa as funções de normalização do mapa
-import { aliasesNormalizados, normalizarNumeroSala, normalizarTextoBusca } from "../app/mapa/normalizacao";
-// importa os tipos das categorias e turnos
+import {
+  aliasesNormalizados,
+  normalizarNumeroSala,
+  normalizarTextoBusca,
+} from "../app/mapa/normalizacao";
 import type { GrupoCategoriaMapa, TurnoMapa } from "../app/mapa/tipos";
 
 // identifica esta versão da carga inicial
@@ -276,7 +278,11 @@ for (const linha of linhasEnsalamentos) {
 export const turmasMapa2026 = [...turmasPorChave.values()];
 
 // confirma as quantidades verificadas na fonte
-if (locaisMapa2026.length !== 67 || turmasMapa2026.length !== 100 || ensalamentosMapa2026.length !== 112) {
+if (
+  locaisMapa2026.length !== 67 ||
+  turmasMapa2026.length !== 100 ||
+  ensalamentosMapa2026.length !== 112
+) {
   throw new Error("A carga do mapa de 2026 não corresponde às quantidades verificadas no PDF.");
 }
 

@@ -78,11 +78,20 @@ export function validarEventoInterno(valor: unknown) {
   const horarioFinal = horario(dados.horarioFinal, "horário final");
   const diaTodo = booleano(dados.diaTodo, false);
   // mantém os horários guardados e usa o dia inteiro quando a opção está marcada
-  if (!diaTodo && dataInicial && horarioInicial && horarioFinal
-    && `${dataFinal || dataInicial}T${horarioFinal}` < `${dataInicial}T${horarioInicial}`) {
+  if (
+    !diaTodo &&
+    dataInicial &&
+    horarioInicial &&
+    horarioFinal &&
+    `${dataFinal || dataInicial}T${horarioFinal}` < `${dataInicial}T${horarioInicial}`
+  ) {
     throw new ErroEventos("O término do evento não pode ser anterior ao início.");
   }
-  const situacao = enumValor(normalizarSituacaoEvento(dados.situacao ?? "proximo"), situacoesEvento, "situação") as SituacaoEvento;
+  const situacao = enumValor(
+    normalizarSituacaoEvento(dados.situacao ?? "proximo"),
+    situacoesEvento,
+    "situação",
+  ) as SituacaoEvento;
   const turno = turnoOpcional(dados.turno);
   return {
     slug: normalizarSlugPublico(dados.slug || titulo),
@@ -118,7 +127,8 @@ export function validarDocumento(valor: unknown) {
   const dados = objetoRecebido(valor);
   const arquivoUrl = link(dados.arquivoUrl ?? dados.url, "arquivo");
   const linkExterno = link(dados.linkExterno, "link externo");
-  if (!arquivoUrl && !linkExterno) throw new ErroEventos("Informe o arquivo ou o link do documento.");
+  if (!arquivoUrl && !linkExterno)
+    throw new ErroEventos("Informe o arquivo ou o link do documento.");
   return {
     titulo: textoObrigatorio(dados.titulo ?? dados.nome, 180, "título do documento"),
     tipo: identificador(dados.tipo, "anexo"),
@@ -138,10 +148,24 @@ export function validarCampeonato(valor: unknown) {
   const nome = textoObrigatorio(dados.nome ?? dados.titulo, 180, "nome do campeonato");
   const dataInicial = data(dados.dataInicial, "data inicial");
   const dataFinal = data(dados.dataFinal, "data final");
-  validarPeriodo(dataInicial, dataFinal, "A data final do campeonato não pode ser anterior à inicial.");
-  const ano = inteiroOpcional(dados.ano, 1900, 2199, "ano") ?? Number(dataInicial.slice(0, 4) || anoDoPortal());
-  const formato = enumValor(dados.formato ?? "mata_mata", formatosCampeonato, "formato") as FormatoCampeonato;
-  const situacao = enumValor(normalizarSituacaoEvento(dados.situacao ?? "proximo"), situacoesEvento, "situação") as SituacaoEvento;
+  validarPeriodo(
+    dataInicial,
+    dataFinal,
+    "A data final do campeonato não pode ser anterior à inicial.",
+  );
+  const ano =
+    inteiroOpcional(dados.ano, 1900, 2199, "ano") ??
+    Number(dataInicial.slice(0, 4) || anoDoPortal());
+  const formato = enumValor(
+    dados.formato ?? "mata_mata",
+    formatosCampeonato,
+    "formato",
+  ) as FormatoCampeonato;
+  const situacao = enumValor(
+    normalizarSituacaoEvento(dados.situacao ?? "proximo"),
+    situacoesEvento,
+    "situação",
+  ) as SituacaoEvento;
   return {
     slug: normalizarSlugPublico(dados.slug || nome),
     nome,
@@ -152,7 +176,12 @@ export function validarCampeonato(valor: unknown) {
     turno: turnoOpcional(dados.turno),
     descricao: textoLongo(dados.descricao, 30_000),
     premiacao: textoLongo(dados.premiacao, 5000),
-    diferencaMaximaAnos: inteiroOpcional(dados.diferencaMaximaAnos, 1, 3, "diferença máxima entre séries"),
+    diferencaMaximaAnos: inteiroOpcional(
+      dados.diferencaMaximaAnos,
+      1,
+      3,
+      "diferença máxima entre séries",
+    ),
     regulamento: textoLongo(dados.regulamento, 30_000),
     organizacao: texto(dados.organizacao, 240),
     locais: textoLongo(dados.locais ?? dados.local, 2000),
@@ -186,7 +215,10 @@ export function validarParticipante(valor: unknown, nomeLegado?: string) {
   const dados = objetoRecebido(valor);
   const recebido = textoObrigatorio(dados.nome, 160, "nome do participante");
   const nome = recebido === nomeLegado ? recebido : normalizarNomeTurma(recebido);
-  if (recebido !== nomeLegado && !padraoTurmaInterclasse.test(nome)) throw new ErroEventos("Use a série (6 a 9 ou 1 a 3) seguida de 1 a 3 letras, como 6A, 1J ou 2DS.");
+  if (recebido !== nomeLegado && !padraoTurmaInterclasse.test(nome))
+    throw new ErroEventos(
+      "Use a série (6 a 9 ou 1 a 3) seguida de 1 a 3 letras, como 6A, 1J ou 2DS.",
+    );
   return {
     turmaAtividadeId: idOpcional(dados.turmaAtividadeId, "turma"),
     nome,
@@ -221,9 +253,14 @@ export function validarPartida(valor: unknown) {
   if (vencedorId && vencedorId !== participanteAId && vencedorId !== participanteBId) {
     throw new ErroEventos("O vencedor precisa participar da partida.");
   }
-  const situacao = enumValor(dados.situacao ?? "data_a_definir", situacoesPartida, "situação da partida") as SituacaoPartida;
+  const situacao = enumValor(
+    dados.situacao ?? "data_a_definir",
+    situacoesPartida,
+    "situação da partida",
+  ) as SituacaoPartida;
   const formaVitoria = texto(dados.formaVitoria, 160);
-  if (situacao === "wo" && !vencedorId) throw new ErroEventos("Escolha o vencedor da partida por W.O.");
+  if (situacao === "wo" && !vencedorId)
+    throw new ErroEventos("Escolha o vencedor da partida por W.O.");
   if ((situacao === "encerrada" || situacao === "wo") && !vencedorId) {
     throw new ErroEventos("Escolha o vencedor para encerrar a partida.");
   }
@@ -263,7 +300,8 @@ export function validarRepresentante(valor: unknown) {
   const nomeExibicao = texto(dados.nomeExibicao, 180);
   const turma = textoObrigatorio(dados.turma, 100, "turma");
   const turno = normalizarTurno(dados.turno);
-  if (!turno || !turnosEventos.includes(turno as TurnoEvento)) throw new ErroEventos("Escolha um turno válido.");
+  if (!turno || !turnosEventos.includes(turno as TurnoEvento))
+    throw new ErroEventos("Escolha um turno válido.");
   const funcao = enumValor(dados.funcao, funcoesRepresentante, "função") as FuncaoRepresentante;
   const datas = validarDatasMandato(dados);
   const contatos = validarContatosRepresentante(dados.contatos);
@@ -274,7 +312,9 @@ export function validarRepresentante(valor: unknown) {
     nome,
     nomeExibicao,
     // o mesmo índice atende buscas pelo nome completo e pelo nome escolhido para exibição
-    nomeNormalizado: [normalizarTextoBusca(nome), normalizarTextoBusca(nomeExibicao)].filter(Boolean).join(" "),
+    nomeNormalizado: [normalizarTextoBusca(nome), normalizarTextoBusca(nomeExibicao)]
+      .filter(Boolean)
+      .join(" "),
     nivelEnsino: textoObrigatorio(dados.nivelEnsino ?? dados.nivel, 120, "nível de ensino"),
     serie: textoObrigatorio(dados.serie ?? dados.anoSerie, 80, "ano ou série"),
     turma,
@@ -298,7 +338,9 @@ export function validarDatasMandato(dados: Record<string, unknown>, encerrado = 
   const fimMandato = data(dados.fimMandato, "fim do mandato");
   validarPeriodo(inicioMandato, fimMandato, "O fim do mandato não pode ser anterior ao início.");
   if (encerrado && (!inicioMandato || !fimMandato || fimMandato > dataDoPortal())) {
-    throw new ErroEventos("Informe o início e o fim do mandato. O fim deve ser hoje ou uma data anterior.");
+    throw new ErroEventos(
+      "Informe o início e o fim do mandato. O fim deve ser hoje ou uma data anterior.",
+    );
   }
   return { inicioMandato, fimMandato };
 }
@@ -306,17 +348,27 @@ export function validarDatasMandato(dados: Record<string, unknown>, encerrado = 
 // aceita até duas formas de contato e confere cada endereço antes de salvar
 function validarContatosRepresentante(valor: unknown): ContatoRepresentante[] {
   if (valor === undefined) return [];
-  if (!Array.isArray(valor) || valor.length > 2) throw new ErroEventos("Cadastre no máximo dois contatos para o representante.");
+  if (!Array.isArray(valor) || valor.length > 2)
+    throw new ErroEventos("Cadastre no máximo dois contatos para o representante.");
   return valor.map((contato) => {
     const dados = objetoRecebido(contato, "Informe uma forma de contato válida.");
-    const tipo = enumValor(dados.tipo, ["whatsapp", "email", "telefone"] as const, "forma de contato") as ContatoRepresentante["tipo"];
+    const tipo = enumValor(
+      dados.tipo,
+      ["whatsapp", "email", "telefone"] as const,
+      "forma de contato",
+    ) as ContatoRepresentante["tipo"];
     const endereco = textoObrigatorio(dados.valor, 254, "contato");
-    if (tipo === "email" && !/^[^\s@<>]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(endereco)) throw new ErroEventos("Informe um e-mail válido.");
+    if (tipo === "email" && !/^[^\s@<>]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(endereco))
+      throw new ErroEventos("Informe um e-mail válido.");
     if (tipo !== "email") {
       const digitos = endereco.replace(/\D/g, "");
       const minimo = tipo === "whatsapp" ? 10 : 8;
       if (!/^\+?[\d ().-]+$/.test(endereco) || digitos.length < minimo || digitos.length > 15) {
-        throw new ErroEventos(tipo === "whatsapp" ? "Informe um número de WhatsApp válido, com DDD." : "Informe um telefone válido.");
+        throw new ErroEventos(
+          tipo === "whatsapp"
+            ? "Informe um número de WhatsApp válido, com DDD."
+            : "Informe um telefone válido.",
+        );
       }
     }
     return { tipo, valor: endereco };
@@ -354,7 +406,11 @@ export function validarReuniao(valor: unknown) {
     observacoesPublicas: textoLongo(dados.observacoesPublicas ?? dados.observacoes, 10_000),
     observacoesInternas: textoLongo(dados.observacoesInternas, 10_000),
     quantidadeParticipantesPublicada: booleano(dados.quantidadeParticipantesPublicada, false),
-    situacao: enumValor(dados.situacao ?? "agendada", situacoesReuniao, "situação") as SituacaoReuniao,
+    situacao: enumValor(
+      dados.situacao ?? "agendada",
+      situacoesReuniao,
+      "situação",
+    ) as SituacaoReuniao,
     publicado: booleano(dados.publicado, false),
     ativo: booleano(dados.ativo, true),
   };
@@ -403,7 +459,13 @@ export function validarOpcaoVotacao(valor: unknown) {
   return {
     id: dados.id === undefined ? null : idPositivo(dados.id, "opção"),
     texto: textoObrigatorio(dados.texto ?? dados.titulo, 300, "texto da opção"),
-    quantidadeVotos: inteiroIntervalo(dados.quantidadeVotos ?? dados.votos, 0, 0, 100_000, "quantidade de votos"),
+    quantidadeVotos: inteiroIntervalo(
+      dados.quantidadeVotos ?? dados.votos,
+      0,
+      0,
+      100_000,
+      "quantidade de votos",
+    ),
     ordem: inteiro(dados.ordem),
     ativo: booleano(dados.ativo, true),
   };
@@ -425,7 +487,11 @@ export function validarPresenca(valor: unknown) {
     turmaNormalizadaSnapshot: normalizarTurma(turmaSnapshot),
     turnoSnapshot,
     funcaoSnapshot: texto(dados.funcaoSnapshot ?? dados.funcao, 80),
-    situacao: enumValor(dados.situacao ?? "nao_informada", situacoesPresenca, "situação da presença") as SituacaoPresenca,
+    situacao: enumValor(
+      dados.situacao ?? "nao_informada",
+      situacoesPresenca,
+      "situação da presença",
+    ) as SituacaoPresenca,
     observacaoPublica: textoLongo(dados.observacaoPublica ?? dados.observacoes, 2000),
     observacaoInterna: textoLongo(dados.observacaoInterna, 2000),
     publicado: booleano(dados.publicado, false),
@@ -448,7 +514,8 @@ export function booleano(valor: unknown, padrao: boolean) {
 
 export function texto(valor: unknown, limite: number) {
   if (valor === undefined || valor === null) return "";
-  if (typeof valor !== "string" && typeof valor !== "number") throw new ErroEventos("Há um campo de texto com formato inválido.");
+  if (typeof valor !== "string" && typeof valor !== "number")
+    throw new ErroEventos("Há um campo de texto com formato inválido.");
   return String(valor).trim().slice(0, limite);
 }
 
@@ -471,10 +538,17 @@ function inteiro(valor: unknown) {
   return inteiroIntervalo(valor, 0, -1_000_000, 1_000_000, "ordem");
 }
 
-function inteiroIntervalo(valor: unknown, padrao: number, minimo: number, maximo: number, rotulo: string) {
+function inteiroIntervalo(
+  valor: unknown,
+  padrao: number,
+  minimo: number,
+  maximo: number,
+  rotulo: string,
+) {
   if (valor === undefined || valor === null || valor === "") return padrao;
   const numero = Number(valor);
-  if (!Number.isInteger(numero) || numero < minimo || numero > maximo) throw new ErroEventos(`Informe ${rotulo} válido.`);
+  if (!Number.isInteger(numero) || numero < minimo || numero > maximo)
+    throw new ErroEventos(`Informe ${rotulo} válido.`);
   return numero;
 }
 
@@ -496,7 +570,8 @@ function placar(valor: unknown, rotulo: string) {
 function data(valor: unknown, rotulo: string) {
   const resultado = texto(valor, 10);
   if (!resultado) return "";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(resultado)) throw new ErroEventos(`Informe uma data válida para ${rotulo}.`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(resultado))
+    throw new ErroEventos(`Informe uma data válida para ${rotulo}.`);
   const instante = new Date(`${resultado}T00:00:00Z`);
   if (Number.isNaN(instante.getTime()) || instante.toISOString().slice(0, 10) !== resultado) {
     throw new ErroEventos(`Informe uma data válida para ${rotulo}.`);
@@ -507,7 +582,8 @@ function data(valor: unknown, rotulo: string) {
 function horario(valor: unknown, rotulo: string) {
   const resultado = texto(valor, 5);
   if (!resultado) return "";
-  if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(resultado)) throw new ErroEventos(`Informe um horário válido para ${rotulo}.`);
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(resultado))
+    throw new ErroEventos(`Informe um horário válido para ${rotulo}.`);
   return resultado;
 }
 
@@ -530,7 +606,8 @@ function link(valor: unknown, rotulo: string) {
 
 function listaLinks(valor: unknown, rotulo: string) {
   if (valor === undefined || valor === null || valor === "") return [] as string[];
-  if (!Array.isArray(valor) || valor.length > 100) throw new ErroEventos(`Envie uma lista válida de ${rotulo}.`);
+  if (!Array.isArray(valor) || valor.length > 100)
+    throw new ErroEventos(`Envie uma lista válida de ${rotulo}.`);
   return valor.map((item) => {
     if (typeof item === "string") return link(item, rotulo);
     const dados = objetoRecebido(item);
@@ -548,12 +625,19 @@ function listaTextos(valor: unknown, limiteItem: number, maximoItens: number) {
 function turnoOpcional(valor: unknown) {
   if (valor === undefined || valor === null || valor === "") return "";
   const turno = normalizarTurno(valor);
-  if (!turno || !turnosEventos.includes(turno as TurnoEvento)) throw new ErroEventos("Escolha um turno válido.");
+  if (!turno || !turnosEventos.includes(turno as TurnoEvento))
+    throw new ErroEventos("Escolha um turno válido.");
   return turno as TurnoEvento;
 }
 
-function enumValor<T extends readonly string[]>(valor: unknown, aceitos: T, rotulo: string): T[number] {
-  const recebido = String(valor ?? "").trim().toLowerCase();
+function enumValor<T extends readonly string[]>(
+  valor: unknown,
+  aceitos: T,
+  rotulo: string,
+): T[number] {
+  const recebido = String(valor ?? "")
+    .trim()
+    .toLowerCase();
   if (!aceitos.includes(recebido)) throw new ErroEventos(`Escolha ${rotulo} válido.`);
   return recebido as T[number];
 }

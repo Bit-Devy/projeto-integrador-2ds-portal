@@ -1,6 +1,4 @@
-// importa a resposta com redirecionamento
 import { NextResponse } from "next/server";
-// importa o nome do cookie da sessão
 import { NOME_COOKIE_SESSAO } from "../../lib/sessao";
 
 // encerra a sessão e volta para a tela inicial

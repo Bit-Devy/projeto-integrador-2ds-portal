@@ -1,6 +1,6 @@
-// Tipos mínimos dos vínculos Cloudflare usados pelo portal.
-// Mantidos locais para que `npm run typecheck` funcione sem instalar um pacote
-// apenas de tipos; o comportamento em execução continua fornecido pelo Worker.
+// tipos mínimos dos vínculos cloudflare usados pelo portal
+// mantidos locais para que `npm run typecheck` funcione sem instalar um pacote
+// apenas de tipos; o comportamento em execução continua fornecido pelo worker
 
 interface Fetcher {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
@@ -57,7 +57,11 @@ interface R2ObjectBody extends R2Object, Body {
 }
 
 interface R2Bucket {
-  list(options?: { limit?: number; cursor?: string; include?: ("httpMetadata" | "customMetadata")[] }): Promise<{ objects: R2Object[]; truncated: boolean; cursor?: string }>;
+  list(options?: {
+    limit?: number;
+    cursor?: string;
+    include?: ("httpMetadata" | "customMetadata")[];
+  }): Promise<{ objects: R2Object[]; truncated: boolean; cursor?: string }>;
   get(key: string): Promise<R2ObjectBody | null>;
   put(
     key: string,

@@ -13,7 +13,11 @@ type EstadoConsulta<T> = {
 export function useConsultaPublica<T>(url: string, habilitada = true): EstadoConsulta<T> {
   const [tentativa, setTentativa] = useState(0);
   const chave = `${url}\u0000${tentativa}`;
-  const [resultado, setResultado] = useState<{ chave: string; dados: T | null; erro: string }>({ chave: "", dados: null, erro: "" });
+  const [resultado, setResultado] = useState<{ chave: string; dados: T | null; erro: string }>({
+    chave: "",
+    dados: null,
+    erro: "",
+  });
 
   const recarregar = useCallback(() => setTentativa((valor) => valor + 1), []);
 
@@ -24,7 +28,7 @@ export function useConsultaPublica<T>(url: string, habilitada = true): EstadoCon
     fetch(url, { signal: controle.signal, cache: "no-store" })
       .then(async (resposta) => {
         if (!resposta.ok) {
-          const corpo = await resposta.json().catch(() => null) as { erro?: string } | null;
+          const corpo = (await resposta.json().catch(() => null)) as { erro?: string } | null;
           throw new Error(corpo?.erro || "Não foi possível carregar as informações.");
         }
         return resposta.json() as Promise<T>;
@@ -35,7 +39,8 @@ export function useConsultaPublica<T>(url: string, habilitada = true): EstadoCon
         setResultado({
           chave,
           dados: null,
-          erro: motivo instanceof Error ? motivo.message : "Não foi possível carregar as informações.",
+          erro:
+            motivo instanceof Error ? motivo.message : "Não foi possível carregar as informações.",
         });
       });
 

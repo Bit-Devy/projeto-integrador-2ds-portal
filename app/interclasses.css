@@ -170,7 +170,7 @@
 
 .ic-chave-topo h2 {
   font-size: 1.5rem;
-  letter-spacing: -.6px;
+  letter-spacing: -0.6px;
   margin: 0 0 8px;
   color: #17374b;
 }
@@ -273,7 +273,7 @@
 }
 
 .ic-zoom button:disabled {
-  opacity: .35;
+  opacity: 0.35;
   cursor: default;
 }
 
@@ -283,7 +283,7 @@
   min-height: 265px;
   cursor: grab;
   background-color: #f5f8fb;
-  background-image: radial-gradient(#d6e1e9 .8px, transparent .8px);
+  background-image: radial-gradient(#d6e1e9 0.8px, transparent 0.8px);
   background-size: 18px 18px;
   border-block: 1px solid #e3ebf0;
   overscroll-behavior: contain;
@@ -387,7 +387,9 @@
   border: 1px solid #d8e3eb;
   border-radius: 10px;
   box-shadow: 0 3px 9px #17374b06;
-  transition: opacity .15s, border-color .15s;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s;
   overflow: hidden;
 }
 
@@ -403,7 +405,7 @@
 }
 
 .ic-jogo-apagado {
-  opacity: .32;
+  opacity: 0.32;
 }
 
 .ic-jogo-encontrado {
@@ -434,7 +436,7 @@
   padding: 0 12px;
   color: #718796;
   font-size: 0.625rem;
-  letter-spacing: .4px;
+  letter-spacing: 0.4px;
   border-bottom: 1px solid #f0f3f6;
 }
 
@@ -516,7 +518,7 @@ button.ic-equipe {
 }
 
 /* mantém a data e o aviso de folga juntos no cartão */
-.ic-jogo-rodape>span:first-child {
+.ic-jogo-rodape > span:first-child {
   display: grid;
   gap: 2px;
 }
@@ -561,7 +563,7 @@ button.ic-equipe {
   font-size: 0.6875rem;
 }
 
-.ic-chave-base>span {
+.ic-chave-base > span {
   display: flex;
   gap: 7px;
   align-items: center;
@@ -575,7 +577,7 @@ button.ic-equipe {
   border-radius: 3px;
 }
 
-.ic-chave-base>div {
+.ic-chave-base > div {
   margin-left: auto;
   display: flex;
   gap: 6px;
@@ -616,7 +618,7 @@ button.ic-equipe {
   color: #738899;
 }
 
-.ic-vazio>span {
+.ic-vazio > span {
   font-size: 2rem;
 }
 
@@ -737,7 +739,7 @@ button.ic-equipe {
   margin: 20px 0;
 }
 
-.ic-resumo-atualizacao>span {
+.ic-resumo-atualizacao > span {
   padding: 12px 18px;
   border: 1px solid #dce7ef;
   border-radius: 12px;
@@ -785,7 +787,7 @@ button.ic-equipe {
   font-weight: 700;
 }
 
-.ic-placar-edicao>span {
+.ic-placar-edicao > span {
   padding-top: 20px;
   color: #7c96a8;
   font-size: 1.5rem;
@@ -804,7 +806,7 @@ button.ic-equipe {
   font-weight: 700;
 }
 
-.ic-detalhes-atualizacao>div {
+.ic-detalhes-atualizacao > div {
   padding: 0 18px 18px;
 }
 
@@ -815,13 +817,13 @@ button.ic-equipe {
 }
 
 /* adapta os controles às telas menores */
-@media (max-width:1000px) {
+@media (max-width: 1000px) {
   .pev-filtros.ic-filtros-admin {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width:600px) {
+@media (max-width: 600px) {
   .pev-filtros.ic-filtros-admin {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -891,12 +893,12 @@ button.ic-equipe {
   margin: 24px 0;
 }
 
-.ic-placar-equipes>strong {
+.ic-placar-equipes > strong {
   font-size: clamp(0.9375rem, calc(3vw * var(--fator-texto)), 1.4375rem);
   overflow-wrap: anywhere;
 }
 
-.ic-placar-equipes>b {
+.ic-placar-equipes > b {
   font-size: 2rem;
   color: #17374b;
   white-space: nowrap;
@@ -928,12 +930,12 @@ button.ic-equipe {
   background: #fbfdff;
 }
 
-.ic-campeonato-resumo>div {
+.ic-campeonato-resumo > div {
   padding: 20px;
   border-right: 1px solid #e3ebf0;
 }
 
-.ic-campeonato-resumo>div:last-child {
+.ic-campeonato-resumo > div:last-child {
   border: 0;
 }
 
@@ -959,7 +961,7 @@ button.ic-equipe {
   margin: 14px 0;
 }
 
-.ic-turmas>span {
+.ic-turmas > span {
   padding: 6px 9px;
   border: 1px solid #dce8f0;
   border-radius: 6px;
@@ -975,7 +977,7 @@ button.ic-equipe {
   margin-bottom: 18px;
 }
 
-.ic-esporte>span {
+.ic-esporte > span {
   display: grid;
   place-items: center;
   width: 46px;
@@ -1049,7 +1051,7 @@ button.ic-equipe {
   cursor: pointer;
 }
 
-.ic-lista-jogo>div {
+.ic-lista-jogo > div {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1067,7 +1069,7 @@ button.ic-equipe {
   font-size: 0.75rem;
 }
 
-.ic-lista-jogo>b {
+.ic-lista-jogo > b {
   color: var(--azul);
   font-size: 0.75rem;
 }
@@ -1089,7 +1091,7 @@ button.ic-equipe {
   color: #254b63;
 }
 
-.ic-lote>p {
+.ic-lote > p {
   color: #627d90;
   line-height: 1.6;
   margin: 0 0 18px;
@@ -1136,7 +1138,7 @@ button.ic-equipe {
   outline-offset: 3px;
 }
 
-@media(max-width:700px) {
+@media (max-width: 700px) {
   .ic-tela-cheia-barra {
     padding: 12px 16px;
     flex-wrap: wrap;
@@ -1180,7 +1182,7 @@ button.ic-equipe {
     gap: 8px;
   }
 
-  .ic-chave-base>span:nth-child(2) {
+  .ic-chave-base > span:nth-child(2) {
     display: none;
   }
 
@@ -1192,16 +1194,16 @@ button.ic-equipe {
     grid-template-columns: 1fr 1fr;
   }
 
-  .ic-campeonato-resumo>div {
+  .ic-campeonato-resumo > div {
     padding: 16px;
     border-bottom: 1px solid #e3ebf0;
   }
 
-  .ic-campeonato-resumo>div:nth-child(2) {
+  .ic-campeonato-resumo > div:nth-child(2) {
     border-right: 0;
   }
 
-  .ic-campeonato-resumo>div:nth-child(3) {
+  .ic-campeonato-resumo > div:nth-child(3) {
     border-bottom: 0;
   }
 
@@ -1213,7 +1215,7 @@ button.ic-equipe {
     gap: 10px;
   }
 
-  .ic-placar-equipes>b {
+  .ic-placar-equipes > b {
     font-size: 1.5rem;
   }
 
@@ -1231,7 +1233,7 @@ button.ic-equipe {
   }
 }
 
-@media(prefers-reduced-motion:reduce) {
+@media (prefers-reduced-motion: reduce) {
   .ic-jogo {
     transition: none;
   }

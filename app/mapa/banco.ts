@@ -1,11 +1,9 @@
 import { dataSqlDoPortal } from "../conteudo/periodos";
-// importa o acesso direto ao banco
 import { getD1 } from "../../db";
 import { condicaoConflitoSala } from "../../db/estrutura-salas";
 // compartilha a regra de publicação com o cadastro de representantes
 import { condicaoTurmaPublicada } from "./turmas-publicadas";
 import { diasDaMascara, mascaraDiasDeAula, rotuloDiasDeAula, semanaInteira } from "./dias-de-aula";
-// importa as funções de normalização do mapa
 import {
   aliasesNormalizados,
   normalizarNumeroSala,
@@ -13,7 +11,6 @@ import {
   normalizarTextoBusca,
   normalizarTurno,
 } from "./normalizacao";
-// importa os tipos dos dados do mapa
 import type {
   CategoriaMapa,
   DadosMapa,
@@ -24,7 +21,6 @@ import type {
   LocalMapa,
   TurmaAtividadeMapa,
 } from "./tipos";
-// importa as validações dos dados do mapa
 import {
   ErroMapa,
   idPositivo,
@@ -141,25 +137,27 @@ export async function obterDadosMapa(opcoes: OpcoesListagem = {}): Promise<Dados
   // escolhe entre consultas privadas e públicas
   const consultas = todos
     ? [
-      d1.prepare("SELECT * FROM categorias_mapa ORDER BY grupo, ordem, nome COLLATE NOCASE, id"),
-      d1.prepare("SELECT * FROM locais_colegio ORDER BY ordem, numero, nome COLLATE NOCASE, id"),
-      d1.prepare("SELECT * FROM turmas_atividades ORDER BY ordem, nome COLLATE NOCASE, id"),
-      d1.prepare("SELECT * FROM ensalamentos ORDER BY ordem, id"),
-    ]
+        d1.prepare("SELECT * FROM categorias_mapa ORDER BY grupo, ordem, nome COLLATE NOCASE, id"),
+        d1.prepare("SELECT * FROM locais_colegio ORDER BY ordem, numero, nome COLLATE NOCASE, id"),
+        d1.prepare("SELECT * FROM turmas_atividades ORDER BY ordem, nome COLLATE NOCASE, id"),
+        d1.prepare("SELECT * FROM ensalamentos ORDER BY ordem, id"),
+      ]
     : [
-      // busca somente categorias locais e turmas publicados
-      d1.prepare("SELECT * FROM categorias_mapa WHERE ativo = 1 ORDER BY grupo, ordem, nome COLLATE NOCASE, id"),
-      d1.prepare(`SELECT l.* FROM locais_colegio l
+        // busca somente categorias locais e turmas publicados
+        d1.prepare(
+          "SELECT * FROM categorias_mapa WHERE ativo = 1 ORDER BY grupo, ordem, nome COLLATE NOCASE, id",
+        ),
+        d1.prepare(`SELECT l.* FROM locais_colegio l
         WHERE l.publicado = 1 AND l.ativo = 1
           AND EXISTS (
             SELECT 1 FROM categorias_mapa c
             WHERE c.grupo = 'local' AND c.slug = l.tipo AND c.ativo = 1
           )
         ORDER BY l.ordem, l.numero, l.nome COLLATE NOCASE, l.id`),
-      d1.prepare(`SELECT t.* FROM turmas_atividades t
+        d1.prepare(`SELECT t.* FROM turmas_atividades t
         WHERE ${condicaoTurmaPublicada()}
         ORDER BY t.ordem, t.nome COLLATE NOCASE, t.id`),
-      d1.prepare(`SELECT e.* FROM ensalamentos e
+        d1.prepare(`SELECT e.* FROM ensalamentos e
         INNER JOIN turmas_atividades t ON t.id = e.turma_atividade_id
         LEFT JOIN locais_colegio l ON l.id = e.local_id
         WHERE e.publicado = 1 AND e.ativo = 1 AND ${filtroVigente.replaceAll("inicio_validade", "e.inicio_validade").replaceAll("fim_validade", "e.fim_validade")}
@@ -179,7 +177,7 @@ export async function obterDadosMapa(opcoes: OpcoesListagem = {}): Promise<Dados
             )
           ))
         ORDER BY e.ordem, e.id`),
-    ];
+      ];
 
   // executa todas as consultas em uma chamada
   const [categorias, locais, turmas, ensalamentos] = await d1.batch(consultas);
@@ -200,7 +198,7 @@ export async function exportarDadosMapa(): Promise<ExportacaoMapa> {
   return {
     versao: 1,
     exportadoEm: new Date().toISOString(),
-    ...await obterDadosMapa({ todos: true }),
+    ...(await obterDadosMapa({ todos: true })),
   };
 }
 
@@ -212,8 +210,11 @@ export async function criarRegistroMapa(entidade: EntidadeMapa, valor: unknown) 
     const dados = validarCategoriaMapa(valor);
     try {
       // devolve a categoria criada pelo banco
-      const linha = await d1.prepare(`INSERT INTO categorias_mapa (grupo, slug, nome, ativo, ordem)
-        VALUES (?, ?, ?, ?, ?) RETURNING *`)
+      const linha = await d1
+        .prepare(
+          `INSERT INTO categorias_mapa (grupo, slug, nome, ativo, ordem)
+        VALUES (?, ?, ?, ?, ?) RETURNING *`,
+        )
         .bind(dados.grupo, dados.slug, dados.nome, numeroBooleano(dados.ativo), dados.ordem)
         .first<LinhaCategoria>();
       return linha ? formatarCategoria(linha) : null;
@@ -235,14 +236,19 @@ export async function criarRegistroMapa(entidade: EntidadeMapa, valor: unknown) 
   // valida e cria um ensalamento
   const dados = validarEnsalamentoMapa(valor);
   await validarReferenciasEnsalamento(dados);
-  const linha = await d1.prepare(`${sqlInserirEnsalamento} RETURNING *`)
+  const linha = await d1
+    .prepare(`${sqlInserirEnsalamento} RETURNING *`)
     .bind(...valoresEnsalamento(dados))
     .first<LinhaEnsalamento>();
   return linha ? formatarEnsalamento(linha) : null;
 }
 
 // atualiza um registro na entidade escolhida
-export async function atualizarRegistroMapa(entidade: EntidadeMapa, idRecebido: unknown, valor: unknown) {
+export async function atualizarRegistroMapa(
+  entidade: EntidadeMapa,
+  idRecebido: unknown,
+  valor: unknown,
+) {
   // valida o identificador e abre o banco
   const id = idPositivo(idRecebido);
   const d1 = getD1();
@@ -253,25 +259,44 @@ export async function atualizarRegistroMapa(entidade: EntidadeMapa, idRecebido: 
     if (!existente) throw new ErroMapa("Categoria não encontrada.", 404);
     const dados = validarCategoriaMapa(valor);
     // impede trocar o grupo de uma categoria usada
-    if (existente.grupo !== dados.grupo && await contarReferenciasCategoria(existente.grupo, existente.slug)) {
+    if (
+      existente.grupo !== dados.grupo &&
+      (await contarReferenciasCategoria(existente.grupo, existente.slug))
+    ) {
       throw new ErroMapa("A categoria está em uso e não pode mudar de grupo.", 409);
     }
     try {
       // prepara a atualização da categoria
-      const comandos = [d1.prepare(`UPDATE categorias_mapa
+      const comandos = [
+        d1
+          .prepare(
+            `UPDATE categorias_mapa
         SET grupo = ?, slug = ?, nome = ?, ativo = ?, ordem = ?, atualizado_em = CURRENT_TIMESTAMP
-        WHERE id = ?`)
-        .bind(dados.grupo, dados.slug, dados.nome, numeroBooleano(dados.ativo), dados.ordem, id)];
+        WHERE id = ?`,
+          )
+          .bind(dados.grupo, dados.slug, dados.nome, numeroBooleano(dados.ativo), dados.ordem, id),
+      ];
       // atualiza os registros quando o identificador muda
       if (existente.slug !== dados.slug) {
         if (existente.grupo === "local") {
-          comandos.push(d1.prepare("UPDATE locais_colegio SET tipo = ?, atualizado_em = CURRENT_TIMESTAMP WHERE tipo = ?")
-            .bind(dados.slug, existente.slug));
+          comandos.push(
+            d1
+              .prepare(
+                "UPDATE locais_colegio SET tipo = ?, atualizado_em = CURRENT_TIMESTAMP WHERE tipo = ?",
+              )
+              .bind(dados.slug, existente.slug),
+          );
         } else {
           comandos.push(
-            d1.prepare("UPDATE turmas_atividades SET tipo = ?, atualizado_em = CURRENT_TIMESTAMP WHERE tipo = ?")
+            d1
+              .prepare(
+                "UPDATE turmas_atividades SET tipo = ?, atualizado_em = CURRENT_TIMESTAMP WHERE tipo = ?",
+              )
               .bind(dados.slug, existente.slug),
-            d1.prepare("UPDATE ensalamentos SET tipo = ?, atualizado_em = CURRENT_TIMESTAMP WHERE tipo = ?")
+            d1
+              .prepare(
+                "UPDATE ensalamentos SET tipo = ?, atualizado_em = CURRENT_TIMESTAMP WHERE tipo = ?",
+              )
               .bind(dados.slug, existente.slug),
           );
         }
@@ -295,37 +320,77 @@ export async function atualizarRegistroMapa(entidade: EntidadeMapa, idRecebido: 
   }
 
   // atualiza um ensalamento
-  if (!await buscarEnsalamento(id)) throw new ErroMapa("Ensalamento não encontrado.", 404);
+  if (!(await buscarEnsalamento(id))) throw new ErroMapa("Ensalamento não encontrado.", 404);
   const dados = validarEnsalamentoMapa(valor);
   await validarReferenciasEnsalamento(dados);
-  await d1.prepare(`${sqlAtualizarEnsalamento} WHERE id = ?`)
+  await d1
+    .prepare(`${sqlAtualizarEnsalamento} WHERE id = ?`)
     .bind(...valoresEnsalamento(dados), id)
     .run();
   return buscarEnsalamento(id);
 }
 
 // confere o mesmo conflito nos cadastros de salas e de turmas
-async function conferirOcupacoes(salas: number[], dados: Pick<TurmaMapaValidada, "ativo" | "publicado" | "turno" | "inicioValidade" | "fimValidade" | "horarioInicial" | "horarioFinal" | "diasSemana">, turmaId: number | null, confirmacao: unknown) {
+async function conferirOcupacoes(
+  salas: number[],
+  dados: Pick<
+    TurmaMapaValidada,
+    | "ativo"
+    | "publicado"
+    | "turno"
+    | "inicioValidade"
+    | "fimValidade"
+    | "horarioInicial"
+    | "horarioFinal"
+    | "diasSemana"
+  >,
+  turmaId: number | null,
+  confirmacao: unknown,
+) {
   const d1 = getD1();
   const ocupacoes = new Map<number, { id: number; nome: string }>();
-  if (dados.ativo && dados.publicado) for (const local of salas) {
-    const encontrados = await d1.prepare(`WITH nova(inicio_validade, fim_validade, horario_inicial, horario_final, dias_semana) AS (VALUES (?, ?, ?, ?, ?))
+  if (dados.ativo && dados.publicado)
+    for (const local of salas) {
+      const encontrados = await d1
+        .prepare(
+          `WITH nova(inicio_validade, fim_validade, horario_inicial, horario_final, dias_semana) AS (VALUES (?, ?, ?, ?, ?))
       SELECT e.id, t.nome, t.horario_inicial, t.horario_final, t.dias_semana FROM ensalamentos e
       JOIN turmas_atividades t ON t.id = e.turma_atividade_id
       CROSS JOIN nova
       WHERE e.local_id = ? AND e.turno = ? AND e.turma_atividade_id <> ?
         AND e.ativo = 1 AND e.publicado = 1
-        AND ${condicaoConflitoSala("e", "nova", "t", "nova")}`)
-      .bind(dados.inicioValidade, dados.fimValidade, dados.horarioInicial, dados.horarioFinal, mascaraDiasDeAula(dados.diasSemana) || semanaInteira, local, dados.turno, turmaId ?? -1)
-      .all<{ id: number; nome: string; horario_inicial: string; horario_final: string; dias_semana: number }>();
-    for (const item of encontrados.results) {
-      const horario = item.horario_inicial ? `${rotuloDiasDeAula(diasDaMascara(item.dias_semana), true)} · ${item.horario_inicial}–${item.horario_final}` : "turno inteiro";
-      ocupacoes.set(item.id, { id: item.id, nome: `${item.nome} (${horario})` });
+        AND ${condicaoConflitoSala("e", "nova", "t", "nova")}`,
+        )
+        .bind(
+          dados.inicioValidade,
+          dados.fimValidade,
+          dados.horarioInicial,
+          dados.horarioFinal,
+          mascaraDiasDeAula(dados.diasSemana) || semanaInteira,
+          local,
+          dados.turno,
+          turmaId ?? -1,
+        )
+        .all<{
+          id: number;
+          nome: string;
+          horario_inicial: string;
+          horario_final: string;
+          dias_semana: number;
+        }>();
+      for (const item of encontrados.results) {
+        const horario = item.horario_inicial
+          ? `${rotuloDiasDeAula(diasDaMascara(item.dias_semana), true)} · ${item.horario_inicial}–${item.horario_final}`
+          : "turno inteiro";
+        ocupacoes.set(item.id, { id: item.id, nome: `${item.nome} (${horario})` });
+      }
     }
-  }
   const confirmados = Array.isArray(confirmacao) ? confirmacao : [];
   if ([...ocupacoes.values()].some((item) => !confirmados.includes(item.id))) {
-    const erro = new ErroMapa("Esta sala já está ocupada no mesmo dia e horário. Deseja substituir a ocupação?", 409);
+    const erro = new ErroMapa(
+      "Esta sala já está ocupada no mesmo dia e horário. Deseja substituir a ocupação?",
+      409,
+    );
     erro.conflitos = [...ocupacoes.values()];
     throw erro;
   }
@@ -340,29 +405,80 @@ async function salvarLocalComTurma(id: number | null, valor: unknown) {
   const dados = validarLocalMapa({ ...existente, ...recebido });
   await exigirCategoria("local", dados.tipo);
   const d1 = getD1();
-  const turmaId = recebido.turmaId !== undefined ? idPositivo(recebido.turmaId, "turma publicada") : null;
+  const turmaId =
+    recebido.turmaId !== undefined ? idPositivo(recebido.turmaId, "turma publicada") : null;
   let turma: TurmaAtividadeMapa | null = null;
   const comandos: D1PreparedStatement[] = [];
   if (turmaId) {
-    if (!dados.ativo || !dados.publicado) throw new ErroMapa("Ative e publique a sala para vincular uma turma.");
-    if (!await d1.prepare("SELECT id FROM categorias_mapa WHERE grupo = 'local' AND slug = ? AND ativo = 1").bind(dados.tipo).first()) throw new ErroMapa("A categoria da sala precisa estar ativa.");
-    const linha = await d1.prepare(`SELECT t.* FROM turmas_atividades t WHERE t.id = ? AND ${condicaoTurmaPublicada()}`).bind(turmaId).first<LinhaTurma>();
+    if (!dados.ativo || !dados.publicado)
+      throw new ErroMapa("Ative e publique a sala para vincular uma turma.");
+    if (
+      !(await d1
+        .prepare("SELECT id FROM categorias_mapa WHERE grupo = 'local' AND slug = ? AND ativo = 1")
+        .bind(dados.tipo)
+        .first())
+    )
+      throw new ErroMapa("A categoria da sala precisa estar ativa.");
+    const linha = await d1
+      .prepare(`SELECT t.* FROM turmas_atividades t WHERE t.id = ? AND ${condicaoTurmaPublicada()}`)
+      .bind(turmaId)
+      .first<LinhaTurma>();
     if (!linha) throw new ErroMapa("Escolha uma turma já publicada, ativa e dentro da validade.");
     turma = formatarTurma(linha);
-    const ocupacoes = await conferirOcupacoes(id ? [id] : [], turma, turmaId, recebido.substituirOcupacoes);
-    for (const ocupacao of ocupacoes) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?").bind(ocupacao.id));
+    const ocupacoes = await conferirOcupacoes(
+      id ? [id] : [],
+      turma,
+      turmaId,
+      recebido.substituirOcupacoes,
+    );
+    for (const ocupacao of ocupacoes)
+      comandos.push(
+        d1
+          .prepare(
+            "UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?",
+          )
+          .bind(ocupacao.id),
+      );
     // guarda a ocupação anterior da turma antes de transferi-la
-    comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND ativo = 1").bind(turmaId));
+    comandos.push(
+      d1
+        .prepare(
+          "UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND ativo = 1",
+        )
+        .bind(turmaId),
+    );
   }
   const chave = `cadastro:${crypto.randomUUID()}`;
-  comandos.push(id
-    ? d1.prepare(`${sqlAtualizarLocal} WHERE id = ?`).bind(...valoresLocal(dados), id)
-    : d1.prepare(`INSERT INTO locais_colegio (chave_importacao, ${colunasLocal}) VALUES (?, ${placeholdersLocal})`).bind(chave, ...valoresLocal(dados)));
-  if (turma) comandos.push(d1.prepare(`INSERT INTO ensalamentos (${colunasEnsalamento})
-    SELECT ?, id, ?, ?, '', ?, ?, 0, 1, 1 FROM locais_colegio WHERE ${id ? "id = ?" : "chave_importacao = ?"}`)
-    .bind(turma.id, turma.turno, turma.tipo, turma.inicioValidade, turma.fimValidade, id ?? chave));
+  comandos.push(
+    id
+      ? d1.prepare(`${sqlAtualizarLocal} WHERE id = ?`).bind(...valoresLocal(dados), id)
+      : d1
+          .prepare(
+            `INSERT INTO locais_colegio (chave_importacao, ${colunasLocal}) VALUES (?, ${placeholdersLocal})`,
+          )
+          .bind(chave, ...valoresLocal(dados)),
+  );
+  if (turma)
+    comandos.push(
+      d1
+        .prepare(
+          `INSERT INTO ensalamentos (${colunasEnsalamento})
+    SELECT ?, id, ?, ?, '', ?, ?, 0, 1, 1 FROM locais_colegio WHERE ${id ? "id = ?" : "chave_importacao = ?"}`,
+        )
+        .bind(
+          turma.id,
+          turma.turno,
+          turma.tipo,
+          turma.inicioValidade,
+          turma.fimValidade,
+          id ?? chave,
+        ),
+    );
   await d1.batch(comandos);
-  const linha = await d1.prepare(`SELECT * FROM locais_colegio WHERE ${id ? "id = ?" : "chave_importacao = ?"}`).bind(id ?? chave).first<LinhaLocal>();
+  const linha = await d1
+    .prepare(`SELECT * FROM locais_colegio WHERE ${id ? "id = ?" : "chave_importacao = ?"}`)
+    .bind(id ?? chave)
+    .first<LinhaLocal>();
   return linha ? formatarLocal(linha) : null;
 }
 
@@ -371,10 +487,25 @@ async function salvarTurmaComSala(id: number | null, valor: unknown) {
   const recebido = objetoRecebido(valor);
   const existente = id ? await buscarTurma(id) : null;
   if (id && !existente) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
-  const diasSemana = "diasSemana" in recebido ? recebido.diasSemana : existente?.turnoParcial ? existente.diasSemana : undefined;
+  const diasSemana =
+    "diasSemana" in recebido
+      ? recebido.diasSemana
+      : existente?.turnoParcial
+        ? existente.diasSemana
+        : undefined;
   // conserva a validade já registrada ao editar os dias dentro do mesmo ano
   const mesmoAno = existente !== null && Number(recebido.ano ?? existente.ano) === existente.ano;
-  const dados = validarTurmaMapa({ ...existente, ...recebido, diasSemana, ...(recebido.ano === undefined && ("inicioValidade" in recebido || "fimValidade" in recebido) ? { ano: undefined } : {}) }, mesmoAno);
+  const dados = validarTurmaMapa(
+    {
+      ...existente,
+      ...recebido,
+      diasSemana,
+      ...(recebido.ano === undefined && ("inicioValidade" in recebido || "fimValidade" in recebido)
+        ? { ano: undefined }
+        : {}),
+    },
+    mesmoAno,
+  );
   if (!dados.ativo) dados.publicado = false;
   await exigirCategoria("atividade", dados.tipo);
   const d1 = getD1();
@@ -382,39 +513,122 @@ async function salvarTurmaComSala(id: number | null, valor: unknown) {
   const salaId = atribuir ? idPositivo(recebido.salaId, "sala publicada") : null;
   const comandos: D1PreparedStatement[] = [];
   const desvincular = recebido.desvincularSala === true;
-  if (desvincular && salaId) throw new ErroMapa("Escolha vincular ou remover a sala, não as duas opções.");
+  if (desvincular && salaId)
+    throw new ErroMapa("Escolha vincular ou remover a sala, não as duas opções.");
   if (salaId) {
     const sala = await buscarLocal(salaId);
     if (!sala?.ativo || !sala.publicado) throw new ErroMapa("Escolha uma sala ativa e publicada.");
-    const categoria = await d1.prepare("SELECT id FROM categorias_mapa WHERE grupo = 'local' AND slug = ? AND ativo = 1").bind(sala.tipo).first();
+    const categoria = await d1
+      .prepare("SELECT id FROM categorias_mapa WHERE grupo = 'local' AND slug = ? AND ativo = 1")
+      .bind(sala.tipo)
+      .first();
     if (!categoria) throw new ErroMapa("A categoria da sala precisa estar ativa.");
   }
   // confere também os vínculos mantidos ao publicar ou trocar turno e validade
-  const vinculos = id && !salaId && !desvincular ? await d1.prepare("SELECT local_id FROM ensalamentos WHERE turma_atividade_id = ? AND ativo = 1 AND local_id IS NOT NULL").bind(id).all<{ local_id: number }>() : { results: [] };
+  const vinculos =
+    id && !salaId && !desvincular
+      ? await d1
+          .prepare(
+            "SELECT local_id FROM ensalamentos WHERE turma_atividade_id = ? AND ativo = 1 AND local_id IS NOT NULL",
+          )
+          .bind(id)
+          .all<{ local_id: number }>()
+      : { results: [] };
   const salas = salaId ? [salaId] : [...new Set(vinculos.results.map((item) => item.local_id))];
   const ocupacoes = await conferirOcupacoes(salas, dados, id, recebido.substituirOcupacoes);
-  for (const ocupacao of ocupacoes) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?").bind(ocupacao.id));
+  for (const ocupacao of ocupacoes)
+    comandos.push(
+      d1
+        .prepare(
+          "UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?",
+        )
+        .bind(ocupacao.id),
+    );
   // libera a sala ao arquivar e conserva os vínculos anteriores como histórico
-  if (id && (salaId || desvincular || !dados.ativo)) comandos.push(d1.prepare("UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND (ativo = 1 OR publicado = 1)").bind(id));
+  if (id && (salaId || desvincular || !dados.ativo))
+    comandos.push(
+      d1
+        .prepare(
+          "UPDATE ensalamentos SET ativo = 0, publicado = 0, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND (ativo = 1 OR publicado = 1)",
+        )
+        .bind(id),
+    );
   const chave = `cadastro:${crypto.randomUUID()}`;
-  comandos.push(id
-    ? d1.prepare(`${sqlAtualizarTurma} WHERE id = ?`).bind(...valoresTurma(dados), id)
-    : d1.prepare(`INSERT INTO turmas_atividades (chave_importacao, ${colunasTurma}) VALUES (?, ${placeholdersTurma})`).bind(chave, ...valoresTurma(dados)));
+  comandos.push(
+    id
+      ? d1.prepare(`${sqlAtualizarTurma} WHERE id = ?`).bind(...valoresTurma(dados), id)
+      : d1
+          .prepare(
+            `INSERT INTO turmas_atividades (chave_importacao, ${colunasTurma}) VALUES (?, ${placeholdersTurma})`,
+          )
+          .bind(chave, ...valoresTurma(dados)),
+  );
   // mantém o nome e o turno dos representantes ligados ao cadastro atual da turma
-  if (id) comandos.push(d1.prepare(`UPDATE representantes SET turma = ?, turma_normalizada = ?, turno = ?,
-    nivel_ensino = ?, serie = ?, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND ano = ? AND ativo = 1`)
-    .bind(dados.nome, dados.nomeNormalizado, dados.turno, dados.nivelEnsino, dados.serie || "Não informado", id, dados.ano));
-  if (id && !dados.ativo) comandos.push(d1.prepare("UPDATE representantes SET ativo = 0, publicado = 0, arquivado_em = COALESCE(arquivado_em, CURRENT_TIMESTAMP), atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND (ativo = 1 OR publicado = 1)").bind(id));
+  if (id)
+    comandos.push(
+      d1
+        .prepare(
+          `UPDATE representantes SET turma = ?, turma_normalizada = ?, turno = ?,
+    nivel_ensino = ?, serie = ?, atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND ano = ? AND ativo = 1`,
+        )
+        .bind(
+          dados.nome,
+          dados.nomeNormalizado,
+          dados.turno,
+          dados.nivelEnsino,
+          dados.serie || "Não informado",
+          id,
+          dados.ano,
+        ),
+    );
+  if (id && !dados.ativo)
+    comandos.push(
+      d1
+        .prepare(
+          "UPDATE representantes SET ativo = 0, publicado = 0, arquivado_em = COALESCE(arquivado_em, CURRENT_TIMESTAMP), atualizado_em = CURRENT_TIMESTAMP WHERE turma_atividade_id = ? AND (ativo = 1 OR publicado = 1)",
+        )
+        .bind(id),
+    );
   if (salaId) {
-    comandos.push(d1.prepare(`INSERT INTO ensalamentos (${colunasEnsalamento})
-      SELECT id, ?, ?, ?, '', ?, ?, 0, ?, ? FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`)
-      .bind(salaId, dados.turno, dados.tipo, dados.inicioValidade, dados.fimValidade, numeroBooleano(dados.ativo), numeroBooleano(dados.publicado), id ?? chave));
+    comandos.push(
+      d1
+        .prepare(
+          `INSERT INTO ensalamentos (${colunasEnsalamento})
+      SELECT id, ?, ?, ?, '', ?, ?, 0, ?, ? FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`,
+        )
+        .bind(
+          salaId,
+          dados.turno,
+          dados.tipo,
+          dados.inicioValidade,
+          dados.fimValidade,
+          numeroBooleano(dados.ativo),
+          numeroBooleano(dados.publicado),
+          id ?? chave,
+        ),
+    );
   } else if (id && !desvincular && dados.ativo) {
-    comandos.push(d1.prepare(`UPDATE ensalamentos SET turno = ?, tipo = ?, inicio_validade = ?, fim_validade = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP
-      WHERE turma_atividade_id = ? AND ativo = 1`).bind(dados.turno, dados.tipo, dados.inicioValidade, dados.fimValidade, numeroBooleano(dados.publicado), id));
+    comandos.push(
+      d1
+        .prepare(
+          `UPDATE ensalamentos SET turno = ?, tipo = ?, inicio_validade = ?, fim_validade = ?, publicado = ?, atualizado_em = CURRENT_TIMESTAMP
+      WHERE turma_atividade_id = ? AND ativo = 1`,
+        )
+        .bind(
+          dados.turno,
+          dados.tipo,
+          dados.inicioValidade,
+          dados.fimValidade,
+          numeroBooleano(dados.publicado),
+          id,
+        ),
+    );
   }
   await d1.batch(comandos);
-  const linha = await d1.prepare(`SELECT * FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`).bind(id ?? chave).first<LinhaTurma>();
+  const linha = await d1
+    .prepare(`SELECT * FROM turmas_atividades WHERE ${id ? "id = ?" : "chave_importacao = ?"}`)
+    .bind(id ?? chave)
+    .first<LinhaTurma>();
   return linha ? formatarTurma(linha) : null;
 }
 
@@ -425,17 +639,32 @@ export async function obterHistoricoTurma(idRecebido: unknown): Promise<Historic
   if (!turma) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
   const d1 = getD1();
   const [salas, representantes] = await d1.batch([
-    d1.prepare(`SELECT COALESCE(NULLIF(l.nome, ''), l.numero) AS sala, e.turno, e.criado_em AS vinculadoEm,
+    d1
+      .prepare(
+        `SELECT COALESCE(NULLIF(l.nome, ''), l.numero) AS sala, e.turno, e.criado_em AS vinculadoEm,
         CASE WHEN e.ativo = 0 THEN e.atualizado_em ELSE NULL END AS encerradoEm
       FROM ensalamentos e JOIN locais_colegio l ON l.id = e.local_id WHERE e.turma_atividade_id = ?
       UNION ALL SELECT sala, turno, vinculado_em, encerrado_em FROM historico_salas_turma WHERE turma_atividade_id = ?
-      ORDER BY vinculadoEm DESC`).bind(id, id),
-    d1.prepare(`SELECT id, nome, funcao, inicio_mandato AS inicioMandato, fim_mandato AS fimMandato,
+      ORDER BY vinculadoEm DESC`,
+      )
+      .bind(id, id),
+    d1
+      .prepare(
+        `SELECT id, nome, funcao, inicio_mandato AS inicioMandato, fim_mandato AS fimMandato,
       arquivado_em AS arquivadoEm, destituido_em AS destituidoEm, ano, ativo
-      FROM representantes WHERE turma_atividade_id = ? ORDER BY inicio_mandato, criado_em, id`).bind(id),
+      FROM representantes WHERE turma_atividade_id = ? ORDER BY inicio_mandato, criado_em, id`,
+      )
+      .bind(id),
   ]);
-  const mandatos = representantes.results as (Omit<HistoricoTurma["representantes"][number], "ativo"> & { ativo: number })[];
-  return { turma, salas: salas.results as HistoricoTurma["salas"], representantes: mandatos.map((item) => ({ ...item, ativo: Boolean(item.ativo) })) };
+  const mandatos = representantes.results as (Omit<
+    HistoricoTurma["representantes"][number],
+    "ativo"
+  > & { ativo: number })[];
+  return {
+    turma,
+    salas: salas.results as HistoricoTurma["salas"],
+    representantes: mandatos.map((item) => ({ ...item, ativo: Boolean(item.ativo) })),
+  };
 }
 
 // exclui um registro da entidade escolhida
@@ -448,40 +677,68 @@ export async function excluirRegistroMapa(entidade: EntidadeMapa, idRecebido: un
     const existente = await buscarCategoria(id);
     if (!existente) throw new ErroMapa("Categoria não encontrada.", 404);
     if (await contarReferenciasCategoria(existente.grupo, existente.slug)) {
-      throw new ErroMapa("A categoria está em uso. Troque a categoria dos registros antes de excluí-la.", 409);
+      throw new ErroMapa(
+        "A categoria está em uso. Troque a categoria dos registros antes de excluí-la.",
+        409,
+      );
     }
     await d1.prepare("DELETE FROM categorias_mapa WHERE id = ?").bind(id).run();
-  // exclui um local sem ensalamentos
+    // exclui um local sem ensalamentos
   } else if (entidade === "locais") {
-    if (!await buscarLocal(id)) throw new ErroMapa("Sala ou local não encontrado.", 404);
+    if (!(await buscarLocal(id))) throw new ErroMapa("Sala ou local não encontrado.", 404);
     if (await contar("ensalamentos", "local_id", id)) {
-      throw new ErroMapa("O local possui ensalamentos. Troque ou exclua esses vínculos antes.", 409);
+      throw new ErroMapa(
+        "O local possui ensalamentos. Troque ou exclua esses vínculos antes.",
+        409,
+      );
     }
     await d1.prepare("DELETE FROM locais_colegio WHERE id = ?").bind(id).run();
-  // só exclui turmas que nunca foram publicadas e conserva os registros relacionados
+    // só exclui turmas que nunca foram publicadas e conserva os registros relacionados
   } else if (entidade === "turmas") {
     const turma = await buscarTurma(id);
     if (!turma) throw new ErroMapa("Turma ou atividade não encontrada.", 404);
-    if (turma.jaPublicado || turma.publicado) throw new ErroMapa("Esta turma já foi publicada. Use a opção Arquivar para preservar o histórico.", 409);
-    const rascunho = "EXISTS (SELECT 1 FROM turmas_atividades WHERE id = ? AND ja_publicado = 0 AND publicado = 0)";
+    if (turma.jaPublicado || turma.publicado)
+      throw new ErroMapa(
+        "Esta turma já foi publicada. Use a opção Arquivar para preservar o histórico.",
+        409,
+      );
+    const rascunho =
+      "EXISTS (SELECT 1 FROM turmas_atividades WHERE id = ? AND ja_publicado = 0 AND publicado = 0)";
     const resultado = await d1.batch([
-      d1.prepare(`UPDATE representantes SET turma_atividade_id = NULL, ativo = 0, publicado = 0,
+      d1
+        .prepare(
+          `UPDATE representantes SET turma_atividade_id = NULL, ativo = 0, publicado = 0,
         arquivado_em = COALESCE(arquivado_em, CURRENT_TIMESTAMP), atualizado_em = CURRENT_TIMESTAMP
-        WHERE turma_atividade_id = ? AND ${rascunho}`).bind(id, id),
-      d1.prepare(`UPDATE participantes_campeonato SET turma_atividade_id = NULL WHERE turma_atividade_id = ? AND ${rascunho}`).bind(id, id),
-      d1.prepare(`DELETE FROM ensalamentos WHERE turma_atividade_id = ? AND ${rascunho}`).bind(id, id),
-      d1.prepare("DELETE FROM turmas_atividades WHERE id = ? AND ja_publicado = 0 AND publicado = 0 RETURNING id").bind(id),
+        WHERE turma_atividade_id = ? AND ${rascunho}`,
+        )
+        .bind(id, id),
+      d1
+        .prepare(
+          `UPDATE participantes_campeonato SET turma_atividade_id = NULL WHERE turma_atividade_id = ? AND ${rascunho}`,
+        )
+        .bind(id, id),
+      d1
+        .prepare(`DELETE FROM ensalamentos WHERE turma_atividade_id = ? AND ${rascunho}`)
+        .bind(id, id),
+      d1
+        .prepare(
+          "DELETE FROM turmas_atividades WHERE id = ? AND ja_publicado = 0 AND publicado = 0 RETURNING id",
+        )
+        .bind(id),
     ]);
-    if (!resultado[3].results.length) throw new ErroMapa("A turma mudou durante a exclusão. Recarregue a lista e tente novamente.", 409);
-  // exclui um ensalamento
+    if (!resultado[3].results.length)
+      throw new ErroMapa(
+        "A turma mudou durante a exclusão. Recarregue a lista e tente novamente.",
+        409,
+      );
+    // exclui um ensalamento
   } else {
-    if (!await buscarEnsalamento(id)) throw new ErroMapa("Ensalamento não encontrado.", 404);
+    if (!(await buscarEnsalamento(id))) throw new ErroMapa("Ensalamento não encontrado.", 404);
     await d1.prepare("DELETE FROM ensalamentos WHERE id = ?").bind(id).run();
   }
   return { removido: true };
 }
 
-// importa uma cópia dos dados do mapa
 export async function importarDadosMapa(valor: unknown) {
   // valida o arquivo e sua versão
   const raiz = objetoRecebido(valor, "Escolha um arquivo de dados válido.");
@@ -493,15 +750,29 @@ export async function importarDadosMapa(valor: unknown) {
   const locaisRecebidos = listaImportacao(raiz.locais, "locais", 2000);
   const turmasRecebidas = listaImportacao(raiz.turmas, "turmas", 5000);
   const ensalamentosRecebidos = listaImportacao(raiz.ensalamentos, "ensalamentos", 10000);
-  if (!categoriasRecebidas.length && !locaisRecebidos.length && !turmasRecebidas.length && !ensalamentosRecebidos.length) {
+  if (
+    !categoriasRecebidas.length &&
+    !locaisRecebidos.length &&
+    !turmasRecebidas.length &&
+    !ensalamentosRecebidos.length
+  ) {
     throw new ErroMapa("A cópia não contém registros do mapa.");
   }
 
   // valida todos os registros antes de alterar o banco
   const categorias = categoriasRecebidas.map(validarCategoriaMapa);
-  const locais = locaisRecebidos.map((item) => ({ id: idImportacao(item), dados: validarLocalMapa(item) }));
-  const turmas = turmasRecebidas.map((item) => ({ id: idImportacao(item), dados: validarTurmaMapa(item) }));
-  const ensalamentos = ensalamentosRecebidos.map((item) => ({ id: idImportacao(item), dados: validarEnsalamentoMapa(item) }));
+  const locais = locaisRecebidos.map((item) => ({
+    id: idImportacao(item),
+    dados: validarLocalMapa(item),
+  }));
+  const turmas = turmasRecebidas.map((item) => ({
+    id: idImportacao(item),
+    dados: validarTurmaMapa(item),
+  }));
+  const ensalamentos = ensalamentosRecebidos.map((item) => ({
+    id: idImportacao(item),
+    dados: validarEnsalamentoMapa(item),
+  }));
   // impede identificadores repetidos nas listas
   validarIdsUnicos(locais, "locais");
   validarIdsUnicos(turmas, "turmas");
@@ -509,7 +780,9 @@ export async function importarDadosMapa(valor: unknown) {
 
   // reúne as categorias atuais e as importadas
   const categoriasDisponiveis = await categoriasExistentes();
-  categorias.forEach((categoria) => categoriasDisponiveis.add(`${categoria.grupo}:${categoria.slug}`));
+  categorias.forEach((categoria) =>
+    categoriasDisponiveis.add(`${categoria.grupo}:${categoria.slug}`),
+  );
   // confirma as categorias usadas pelos locais
   for (const local of locais) {
     if (!categoriasDisponiveis.has(`local:${local.dados.tipo}`)) {
@@ -532,26 +805,50 @@ export async function importarDadosMapa(valor: unknown) {
   const comandosTurmas: InstrucaoD1[] = [];
   const comandosEnsalamentos: InstrucaoD1[] = [];
   // prepara a criação ou atualização das categorias
-  categorias.forEach((dados) => comandosCategorias.push(d1.prepare(`INSERT INTO categorias_mapa (grupo, slug, nome, ativo, ordem)
+  categorias.forEach((dados) =>
+    comandosCategorias.push(
+      d1
+        .prepare(
+          `INSERT INTO categorias_mapa (grupo, slug, nome, ativo, ordem)
     VALUES (?, ?, ?, ?, ?)
     ON CONFLICT (grupo, slug) DO UPDATE SET
       nome = excluded.nome, ativo = excluded.ativo, ordem = excluded.ordem,
-      atualizado_em = CURRENT_TIMESTAMP`)
-    .bind(dados.grupo, dados.slug, dados.nome, numeroBooleano(dados.ativo), dados.ordem)));
+      atualizado_em = CURRENT_TIMESTAMP`,
+        )
+        .bind(dados.grupo, dados.slug, dados.nome, numeroBooleano(dados.ativo), dados.ordem),
+    ),
+  );
   // prepara a criação ou atualização dos locais
-  locais.forEach(({ id, dados }) => comandosLocais.push(d1.prepare(sqlImportarLocal()).bind(id, ...valoresLocal(dados))));
+  locais.forEach(({ id, dados }) =>
+    comandosLocais.push(d1.prepare(sqlImportarLocal()).bind(id, ...valoresLocal(dados))),
+  );
   // prepara as turmas e atualiza seus vínculos
-  turmas.forEach(({ id, dados }) => comandosTurmas.push(
-    d1.prepare(sqlImportarTurma()).bind(id, ...valoresTurma(dados)),
-    d1.prepare(`UPDATE ensalamentos
+  turmas.forEach(({ id, dados }) =>
+    comandosTurmas.push(
+      d1.prepare(sqlImportarTurma()).bind(id, ...valoresTurma(dados)),
+      d1
+        .prepare(
+          `UPDATE ensalamentos
       SET turno = ?, tipo = ?, atualizado_em = CURRENT_TIMESTAMP
-      WHERE turma_atividade_id = ? AND ativo = 1`).bind(dados.turno, dados.tipo, id),
-  ));
+      WHERE turma_atividade_id = ? AND ativo = 1`,
+        )
+        .bind(dados.turno, dados.tipo, id),
+    ),
+  );
   // prepara a criação ou atualização dos ensalamentos
-  ensalamentos.forEach(({ id, dados }) => comandosEnsalamentos.push(d1.prepare(sqlImportarEnsalamento()).bind(id, ...valoresEnsalamento(dados))));
+  ensalamentos.forEach(({ id, dados }) =>
+    comandosEnsalamentos.push(
+      d1.prepare(sqlImportarEnsalamento()).bind(id, ...valoresEnsalamento(dados)),
+    ),
+  );
 
   // executa as entidades na ordem de suas relações
-  for (const comandos of [comandosCategorias, comandosLocais, comandosTurmas, comandosEnsalamentos]) {
+  for (const comandos of [
+    comandosCategorias,
+    comandosLocais,
+    comandosTurmas,
+    comandosEnsalamentos,
+  ]) {
     await executarEmLotes(d1, comandos);
   }
   // informa as quantidades importadas
@@ -575,27 +872,59 @@ function filtrarDados(dados: DadosMapa, opcoes: OpcoesListagem) {
   if (!busca && !turno && !tipo) return dados;
 
   // encontra as turmas que combinam diretamente
-  const turmasDiretas = new Set(dados.turmas.filter((turma) =>
-    (!turno || turma.turno === turno)
-    && (!tipo || turma.tipo === tipo)
-    && (!busca || normalizarTextoBusca([
-      turma.nome, turma.aliases, turma.curso, turma.serie, turma.turma, turma.descricao,
-    ].join(" ")).includes(busca)),
-  ).map((turma) => turma.id));
+  const turmasDiretas = new Set(
+    dados.turmas
+      .filter(
+        (turma) =>
+          (!turno || turma.turno === turno) &&
+          (!tipo || turma.tipo === tipo) &&
+          (!busca ||
+            normalizarTextoBusca(
+              [
+                turma.nome,
+                turma.aliases,
+                turma.curso,
+                turma.serie,
+                turma.turma,
+                turma.descricao,
+              ].join(" "),
+            ).includes(busca)),
+      )
+      .map((turma) => turma.id),
+  );
   // encontra os locais que combinam diretamente
-  const locaisDiretos = new Set(dados.locais.filter((local) => !busca ||
-    normalizarTextoBusca([
-      local.nome, local.nomeAlternativo, local.tipo, local.ala, local.andar, local.bloco,
-      local.setor, local.corredor, local.referencia, local.descricao,
-    ].join(" ")).includes(busca)
-    || (buscaSala && normalizarNumeroSala(local.numero).includes(buscaSala)),
-  ).map((local) => local.id));
+  const locaisDiretos = new Set(
+    dados.locais
+      .filter(
+        (local) =>
+          !busca ||
+          normalizarTextoBusca(
+            [
+              local.nome,
+              local.nomeAlternativo,
+              local.tipo,
+              local.ala,
+              local.andar,
+              local.bloco,
+              local.setor,
+              local.corredor,
+              local.referencia,
+              local.descricao,
+            ].join(" "),
+          ).includes(busca) ||
+          (buscaSala && normalizarNumeroSala(local.numero).includes(buscaSala)),
+      )
+      .map((local) => local.id),
+  );
 
   // mantém os ensalamentos ligados aos resultados
-  const ensalamentos = dados.ensalamentos.filter((item) =>
-    (!turno || item.turno === turno)
-    && (!tipo || item.tipo === tipo)
-    && (!busca || turmasDiretas.has(item.turmaAtividadeId) || (item.localId !== null && locaisDiretos.has(item.localId))),
+  const ensalamentos = dados.ensalamentos.filter(
+    (item) =>
+      (!turno || item.turno === turno) &&
+      (!tipo || item.tipo === tipo) &&
+      (!busca ||
+        turmasDiretas.has(item.turmaAtividadeId) ||
+        (item.localId !== null && locaisDiretos.has(item.localId))),
   );
   // reúne os identificadores ligados aos ensalamentos
   const idsTurmas = new Set(turmasDiretas);
@@ -620,17 +949,20 @@ async function validarReferenciasEnsalamento(dados: EnsalamentoMapaValidado) {
   if (!turma) throw new ErroMapa("A turma ou atividade selecionada não existe.", 404);
   // mantém turno e tipo iguais aos da turma
   if (turma.turno !== dados.turno || turma.tipo !== dados.tipo) {
-    throw new ErroMapa("O turno e o tipo do ensalamento devem ser iguais aos da turma ou atividade.");
+    throw new ErroMapa(
+      "O turno e o tipo do ensalamento devem ser iguais aos da turma ou atividade.",
+    );
   }
   // exige um local existente quando ele foi informado
-  if (dados.localId !== null && !await buscarLocal(dados.localId)) {
+  if (dados.localId !== null && !(await buscarLocal(dados.localId))) {
     throw new ErroMapa("A sala ou local selecionado não existe.", 404);
   }
 }
 
 // exige uma categoria cadastrada
 async function exigirCategoria(grupo: "atividade" | "local", slug: string) {
-  const categoria = await getD1().prepare("SELECT id FROM categorias_mapa WHERE grupo = ? AND slug = ?")
+  const categoria = await getD1()
+    .prepare("SELECT id FROM categorias_mapa WHERE grupo = ? AND slug = ?")
     .bind(grupo, slug)
     .first<{ id: number }>();
   if (!categoria) throw new ErroMapa("A categoria selecionada não está cadastrada.");
@@ -638,32 +970,49 @@ async function exigirCategoria(grupo: "atividade" | "local", slug: string) {
 
 // busca uma categoria pelo identificador
 async function buscarCategoria(id: number) {
-  const linha = await getD1().prepare("SELECT * FROM categorias_mapa WHERE id = ?").bind(id).first<LinhaCategoria>();
+  const linha = await getD1()
+    .prepare("SELECT * FROM categorias_mapa WHERE id = ?")
+    .bind(id)
+    .first<LinhaCategoria>();
   return linha ? formatarCategoria(linha) : null;
 }
 
 // busca um local pelo identificador
 async function buscarLocal(id: number) {
-  const linha = await getD1().prepare("SELECT * FROM locais_colegio WHERE id = ?").bind(id).first<LinhaLocal>();
+  const linha = await getD1()
+    .prepare("SELECT * FROM locais_colegio WHERE id = ?")
+    .bind(id)
+    .first<LinhaLocal>();
   return linha ? formatarLocal(linha) : null;
 }
 
 // busca uma turma pelo identificador
 async function buscarTurma(id: number) {
-  const linha = await getD1().prepare("SELECT * FROM turmas_atividades WHERE id = ?").bind(id).first<LinhaTurma>();
+  const linha = await getD1()
+    .prepare("SELECT * FROM turmas_atividades WHERE id = ?")
+    .bind(id)
+    .first<LinhaTurma>();
   return linha ? formatarTurma(linha) : null;
 }
 
 // busca um ensalamento pelo identificador
 async function buscarEnsalamento(id: number) {
-  const linha = await getD1().prepare("SELECT * FROM ensalamentos WHERE id = ?").bind(id).first<LinhaEnsalamento>();
+  const linha = await getD1()
+    .prepare("SELECT * FROM ensalamentos WHERE id = ?")
+    .bind(id)
+    .first<LinhaEnsalamento>();
   return linha ? formatarEnsalamento(linha) : null;
 }
 
 // conta os vínculos de um local ou turma
-async function contar(tabela: "ensalamentos", coluna: "local_id" | "turma_atividade_id", id: number) {
+async function contar(
+  tabela: "ensalamentos",
+  coluna: "local_id" | "turma_atividade_id",
+  id: number,
+) {
   // usa somente tabela e colunas permitidas pelo tipo
-  const linha = await getD1().prepare(`SELECT COUNT(*) AS total FROM ${tabela} WHERE ${coluna} = ?`)
+  const linha = await getD1()
+    .prepare(`SELECT COUNT(*) AS total FROM ${tabela} WHERE ${coluna} = ?`)
     .bind(id)
     .first<{ total: number }>();
   return Number(linha?.total ?? 0);
@@ -673,7 +1022,8 @@ async function contar(tabela: "ensalamentos", coluna: "local_id" | "turma_ativid
 async function contarReferenciasCategoria(grupo: "atividade" | "local", slug: string) {
   // escolhe a tabela pelo grupo da categoria
   const tabela = grupo === "local" ? "locais_colegio" : "turmas_atividades";
-  const linha = await getD1().prepare(`SELECT COUNT(*) AS total FROM ${tabela} WHERE tipo = ?`)
+  const linha = await getD1()
+    .prepare(`SELECT COUNT(*) AS total FROM ${tabela} WHERE tipo = ?`)
     .bind(slug)
     .first<{ total: number }>();
   return Number(linha?.total ?? 0);
@@ -927,7 +1277,8 @@ function numeroBooleano(valor: boolean) {
 
 // transforma conflito de chave única em erro simples
 function converterErroUnico(erro: unknown, mensagem: string): never {
-  if (erro instanceof Error && /unique constraint/i.test(erro.message)) throw new ErroMapa(mensagem, 409);
+  if (erro instanceof Error && /unique constraint/i.test(erro.message))
+    throw new ErroMapa(mensagem, 409);
   throw erro;
 }
 
@@ -949,7 +1300,8 @@ function validarIdsUnicos(itens: Array<{ id: number }>, nome: string) {
   const ids = new Set<number>();
   // registra cada identificador apenas uma vez
   for (const item of itens) {
-    if (ids.has(item.id)) throw new ErroMapa(`A cópia contém ${nome} com identificadores repetidos.`);
+    if (ids.has(item.id))
+      throw new ErroMapa(`A cópia contém ${nome} com identificadores repetidos.`);
     ids.add(item.id);
   }
 }
@@ -957,8 +1309,12 @@ function validarIdsUnicos(itens: Array<{ id: number }>, nome: string) {
 // busca as categorias já cadastradas
 async function categoriasExistentes() {
   // cria chaves com o grupo e o identificador
-  const resultado = await getD1().prepare("SELECT grupo, slug FROM categorias_mapa").all<{ grupo: string; slug: string }>();
-  return new Set(resultado.results.map((item: { grupo: string; slug: string }) => `${item.grupo}:${item.slug}`));
+  const resultado = await getD1()
+    .prepare("SELECT grupo, slug FROM categorias_mapa")
+    .all<{ grupo: string; slug: string }>();
+  return new Set(
+    resultado.results.map((item: { grupo: string; slug: string }) => `${item.grupo}:${item.slug}`),
+  );
 }
 
 // valida os vínculos recebidos na importação
@@ -977,10 +1333,11 @@ async function validarReferenciasImportacao(
     // procura a turma atual quando ela não veio na cópia
     if (!turma) {
       const existente = await buscarTurma(item.dados.turmaAtividadeId);
-      if (existente) turma = {
-        ...existente,
-        aliasesNormalizados: aliasesNormalizados(existente.aliases),
-      };
+      if (existente)
+        turma = {
+          ...existente,
+          aliasesNormalizados: aliasesNormalizados(existente.aliases),
+        };
     }
     // confirma turma turno e tipo
     if (!turma) throw new ErroMapa("A cópia contém ensalamento sem turma correspondente.");
@@ -989,7 +1346,8 @@ async function validarReferenciasImportacao(
     }
     // procura o local atual quando ele não veio na cópia
     if (item.dados.localId !== null && !idsLocais.has(item.dados.localId)) {
-      const local = await d1.prepare("SELECT id FROM locais_colegio WHERE id = ?")
+      const local = await d1
+        .prepare("SELECT id FROM locais_colegio WHERE id = ?")
         .bind(item.dados.localId)
         .first<{ id: number }>();
       if (!local) throw new ErroMapa("A cópia contém ensalamento sem local correspondente.");

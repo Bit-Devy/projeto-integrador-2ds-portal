@@ -6,9 +6,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { todos, bloqueio } = await prepararLeitura(request);
     if (bloqueio) return bloqueio;
     const { id } = await params;
-    return Response.json({ item: await obterRepresentante(identificadorDaRota(id), todos) }, {
-      headers: { "cache-control": todos ? "private, no-store" : "no-store" },
-    });
+    return Response.json(
+      { item: await obterRepresentante(identificadorDaRota(id), todos) },
+      {
+        headers: { "cache-control": todos ? "private, no-store" : "no-store" },
+      },
+    );
   } catch (erro) {
     return responderErroEventos(erro, "GET /api/representantes/[id]");
   }

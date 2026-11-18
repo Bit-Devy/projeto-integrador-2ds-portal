@@ -1,4 +1,3 @@
-// importa a leitura da sessão do painel
 import { obterUsuarioPainel } from "./sessao";
 
 import { podeAcessar, cargoComPermissoes, type RecursoPainel } from "./cargos";
@@ -14,17 +13,24 @@ export async function exigirAdministradorApi(recurso: RecursoPainel = "geral", e
   const acesso = await verificarAdministrador();
   if (acesso.usuario) {
     const cargo = cargoComPermissoes(acesso.usuario.cargo, acesso.usuario.permissoes);
-    if (podeAcessar(acesso.usuario.cargo, recurso, escrita, acesso.usuario.permissoes) && !(cargo?.publicos && !escrita)) return { acesso, resposta: null };
-    return { acesso, resposta: Response.json({ erro: "Seu cargo não tem permissão para esta ação." }, { status: 403 }) };
+    if (
+      podeAcessar(acesso.usuario.cargo, recurso, escrita, acesso.usuario.permissoes) &&
+      !(cargo?.publicos && !escrita)
+    )
+      return { acesso, resposta: null };
+    return {
+      acesso,
+      resposta: Response.json(
+        { erro: "Seu cargo não tem permissão para esta ação." },
+        { status: 403 },
+      ),
+    };
   }
 
   // devolve a resposta de acesso negado
   return {
     acesso,
-    resposta: Response.json(
-      { erro: "Entre no painel para realizar esta ação." },
-      { status: 401 },
-    ),
+    resposta: Response.json({ erro: "Entre no painel para realizar esta ação." }, { status: 401 }),
   };
 }
 

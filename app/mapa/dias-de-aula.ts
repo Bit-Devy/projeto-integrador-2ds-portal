@@ -14,7 +14,10 @@ export const semanaInteira = (1 << diasDeAula.length) - 1;
 
 // guarda um bit por dia para comparar os horários no banco
 export function mascaraDiasDeAula(dias: DiaDeAula[]) {
-  return diasDeAula.reduce((mascara, dia, indice) => dias.includes(dia.chave) ? mascara | (1 << indice) : mascara, 0);
+  return diasDeAula.reduce(
+    (mascara, dia, indice) => (dias.includes(dia.chave) ? mascara | (1 << indice) : mascara),
+    0,
+  );
 }
 
 export function diasDaMascara(mascara: number): DiaDeAula[] {
@@ -24,5 +27,8 @@ export function diasDaMascara(mascara: number): DiaDeAula[] {
 // mostra os dias escolhidos na ordem da semana
 export function rotuloDiasDeAula(dias: DiaDeAula[], curto = false) {
   if (dias.length === diasDeAula.length) return "Todos os dias";
-  return diasDeAula.filter((dia) => dias.includes(dia.chave)).map((dia) => curto ? dia.curto : dia.nome).join(", ");
+  return diasDeAula
+    .filter((dia) => dias.includes(dia.chave))
+    .map((dia) => (curto ? dia.curto : dia.nome))
+    .join(", ");
 }

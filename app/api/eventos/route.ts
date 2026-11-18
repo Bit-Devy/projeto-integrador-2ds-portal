@@ -29,7 +29,9 @@ export async function GET(request: Request) {
     if (bloqueio) return bloqueio;
     if (parametros.get("central") === "1" || parametros.get("visao") === "central") {
       if (todos) throw new ErroEventos("A central é uma projeção exclusivamente pública.");
-      return Response.json(await obterCentralEventos(), { headers: { "cache-control": "public, max-age=30" } });
+      return Response.json(await obterCentralEventos(), {
+        headers: { "cache-control": "public, max-age=30" },
+      });
     }
     return Response.json(await listarEventos(parametros, todos), {
       headers: { "cache-control": todos ? "private, no-store" : "public, max-age=30" },
@@ -103,7 +105,9 @@ export async function DELETE(request: Request) {
       return Response.json(resposta);
     }
     const anterior = await obterEvento(String(id ?? ""), true);
-    const resposta = await (parametros.get("acao") === "excluir" ? excluirRascunhoEvento : arquivarEvento)(id);
+    const resposta = await (
+      parametros.get("acao") === "excluir" ? excluirRascunhoEvento : arquivarEvento
+    )(id);
     await sincronizarArquivosDoEvento(anterior);
     return Response.json(resposta);
   } catch (erro) {

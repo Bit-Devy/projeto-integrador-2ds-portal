@@ -1,12 +1,7 @@
-// importa o tipo dos dados da página
 import type { Metadata } from "next";
-// importa a estrutura comum do portal
 import EstruturaPortal from "./componentes/EstruturaPortal";
-// importa os estilos do portal
 import "./globals.css";
-// importa os estilos exclusivos do sistema público de eventos
 import "./eventos.css";
-// importa estilos isolados das novas áreas administrativas
 import "./painel-eventos.css";
 import "./interclasses.css";
 // mantém o estilo dos serviços junto da identidade visual do portal
@@ -36,7 +31,11 @@ export default async function RootLayout({
     <html lang="pt-BR">
       <body>
         {/* envolve a página com o cabeçalho e o rodapé */}
-        <EstruturaPortal modulosIniciais={obterAmbiente().DB ? await obterModulos() : modulosPadrao}>{children}</EstruturaPortal>
+        <EstruturaPortal
+          modulosIniciais={obterAmbiente().DB ? await obterModulos() : modulosPadrao}
+        >
+          {children}
+        </EstruturaPortal>
       </body>
     </html>
   );

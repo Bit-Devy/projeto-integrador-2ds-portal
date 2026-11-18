@@ -52,7 +52,11 @@ export async function POST(request: Request) {
     }
     const entidade = String(corpo.entidade ?? "");
     const reuniaoId = corpo.reuniaoId ?? corpo.id;
-    if (entidade === "itens") return Response.json({ item: await criarItemReuniao(reuniaoId, corpo.dados) }, { status: 201 });
+    if (entidade === "itens")
+      return Response.json(
+        { item: await criarItemReuniao(reuniaoId, corpo.dados) },
+        { status: 201 },
+      );
     if (entidade === "documentos") {
       const dados = objetoRecebido(corpo.dados);
       await conferirArquivosAnexados([dados]);
@@ -60,8 +64,16 @@ export async function POST(request: Request) {
       await sincronizarVisibilidadeArquivo(item);
       return Response.json({ item }, { status: 201 });
     }
-    if (entidade === "votacoes") return Response.json({ item: await criarVotacaoReuniao(reuniaoId, corpo.dados) }, { status: 201 });
-    if (entidade === "presencas") return Response.json({ item: await criarPresencaReuniao(reuniaoId, corpo.dados) }, { status: 201 });
+    if (entidade === "votacoes")
+      return Response.json(
+        { item: await criarVotacaoReuniao(reuniaoId, corpo.dados) },
+        { status: 201 },
+      );
+    if (entidade === "presencas")
+      return Response.json(
+        { item: await criarPresencaReuniao(reuniaoId, corpo.dados) },
+        { status: 201 },
+      );
     if (entidade) throw new ErroEventos("Escolha uma área válida da reunião.");
     const dados = dadosDoCorpo(corpo);
     await conferirArquivosAnexados(dados.documentosNovos);
@@ -84,10 +96,13 @@ export async function PUT(request: Request) {
       return Response.json(await gerarPresencasDeRepresentantes(corpo.id, corpo.filtros));
     }
     if (corpo.acao === "status_presencas") {
-      return Response.json(await atualizarStatusPresencasEmMassa(corpo.id, corpo.situacao, corpo.ids, corpo.filtros));
+      return Response.json(
+        await atualizarStatusPresencasEmMassa(corpo.id, corpo.situacao, corpo.ids, corpo.filtros),
+      );
     }
     const entidade = String(corpo.entidade ?? "");
-    if (entidade === "itens") return Response.json({ item: await atualizarItemReuniao(corpo.id, corpo.dados) });
+    if (entidade === "itens")
+      return Response.json({ item: await atualizarItemReuniao(corpo.id, corpo.dados) });
     if (entidade === "documentos") {
       const dados = objetoRecebido(corpo.dados);
       const anterior = await obterDocumentoParaSincronizacao("reuniao", corpo.id);
@@ -97,8 +112,10 @@ export async function PUT(request: Request) {
       await sincronizarVisibilidadeArquivo(item);
       return Response.json({ item });
     }
-    if (entidade === "votacoes") return Response.json({ item: await atualizarVotacaoReuniao(corpo.id, corpo.dados) });
-    if (entidade === "presencas") return Response.json({ item: await atualizarPresencaReuniao(corpo.id, corpo.dados) });
+    if (entidade === "votacoes")
+      return Response.json({ item: await atualizarVotacaoReuniao(corpo.id, corpo.dados) });
+    if (entidade === "presencas")
+      return Response.json({ item: await atualizarPresencaReuniao(corpo.id, corpo.dados) });
     if (entidade) throw new ErroEventos("Escolha uma área editável válida da reunião.");
     const anterior = await obterReuniao(String(corpo.id ?? ""), true);
     const dados = dadosDoCorpo(corpo);
@@ -123,15 +140,27 @@ export async function DELETE(request: Request) {
     const parametros = new URL(request.url).searchParams;
     const id = parametros.get("id");
     const entidade = parametros.get("entidade");
-    if (entidade === "itens" || entidade === "documentos" || entidade === "votacoes" || entidade === "presencas") {
-      const anterior = entidade === "documentos" ? await obterDocumentoParaSincronizacao("reuniao", id) : null;
-      const resposta = await arquivarSubentidadeReuniao(entidade, id, parametros.get("acao") === "excluir");
+    if (
+      entidade === "itens" ||
+      entidade === "documentos" ||
+      entidade === "votacoes" ||
+      entidade === "presencas"
+    ) {
+      const anterior =
+        entidade === "documentos" ? await obterDocumentoParaSincronizacao("reuniao", id) : null;
+      const resposta = await arquivarSubentidadeReuniao(
+        entidade,
+        id,
+        parametros.get("acao") === "excluir",
+      );
       if (anterior) await sincronizarVisibilidadeArquivo(anterior);
       return Response.json(resposta);
     }
     if (entidade) throw new ErroEventos("Escolha uma área válida da reunião.");
     const anterior = await obterReuniao(String(id ?? ""), true);
-    const resposta = await (parametros.get("acao") === "excluir" ? excluirRascunhoReuniao : arquivarReuniao)(id);
+    const resposta = await (
+      parametros.get("acao") === "excluir" ? excluirRascunhoReuniao : arquivarReuniao
+    )(id);
     await sincronizarArquivosDoEvento({ documentos: anterior.documentos });
     return Response.json(resposta);
   } catch (erro) {

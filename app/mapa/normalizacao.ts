@@ -1,4 +1,3 @@
-// importa os turnos aceitos pelo mapa
 import { turnosMapa, type TurnoMapa } from "./tipos";
 
 // relaciona ordinais escritos com seus números
@@ -26,8 +25,11 @@ const ordinaisPorExtenso: Record<string, string> = {
 // prepara um texto para buscas sem acentos ou símbolos
 export function normalizarTextoBusca(valor: unknown) {
   // converte o valor para texto minúsculo sem acentos
-  let texto = removerAcentos(String(valor ?? "").trim().toLowerCase())
-    .replace(/[º°ª]/g, " ");
+  let texto = removerAcentos(
+    String(valor ?? "")
+      .trim()
+      .toLowerCase(),
+  ).replace(/[º°ª]/g, " ");
 
   // troca cada ordinal escrito pelo número correspondente
   for (const [ordinal, numero] of Object.entries(ordinaisPorExtenso)) {
@@ -41,15 +43,22 @@ export function normalizarTextoBusca(valor: unknown) {
 // prepara o número de uma sala para comparação
 export function normalizarNumeroSala(valor: unknown) {
   // remove o texto sala do início
-  const texto = removerAcentos(String(valor ?? "").trim().toLowerCase())
-    .replace(/^sala\s*/i, "");
+  const texto = removerAcentos(
+    String(valor ?? "")
+      .trim()
+      .toLowerCase(),
+  ).replace(/^sala\s*/i, "");
   return texto.replace(/[^a-z0-9]+/g, "");
 }
 
 // transforma um valor em identificador simples
 export function normalizarSlug(valor: unknown) {
   // limita o identificador a letras números e sublinhados
-  return removerAcentos(String(valor ?? "").trim().toLowerCase())
+  return removerAcentos(
+    String(valor ?? "")
+      .trim()
+      .toLowerCase(),
+  )
     .replace(/[º°ª]/g, "")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
@@ -60,7 +69,7 @@ export function normalizarSlug(valor: unknown) {
 export function normalizarTurno(valor: unknown): TurnoMapa | "" {
   const turno = normalizarSlug(valor);
   // devolve vazio quando o turno não existe
-  return turnosMapa.includes(turno as TurnoMapa) ? turno as TurnoMapa : "";
+  return turnosMapa.includes(turno as TurnoMapa) ? (turno as TurnoMapa) : "";
 }
 
 // organiza apelidos sem repetição

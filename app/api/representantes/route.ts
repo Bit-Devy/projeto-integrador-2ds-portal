@@ -8,7 +8,12 @@ import {
   listarRepresentantes,
 } from "../../eventos/banco";
 import { dadosDoCorpo, ErroEventos } from "../../eventos/validacao";
-import { lerObjeto, prepararEscrita, prepararLeitura, responderErroEventos } from "../eventos/apoio";
+import {
+  lerObjeto,
+  prepararEscrita,
+  prepararLeitura,
+  responderErroEventos,
+} from "../eventos/apoio";
 
 export async function GET(request: Request) {
   try {
@@ -16,7 +21,9 @@ export async function GET(request: Request) {
     if (bloqueio) return bloqueio;
     if (parametros.get("diagnostico") === "1") {
       if (!todos) throw new ErroEventos("O diagnóstico exige a visão administrativa.", 401);
-      return Response.json(await diagnosticoRepresentantes(), { headers: { "cache-control": "private, no-store" } });
+      return Response.json(await diagnosticoRepresentantes(), {
+        headers: { "cache-control": "private, no-store" },
+      });
     }
     return Response.json(await listarRepresentantes(parametros, todos), {
       headers: { "cache-control": todos ? "private, no-store" : "no-store" },
@@ -43,7 +50,8 @@ export async function PUT(request: Request) {
   try {
     const corpo = await lerObjeto(request);
     if (corpo.acao === "destituir") {
-      if (corpo.confirmado !== true) throw new ErroEventos("Confirme o encerramento do mandato antes de salvar.");
+      if (corpo.confirmado !== true)
+        throw new ErroEventos("Confirme o encerramento do mandato antes de salvar.");
       return Response.json({ item: await destituirRepresentante(corpo.id, dadosDoCorpo(corpo)) });
     }
     return Response.json({ item: await atualizarRepresentante(corpo.id, dadosDoCorpo(corpo)) });
@@ -57,7 +65,11 @@ export async function DELETE(request: Request) {
   if (bloqueio) return bloqueio;
   try {
     const parametros = new URL(request.url).searchParams;
-    return Response.json(await (parametros.get("acao") === "excluir" ? excluirRascunhoRepresentante : arquivarRepresentante)(parametros.get("id")));
+    return Response.json(
+      await (
+        parametros.get("acao") === "excluir" ? excluirRascunhoRepresentante : arquivarRepresentante
+      )(parametros.get("id")),
+    );
   } catch (erro) {
     return responderErroEventos(erro, "DELETE /api/representantes");
   }

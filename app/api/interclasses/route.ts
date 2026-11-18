@@ -56,20 +56,39 @@ export async function POST(request: Request) {
   if (bloqueio) return bloqueio;
   try {
     const corpo = await lerObjeto(request);
-    if (corpo.acao === "adicionar_turmas") return Response.json(await adicionarTurmasCampeonato(corpo.id, corpo.turmas), { status: 201 });
+    if (corpo.acao === "adicionar_turmas")
+      return Response.json(await adicionarTurmasCampeonato(corpo.id, corpo.turmas), {
+        status: 201,
+      });
     if (corpo.acao === "duplicar") throw new ErroEventos("A duplicação de edições foi desativada.");
     const entidade = String(corpo.entidade ?? "");
     const campeonatoId = corpo.campeonatoId ?? corpo.id;
-    if (entidade === "participantes") return Response.json({ item: await criarParticipanteCampeonato(campeonatoId, corpo.dados) }, { status: 201 });
-    if (entidade === "fases") return Response.json({ item: await criarFaseCampeonato(campeonatoId, corpo.dados) }, { status: 201 });
-    if (entidade === "partidas") return Response.json({ item: await criarPartidaCampeonato(campeonatoId, corpo.dados) }, { status: 201 });
+    if (entidade === "participantes")
+      return Response.json(
+        { item: await criarParticipanteCampeonato(campeonatoId, corpo.dados) },
+        { status: 201 },
+      );
+    if (entidade === "fases")
+      return Response.json(
+        { item: await criarFaseCampeonato(campeonatoId, corpo.dados) },
+        { status: 201 },
+      );
+    if (entidade === "partidas")
+      return Response.json(
+        { item: await criarPartidaCampeonato(campeonatoId, corpo.dados) },
+        { status: 201 },
+      );
     if (entidade === "documentos") {
       const dados = objetoRecebido(corpo.dados);
       const item = await criarDocumentoCampeonato(campeonatoId, dados);
       await sincronizarVisibilidadeArquivo(item);
       return Response.json({ item }, { status: 201 });
     }
-    if (entidade === "atualizacoes") return Response.json({ item: await criarAtualizacaoCampeonato(campeonatoId, corpo.dados) }, { status: 201 });
+    if (entidade === "atualizacoes")
+      return Response.json(
+        { item: await criarAtualizacaoCampeonato(campeonatoId, corpo.dados) },
+        { status: 201 },
+      );
     if (entidade) throw new ErroEventos("Escolha uma área válida do campeonato.");
     const item = await criarCampeonato(dadosDoCorpo(corpo));
     await sincronizarArquivosDoEvento(item);
@@ -84,7 +103,8 @@ export async function PUT(request: Request) {
   if (bloqueio) return bloqueio;
   try {
     const corpo = await lerObjeto(request);
-    if (corpo.acao === "trocar_turmas") return Response.json(await trocarTurmasChave(corpo.id, corpo.origem, corpo.destino));
+    if (corpo.acao === "trocar_turmas")
+      return Response.json(await trocarTurmasChave(corpo.id, corpo.origem, corpo.destino));
     if (corpo.acao === "gerar_chave") {
       return Response.json(await gerarChaveCampeonato(corpo.id, booleano(corpo.confirmar, false)));
     }
@@ -92,17 +112,24 @@ export async function PUT(request: Request) {
     if (corpo.acao === "registrar_resultado" || corpo.acao === "atualizar_jogo") {
       try {
         if (corpo.acao === "atualizar_jogo") {
-          return Response.json(await atualizarJogoPublicado(
-            corpo.id, corpo.partidaId, corpo.dados,
-            booleano(corpo.confirmarImpacto, false), String(corpo.motivo ?? ""),
-          ));
+          return Response.json(
+            await atualizarJogoPublicado(
+              corpo.id,
+              corpo.partidaId,
+              corpo.dados,
+              booleano(corpo.confirmarImpacto, false),
+              String(corpo.motivo ?? ""),
+            ),
+          );
         }
-        return Response.json(await registrarResultadoPartida(
-          corpo.partidaId,
-          corpo.dados,
-          booleano(corpo.confirmarImpacto, false),
-          String(corpo.motivo ?? ""),
-        ));
+        return Response.json(
+          await registrarResultadoPartida(
+            corpo.partidaId,
+            corpo.dados,
+            booleano(corpo.confirmarImpacto, false),
+            String(corpo.motivo ?? ""),
+          ),
+        );
       } catch (erro) {
         if (erro instanceof ErroEventos && erro.status === 409) {
           return Response.json(
@@ -114,24 +141,30 @@ export async function PUT(request: Request) {
       }
     }
     if (corpo.acao === "definir_campeao") {
-      return Response.json({ item: await definirCampeaoCampeonato(corpo.id, corpo.participanteId) });
+      return Response.json({
+        item: await definirCampeaoCampeonato(corpo.id, corpo.participanteId),
+      });
     }
     const entidade = String(corpo.entidade ?? "");
     if (entidade === "participantes") {
       const dados = objetoRecebido(corpo.dados);
-      if (dados.ativo === false) return Response.json(await arquivarParticipanteCampeonato(corpo.id));
+      if (dados.ativo === false)
+        return Response.json(await arquivarParticipanteCampeonato(corpo.id));
       return Response.json({ item: await atualizarParticipanteCampeonato(corpo.id, dados) });
     }
-    if (entidade === "fases") return Response.json({ item: await atualizarFaseCampeonato(corpo.id, corpo.dados) });
+    if (entidade === "fases")
+      return Response.json({ item: await atualizarFaseCampeonato(corpo.id, corpo.dados) });
     if (entidade === "partidas") {
       const dados = objetoRecebido(corpo.dados ?? corpo);
       try {
-        return Response.json({ item: await atualizarPartidaCampeonato(
-          corpo.id,
-          dados,
-          booleano(corpo.confirmarImpacto ?? dados.confirmarImpacto, false),
-          String(corpo.motivo ?? dados.motivo ?? ""),
-        ) });
+        return Response.json({
+          item: await atualizarPartidaCampeonato(
+            corpo.id,
+            dados,
+            booleano(corpo.confirmarImpacto ?? dados.confirmarImpacto, false),
+            String(corpo.motivo ?? dados.motivo ?? ""),
+          ),
+        });
       } catch (erro) {
         if (erro instanceof ErroEventos && erro.status === 409) {
           return Response.json(
@@ -158,8 +191,10 @@ export async function PUT(request: Request) {
     const item = await atualizarCampeonato(corpo.id, dadosDoCorpo(corpo));
     const atual = await obterCampeonato(String(corpo.id ?? ""), true);
     await sincronizarArquivosDoEvento(
-      anterior.item, { documentos: anterior.documentos },
-      atual.item, { documentos: atual.documentos },
+      anterior.item,
+      { documentos: anterior.documentos },
+      atual.item,
+      { documentos: atual.documentos },
     );
     return Response.json({ item });
   } catch (erro) {
@@ -174,7 +209,8 @@ export async function DELETE(request: Request) {
     const parametros = new URL(request.url).searchParams;
     const id = parametros.get("id");
     const entidade = parametros.get("entidade");
-    if (entidade === "participantes") return Response.json(await arquivarParticipanteCampeonato(id));
+    if (entidade === "participantes")
+      return Response.json(await arquivarParticipanteCampeonato(id));
     if (entidade === "fases") return Response.json(await arquivarFaseCampeonato(id));
     if (entidade === "partidas") return Response.json(await arquivarPartidaCampeonato(id));
     if (entidade === "documentos") {
@@ -185,11 +221,17 @@ export async function DELETE(request: Request) {
       await sincronizarVisibilidadeArquivo(anterior);
       return Response.json(resposta);
     }
-    if (entidade === "atualizacoes") return Response.json(await (parametros.get("acao") === "excluir"
-      ? excluirRascunhoComplemento("atualizacoes_campeonato", id) : arquivarAtualizacaoCampeonato(id)));
+    if (entidade === "atualizacoes")
+      return Response.json(
+        await (parametros.get("acao") === "excluir"
+          ? excluirRascunhoComplemento("atualizacoes_campeonato", id)
+          : arquivarAtualizacaoCampeonato(id)),
+      );
     if (entidade) throw new ErroEventos("Escolha uma área válida do campeonato.");
     const anterior = await obterCampeonato(String(id ?? ""), true);
-    const resposta = await (parametros.get("acao") === "excluir" ? excluirRascunhoCampeonato : arquivarCampeonato)(id);
+    const resposta = await (
+      parametros.get("acao") === "excluir" ? excluirRascunhoCampeonato : arquivarCampeonato
+    )(id);
     await sincronizarArquivosDoEvento(anterior.item, { documentos: anterior.documentos });
     return Response.json(resposta);
   } catch (erro) {

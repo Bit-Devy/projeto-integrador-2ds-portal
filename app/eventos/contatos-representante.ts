@@ -1,6 +1,10 @@
 import type { ContatoRepresentante } from "./tipos";
 
-export const nomesContatosRepresentante = { whatsapp: "WhatsApp", email: "E-mail", telefone: "Telefone" };
+export const nomesContatosRepresentante = {
+  whatsapp: "WhatsApp",
+  email: "E-mail",
+  telefone: "Telefone",
+};
 
 // monta o endereço de contato apenas com os dados conferidos no cadastro
 export function enderecoContatoRepresentante({ tipo, valor }: ContatoRepresentante) {

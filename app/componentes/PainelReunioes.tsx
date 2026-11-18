@@ -59,7 +59,13 @@ type VotacaoReuniao = {
   titulo: string;
   pergunta: string;
   contexto: string;
-  opcoes: Array<{ id?: Identificador; texto: string; quantidadeVotos: number; ordem?: number; ativo?: boolean }>;
+  opcoes: Array<{
+    id?: Identificador;
+    texto: string;
+    quantidadeVotos: number;
+    ordem?: number;
+    ativo?: boolean;
+  }>;
   abstencoes: number;
   resultado: string;
   decisaoFinal: string;
@@ -137,27 +143,110 @@ type Reuniao = {
   atualizadoEm?: string;
 };
 
-type FormularioReuniao = Omit<Reuniao, "id" | "documentos" | "votacoes" | "presencas" | "itens" | "atualizadoEm">;
+type FormularioReuniao = Omit<
+  Reuniao,
+  "id" | "documentos" | "votacoes" | "presencas" | "itens" | "atualizadoEm"
+>;
 type AbaReuniao = "informacoes" | "itens" | "votacoes" | "documentos" | "presencas";
 
 const formularioVazio: FormularioReuniao = {
-  areaResponsavel: "geral", titulo: "", slug: "", tipo: "representantes", data: "", horarioInicial: "", horarioFinal: "", local: "",
-  descricaoCurta: "", responsaveis: "", pauta: "", pautaInterna: "", discussoes: "", resumo: "", decisoes: "",
-  propostas: "", encaminhamentos: "", ata: "", transcricao: "", observacoesPublicas: "", observacoesInternas: "",
-  situacao: "agendada", turno: "", niveisEnsino: [], publicado: false, quantidadeParticipantesPublicada: false, arquivado: false, membrosGecepPresentes: [],
+  areaResponsavel: "geral",
+  titulo: "",
+  slug: "",
+  tipo: "representantes",
+  data: "",
+  horarioInicial: "",
+  horarioFinal: "",
+  local: "",
+  descricaoCurta: "",
+  responsaveis: "",
+  pauta: "",
+  pautaInterna: "",
+  discussoes: "",
+  resumo: "",
+  decisoes: "",
+  propostas: "",
+  encaminhamentos: "",
+  ata: "",
+  transcricao: "",
+  observacoesPublicas: "",
+  observacoesInternas: "",
+  situacao: "agendada",
+  turno: "",
+  niveisEnsino: [],
+  publicado: false,
+  quantidadeParticipantesPublicada: false,
+  arquivado: false,
+  membrosGecepPresentes: [],
 };
 
-const documentoVazio: DocumentoReuniao = { titulo: "", tipo: "ata", descricao: "", arquivoUrl: "", linkExterno: "", data: "", ordem: 0, publicado: false };
-const votacaoVazia: VotacaoReuniao = { titulo: "", pergunta: "", contexto: "", opcoes: [{ texto: "", quantidadeVotos: 0, ordem: 1, ativo: true }, { texto: "", quantidadeVotos: 0, ordem: 2, ativo: true }], abstencoes: 0, resultado: "", decisaoFinal: "", observacaoPublica: "", observacaoInterna: "", ordem: 0, publicado: false };
-const itemVazio: ItemReuniao = { tipo: "tarefa", titulo: "", conteudo: "", responsaveis: "", prazo: "", ordem: 0, publicado: false, ativo: true };
+const documentoVazio: DocumentoReuniao = {
+  titulo: "",
+  tipo: "ata",
+  descricao: "",
+  arquivoUrl: "",
+  linkExterno: "",
+  data: "",
+  ordem: 0,
+  publicado: false,
+};
+const votacaoVazia: VotacaoReuniao = {
+  titulo: "",
+  pergunta: "",
+  contexto: "",
+  opcoes: [
+    { texto: "", quantidadeVotos: 0, ordem: 1, ativo: true },
+    { texto: "", quantidadeVotos: 0, ordem: 2, ativo: true },
+  ],
+  abstencoes: 0,
+  resultado: "",
+  decisaoFinal: "",
+  observacaoPublica: "",
+  observacaoInterna: "",
+  ordem: 0,
+  publicado: false,
+};
+const itemVazio: ItemReuniao = {
+  tipo: "tarefa",
+  titulo: "",
+  conteudo: "",
+  responsaveis: "",
+  prazo: "",
+  ordem: 0,
+  publicado: false,
+  ativo: true,
+};
 const presencaManualVazia: PresencaManual = {
-  nome: "", nivelEnsino: "", serie: "", turma: "", turno: "", funcao: "membro",
-  situacao: "nao_informada", observacaoPublica: "", observacaoInterna: "", publicado: false,
+  nome: "",
+  nivelEnsino: "",
+  serie: "",
+  turma: "",
+  turno: "",
+  funcao: "membro",
+  situacao: "nao_informada",
+  observacaoPublica: "",
+  observacaoInterna: "",
+  publicado: false,
 };
-const situacoesReuniao = [["agendada", "Agendada"], ["em_andamento", "Em andamento"], ["encerrada", "Encerrada"], ["adiada", "Adiada"], ["cancelada", "Cancelada"]] as const;
-const situacoesPresenca = [["nao_informada", "Não informada"], ["presente", "Presente"], ["ausente", "Ausente"], ["justificada", "Ausência justificada"], ["nao_se_aplica", "Não se aplica"]] as const;
+const situacoesReuniao = [
+  ["agendada", "Agendada"],
+  ["em_andamento", "Em andamento"],
+  ["encerrada", "Encerrada"],
+  ["adiada", "Adiada"],
+  ["cancelada", "Cancelada"],
+] as const;
+const situacoesPresenca = [
+  ["nao_informada", "Não informada"],
+  ["presente", "Presente"],
+  ["ausente", "Ausente"],
+  ["justificada", "Ausência justificada"],
+  ["nao_se_aplica", "Não se aplica"],
+] as const;
 
-export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: { cargo?: string; aoMudarEstadoSujo?: AoMudarEstadoSujo } = {}) {
+export default function PainelReunioes({
+  cargo = "geral",
+  aoMudarEstadoSujo,
+}: { cargo?: string; aoMudarEstadoSujo?: AoMudarEstadoSujo } = {}) {
   const [itens, setItens] = useState<Reuniao[]>([]);
   const [formulario, setFormulario] = useState<FormularioReuniao | null>(null);
   const [idEditando, setIdEditando] = useState<Identificador | null>(null);
@@ -186,7 +275,12 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
   const [filtroTurnoPresenca, setFiltroTurnoPresenca] = useState("");
   const [filtroNivelPresenca, setFiltroNivelPresenca] = useState("");
   const [selecionadas, setSelecionadas] = useState<Set<Identificador>>(new Set());
-  const [filtrosGeracao, setFiltrosGeracao] = useState({ nivelEnsino: "", turno: "", serie: "", turma: "" });
+  const [filtrosGeracao, setFiltrosGeracao] = useState({
+    nivelEnsino: "",
+    turno: "",
+    serie: "",
+    turma: "",
+  });
 
   useAvisoMudancas(mudou, aoMudarEstadoSujo);
 
@@ -194,7 +288,10 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
     setCarregando(true);
     setErro("");
     try {
-      const itens = await requisitarTodasPaginasPainel<Record<string, unknown>>("/api/reunioes?todos=1", ["reunioes"]);
+      const itens = await requisitarTodasPaginasPainel<Record<string, unknown>>(
+        "/api/reunioes?todos=1",
+        ["reunioes"],
+      );
       setItens(itens.map(normalizarReuniao));
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : "Erro inesperado ao carregar as reuniões.");
@@ -203,34 +300,63 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
     }
   }, []);
 
-  useEffect(() => { const temporizador = window.setTimeout(() => void carregar(), 0); return () => window.clearTimeout(temporizador); }, [carregar]);
+  useEffect(() => {
+    const temporizador = window.setTimeout(() => void carregar(), 0);
+    return () => window.clearTimeout(temporizador);
+  }, [carregar]);
 
-  const anos = useMemo(() => Array.from(new Set([String(anoDoPortal()), ...itens.map((item) => item.data.slice(0, 4)).filter(Boolean)])).sort().reverse(), [itens]);
+  const anos = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          String(anoDoPortal()),
+          ...itens.map((item) => item.data.slice(0, 4)).filter(Boolean),
+        ]),
+      )
+        .sort()
+        .reverse(),
+    [itens],
+  );
   const filtrados = useMemo(() => {
     const termo = normalizarBusca(busca);
-    return itens.filter((item) => (!termo || normalizarBusca(`${item.titulo} ${item.local} ${item.resumo}`).includes(termo))
-      && (filtroArquivo === "todas" || (item.arquivado || item.data.slice(0, 4) !== String(anoDoPortal())) === (filtroArquivo === "arquivadas"))
-      && (!filtroTipo || item.tipo === filtroTipo)
-      && (!filtroSituacao || item.situacao === filtroSituacao)
-      && (!filtroAno || item.data.startsWith(filtroAno)));
+    return itens.filter(
+      (item) =>
+        (!termo ||
+          normalizarBusca(`${item.titulo} ${item.local} ${item.resumo}`).includes(termo)) &&
+        (filtroArquivo === "todas" ||
+          (item.arquivado || item.data.slice(0, 4) !== String(anoDoPortal())) ===
+            (filtroArquivo === "arquivadas")) &&
+        (!filtroTipo || item.tipo === filtroTipo) &&
+        (!filtroSituacao || item.situacao === filtroSituacao) &&
+        (!filtroAno || item.data.startsWith(filtroAno)),
+    );
   }, [busca, filtroAno, filtroSituacao, filtroTipo, filtroArquivo, itens]);
 
   const presencasFiltradas = useMemo(() => {
     const termo = normalizarBusca(buscaPresenca);
-    return (detalhes?.presencas ?? []).filter((item) => (!termo || normalizarBusca(`${item.nome} ${item.turma}`).includes(termo))
-      && (!filtroPresenca || item.situacao === filtroPresenca)
-      && (!filtroTurnoPresenca || item.turno === filtroTurnoPresenca)
-      && (!filtroNivelPresenca || item.nivelEnsino === filtroNivelPresenca));
-  }, [buscaPresenca, detalhes?.presencas, filtroNivelPresenca, filtroPresenca, filtroTurnoPresenca]);
+    return (detalhes?.presencas ?? []).filter(
+      (item) =>
+        (!termo || normalizarBusca(`${item.nome} ${item.turma}`).includes(termo)) &&
+        (!filtroPresenca || item.situacao === filtroPresenca) &&
+        (!filtroTurnoPresenca || item.turno === filtroTurnoPresenca) &&
+        (!filtroNivelPresenca || item.nivelEnsino === filtroNivelPresenca),
+    );
+  }, [
+    buscaPresenca,
+    detalhes?.presencas,
+    filtroNivelPresenca,
+    filtroPresenca,
+    filtroTurnoPresenca,
+  ]);
 
   function mudar<K extends keyof FormularioReuniao>(chave: K, valor: FormularioReuniao[K]) {
-    setFormulario((atual) => atual ? { ...atual, [chave]: valor } : atual);
+    setFormulario((atual) => (atual ? { ...atual, [chave]: valor } : atual));
     setMudou(true);
     setSucesso("");
   }
 
   async function novo() {
-    if (!await confirmarSaida(mudou)) return;
+    if (!(await confirmarSaida(mudou))) return;
     setFormulario({ ...formularioVazio, areaResponsavel: areaRestrita(cargo) || "geral" });
     setIdEditando(null);
     setDocumentosNovos([]);
@@ -242,15 +368,30 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
   }
 
   async function editar(item: Reuniao, abaInicial: AbaReuniao = "informacoes") {
-    if (!await confirmarSaida(mudou)) return false;
+    if (!(await confirmarSaida(mudou))) return false;
     setCarregando(true);
     setErro("");
     try {
-      const resultado = await requisitarPainel<unknown>(`/api/reunioes/${encodeURIComponent(String(item.id))}?todos=1`).catch(() => ({ item }));
+      const resultado = await requisitarPainel<unknown>(
+        `/api/reunioes/${encodeURIComponent(String(item.id))}?todos=1`,
+      ).catch(() => ({ item }));
       const objeto = montarDetalheReuniao(resultado, item as unknown as Record<string, unknown>);
       const completo = normalizarReuniao(objeto);
-      const { id: _id, documentos: _documentos, votacoes: _votacoes, presencas: _presencas, itens: _itens, atualizadoEm: _atualizadoEm, ...dados } = completo;
-      void _id; void _documentos; void _votacoes; void _presencas; void _itens; void _atualizadoEm;
+      const {
+        id: _id,
+        documentos: _documentos,
+        votacoes: _votacoes,
+        presencas: _presencas,
+        itens: _itens,
+        atualizadoEm: _atualizadoEm,
+        ...dados
+      } = completo;
+      void _id;
+      void _documentos;
+      void _votacoes;
+      void _presencas;
+      void _itens;
+      void _atualizadoEm;
       setDetalhes(completo);
       setDocumentosNovos([]);
       setFormulario(dados);
@@ -268,7 +409,7 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
   }
 
   async function fechar() {
-    if (!await confirmarSaida(mudou)) return;
+    if (!(await confirmarSaida(mudou))) return;
     setFormulario(null);
     setIdEditando(null);
     setDetalhes(null);
@@ -283,30 +424,57 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!formulario || salvando) return;
-    const vaiPublicar = formulario.publicado && (!detalhes?.publicado || documentosNovos.some((item) => item.publicado));
-    if (vaiPublicar && !await confirmarPublicacao(formulario.titulo)) return;
+    const vaiPublicar =
+      formulario.publicado &&
+      (!detalhes?.publicado || documentosNovos.some((item) => item.publicado));
+    if (vaiPublicar && !(await confirmarPublicacao(formulario.titulo))) return;
     setSalvando(true);
     setErro("");
     setSucesso("");
     try {
-      const dados = { ...formulario, slug: formulario.slug || criarSlug(formulario.titulo), membrosGecepPresentes: formulario.membrosGecepPresentes.map(({ membroId, cargoChave, vaga }) => ({ membroId, cargoChave, vaga })), documentosNovos };
+      const dados = {
+        ...formulario,
+        slug: formulario.slug || criarSlug(formulario.titulo),
+        membrosGecepPresentes: formulario.membrosGecepPresentes.map(
+          ({ membroId, cargoChave, vaga }) => ({ membroId, cargoChave, vaga }),
+        ),
+        documentosNovos,
+      };
       const resposta = await requisitarPainel<Record<string, unknown>>("/api/reunioes", {
         method: idEditando === null ? "POST" : "PUT",
         ...corpoJson(idEditando === null ? { dados } : { id: idEditando, dados }),
       });
       setMudou(false);
       setDocumentosNovos([]);
-      setSucesso(idEditando === null ? (dados.publicado ? "Reunião publicada." : "Rascunho da reunião salvo.") : "Reunião atualizada com sucesso.");
+      setSucesso(
+        idEditando === null
+          ? dados.publicado
+            ? "Reunião publicada."
+            : "Rascunho da reunião salvo."
+          : "Reunião atualizada com sucesso.",
+      );
       await carregar();
       if (idEditando === null) {
-        const criado = resposta.item && typeof resposta.item === "object" ? normalizarReuniao(resposta.item as Record<string, unknown>) : null;
+        const criado =
+          resposta.item && typeof resposta.item === "object"
+            ? normalizarReuniao(resposta.item as Record<string, unknown>)
+            : null;
         setFormulario(null);
         setDetalhes(null);
         setIdEditando(null);
-        if (criado) setSucesso(criado.publicado ? "Reunião publicada." : "Rascunho salvo. Abra “Editar” para adicionar presenças, votações e documentos.");
+        if (criado)
+          setSucesso(
+            criado.publicado
+              ? "Reunião publicada."
+              : "Rascunho salvo. Abra “Editar” para adicionar presenças, votações e documentos.",
+          );
       } else if (detalhes) {
-        const resultado = await requisitarPainel<unknown>(`/api/reunioes/${encodeURIComponent(String(detalhes.id))}?todos=1`);
-        const atualizado = normalizarReuniao(montarDetalheReuniao(resultado, detalhes as unknown as Record<string, unknown>));
+        const resultado = await requisitarPainel<unknown>(
+          `/api/reunioes/${encodeURIComponent(String(detalhes.id))}?todos=1`,
+        );
+        const atualizado = normalizarReuniao(
+          montarDetalheReuniao(resultado, detalhes as unknown as Record<string, unknown>),
+        );
         setDetalhes(atualizado);
         setFormulario({ ...formulario, membrosGecepPresentes: atualizado.membrosGecepPresentes });
       }
@@ -318,20 +486,39 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
   }
 
   async function executarAcao(item: Reuniao, acao: "arquivar" | "cancelar" | "excluir") {
-    const nomes = { arquivar: "Arquivar", cancelar: "Cancelar reunião", excluir: "Excluir rascunho" };
+    const nomes = {
+      arquivar: "Arquivar",
+      cancelar: "Cancelar reunião",
+      excluir: "Excluir rascunho",
+    };
     const perguntas = {
       excluir: `Excluir “${item.titulo}” definitivamente?`,
       arquivar: `Arquivar “${item.titulo}”? A ata e o histórico de presenças serão preservados.`,
       cancelar: `Cancelar “${item.titulo}”? A situação ficará visível se a reunião estiver publicada.`,
     };
-    if (!await confirmarNoPainel(`${nomes[acao]}?`, perguntas[acao], nomes[acao], "Voltar")) return;
+    if (!(await confirmarNoPainel(`${nomes[acao]}?`, perguntas[acao], nomes[acao], "Voltar")))
+      return;
     setSalvando(true);
     setErro("");
     setSucesso("");
     try {
-      if (acao === "cancelar") await requisitarPainel("/api/reunioes", { method: "PUT", ...corpoJson({ id: item.id, dados: { situacao: "cancelada" } }) });
-      else await requisitarPainel(`/api/reunioes?id=${encodeURIComponent(String(item.id))}&acao=${acao}`, { method: "DELETE" });
-      setSucesso(acao === "arquivar" ? "Reunião arquivada." : acao === "excluir" ? "Rascunho excluído." : "Reunião cancelada.");
+      if (acao === "cancelar")
+        await requisitarPainel("/api/reunioes", {
+          method: "PUT",
+          ...corpoJson({ id: item.id, dados: { situacao: "cancelada" } }),
+        });
+      else
+        await requisitarPainel(
+          `/api/reunioes?id=${encodeURIComponent(String(item.id))}&acao=${acao}`,
+          { method: "DELETE" },
+        );
+      setSucesso(
+        acao === "arquivar"
+          ? "Reunião arquivada."
+          : acao === "excluir"
+            ? "Rascunho excluído."
+            : "Reunião cancelada.",
+      );
       await carregar();
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : "Não foi possível concluir a ação.");
@@ -345,34 +532,67 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
     if (item.id === undefined || salvando) return;
     const acao = item.jaPublicado ? "arquivar" : "excluir";
     const botao = item.jaPublicado ? "Arquivar" : "Excluir rascunho";
-    if (!await confirmarNoPainel(`${botao}?`, `“${item.titulo || item.nome || "Registro da reunião"}”`, botao, "Cancelar")) return;
-    setSalvando(true); setErro("");
+    if (
+      !(await confirmarNoPainel(
+        `${botao}?`,
+        `“${item.titulo || item.nome || "Registro da reunião"}”`,
+        botao,
+        "Cancelar",
+      ))
+    )
+      return;
+    setSalvando(true);
+    setErro("");
     try {
-      await requisitarPainel(`/api/reunioes?entidade=${entidade}&id=${encodeURIComponent(String(item.id))}&acao=${acao}`, { method: "DELETE" });
+      await requisitarPainel(
+        `/api/reunioes?entidade=${entidade}&id=${encodeURIComponent(String(item.id))}&acao=${acao}`,
+        { method: "DELETE" },
+      );
       setSucesso(item.jaPublicado ? "Registro arquivado." : "Rascunho excluído.");
       await recarregarDetalhes();
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : "Não foi possível remover o registro.");
-    } finally { setSalvando(false); }
+    } finally {
+      setSalvando(false);
+    }
   }
 
   async function recarregarDetalhes() {
     if (!detalhes) return;
-    const resultado = await requisitarPainel<unknown>(`/api/reunioes/${encodeURIComponent(String(detalhes.id))}?todos=1`);
-    setDetalhes(normalizarReuniao(montarDetalheReuniao(resultado, detalhes as unknown as Record<string, unknown>)));
+    const resultado = await requisitarPainel<unknown>(
+      `/api/reunioes/${encodeURIComponent(String(detalhes.id))}?todos=1`,
+    );
+    setDetalhes(
+      normalizarReuniao(
+        montarDetalheReuniao(resultado, detalhes as unknown as Record<string, unknown>),
+      ),
+    );
   }
 
   async function salvarDocumento(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!documento || !idEditando) return;
-    if (!documento.arquivoUrl && !documento.linkExterno) { setErro("Envie um arquivo ou informe um link autorizado."); return; }
-    if (documento.publicado && !detalhes?.documentos.find((item) => item.id === documento.id)?.publicado && !await confirmarPublicacao(documento.titulo)) return;
+    if (!documento.arquivoUrl && !documento.linkExterno) {
+      setErro("Envie um arquivo ou informe um link autorizado.");
+      return;
+    }
+    if (
+      documento.publicado &&
+      !detalhes?.documentos.find((item) => item.id === documento.id)?.publicado &&
+      !(await confirmarPublicacao(documento.titulo))
+    )
+      return;
     setSalvando(true);
     setErro("");
     try {
       await requisitarPainel("/api/reunioes", {
         method: documento.id ? "PUT" : "POST",
-        ...corpoJson({ entidade: "documentos", reuniaoId: idEditando, ...(documento.id ? { id: documento.id } : {}), dados: documento }),
+        ...corpoJson({
+          entidade: "documentos",
+          reuniaoId: idEditando,
+          ...(documento.id ? { id: documento.id } : {}),
+          dados: documento,
+        }),
       });
       setDocumento(null);
       setMudou(false);
@@ -380,7 +600,9 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
       await recarregarDetalhes();
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : "Não foi possível salvar o documento.");
-    } finally { setSalvando(false); }
+    } finally {
+      setSalvando(false);
+    }
   }
 
   async function enviarDocumento(arquivo?: File) {
@@ -389,86 +611,190 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
     setErro("");
     try {
       const resultado = await enviarArquivoPainel(arquivo, "privada");
-      setDocumento((atual) => atual ? { ...atual, arquivoUrl: resultado.url, titulo: atual.titulo || resultado.nome || arquivo.name } : atual);
+      setDocumento((atual) =>
+        atual
+          ? {
+              ...atual,
+              arquivoUrl: resultado.url,
+              titulo: atual.titulo || resultado.nome || arquivo.name,
+            }
+          : atual,
+      );
       setMudou(true);
-      setSucesso("Arquivo enviado como privado. Ao salvar, o servidor só liberará o acesso se a reunião e o documento estiverem autorizados para publicação.");
-    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível enviar o arquivo."); }
-    finally { setEnviando(false); }
+      setSucesso(
+        "Arquivo enviado como privado. Ao salvar, o servidor só liberará o acesso se a reunião e o documento estiverem autorizados para publicação.",
+      );
+    } catch (falha) {
+      setErro(falha instanceof Error ? falha.message : "Não foi possível enviar o arquivo.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
   // envia anexos para a mesma biblioteca usada em todo o painel
   async function enviarDocumentosNovos(arquivos: FileList | null) {
     if (!arquivos?.length) return;
-    setEnviando(true); setErro("");
+    setEnviando(true);
+    setErro("");
     try {
       for (const arquivo of Array.from(arquivos)) {
         const resultado = await enviarArquivoPainel(arquivo, "privada");
-        setDocumentosNovos((atuais) => [...atuais, { ...documentoVazio, titulo: resultado.nome || arquivo.name, tipo: "anexo", arquivoUrl: resultado.url, ordem: atuais.length + 1 }]);
+        setDocumentosNovos((atuais) => [
+          ...atuais,
+          {
+            ...documentoVazio,
+            titulo: resultado.nome || arquivo.name,
+            tipo: "anexo",
+            arquivoUrl: resultado.url,
+            ordem: atuais.length + 1,
+          },
+        ]);
         setMudou(true);
       }
-    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível enviar o anexo."); }
-    finally { setEnviando(false); }
+    } catch (falha) {
+      setErro(falha instanceof Error ? falha.message : "Não foi possível enviar o anexo.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
   function mudarDocumentosNovos(valor: DocumentoReuniao[]) {
-    setDocumentosNovos(valor); setMudou(true); setSucesso("");
+    setDocumentosNovos(valor);
+    setMudou(true);
+    setSucesso("");
   }
 
   async function salvarVotacao(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!votacao || !idEditando) return;
-    if (votacao.opcoes.filter((item) => item.texto.trim()).length < 2) { setErro("Informe pelo menos duas opções para a votação."); return; }
-    if (votacao.publicado && !detalhes?.votacoes.find((item) => item.id === votacao.id)?.publicado && !await confirmarPublicacao(votacao.titulo)) return;
+    if (votacao.opcoes.filter((item) => item.texto.trim()).length < 2) {
+      setErro("Informe pelo menos duas opções para a votação.");
+      return;
+    }
+    if (
+      votacao.publicado &&
+      !detalhes?.votacoes.find((item) => item.id === votacao.id)?.publicado &&
+      !(await confirmarPublicacao(votacao.titulo))
+    )
+      return;
     setSalvando(true);
     setErro("");
     try {
       await requisitarPainel("/api/reunioes", {
         method: votacao.id ? "PUT" : "POST",
-        ...corpoJson({ entidade: "votacoes", reuniaoId: idEditando, ...(votacao.id ? { id: votacao.id } : {}), dados: { ...votacao, interno: !votacao.publicado, opcoes: votacao.opcoes.filter((item) => item.texto.trim()).map((item, indice) => ({ ...item, ordem: item.ordem ?? indice + 1, ativo: item.ativo ?? true })) } }),
+        ...corpoJson({
+          entidade: "votacoes",
+          reuniaoId: idEditando,
+          ...(votacao.id ? { id: votacao.id } : {}),
+          dados: {
+            ...votacao,
+            interno: !votacao.publicado,
+            opcoes: votacao.opcoes
+              .filter((item) => item.texto.trim())
+              .map((item, indice) => ({
+                ...item,
+                ordem: item.ordem ?? indice + 1,
+                ativo: item.ativo ?? true,
+              })),
+          },
+        }),
       });
       setVotacao(null);
       setMudou(false);
       setSucesso("Votação salva com sucesso.");
       await recarregarDetalhes();
-    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível salvar a votação."); }
-    finally { setSalvando(false); }
+    } catch (falha) {
+      setErro(falha instanceof Error ? falha.message : "Não foi possível salvar a votação.");
+    } finally {
+      setSalvando(false);
+    }
   }
 
   async function salvarItemReuniao(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!itemReuniao || !idEditando) return;
-    if (!itemReuniao.titulo.trim() && !itemReuniao.conteudo.trim()) { setErro("Informe o título ou o conteúdo do item."); return; }
-    if (itemReuniao.publicado && !detalhes?.itens.find((item) => item.id === itemReuniao.id)?.publicado && !await confirmarPublicacao(itemReuniao.titulo)) return;
-    setSalvando(true); setErro("");
+    if (!itemReuniao.titulo.trim() && !itemReuniao.conteudo.trim()) {
+      setErro("Informe o título ou o conteúdo do item.");
+      return;
+    }
+    if (
+      itemReuniao.publicado &&
+      !detalhes?.itens.find((item) => item.id === itemReuniao.id)?.publicado &&
+      !(await confirmarPublicacao(itemReuniao.titulo))
+    )
+      return;
+    setSalvando(true);
+    setErro("");
     try {
       await requisitarPainel("/api/reunioes", {
         method: itemReuniao.id ? "PUT" : "POST",
-        ...corpoJson({ entidade: "itens", reuniaoId: idEditando, ...(itemReuniao.id ? { id: itemReuniao.id } : {}), dados: itemReuniao }),
+        ...corpoJson({
+          entidade: "itens",
+          reuniaoId: idEditando,
+          ...(itemReuniao.id ? { id: itemReuniao.id } : {}),
+          dados: itemReuniao,
+        }),
       });
-      setItemReuniao(null); setMudou(false); setSucesso("Item da reunião salvo com sucesso."); await recarregarDetalhes();
-    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível salvar o item da reunião."); }
-    finally { setSalvando(false); }
+      setItemReuniao(null);
+      setMudou(false);
+      setSucesso("Item da reunião salvo com sucesso.");
+      await recarregarDetalhes();
+    } catch (falha) {
+      setErro(
+        falha instanceof Error ? falha.message : "Não foi possível salvar o item da reunião.",
+      );
+    } finally {
+      setSalvando(false);
+    }
   }
 
   async function gerarPresencas(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!idEditando) return;
-    if (!await confirmarNoPainel("Gerar lista de presença?", "Gerar a lista a partir dos representantes ativos? Os nomes e turmas serão preservados como retrato histórico desta reunião.", "Gerar lista", "Voltar")) return;
+    if (
+      !(await confirmarNoPainel(
+        "Gerar lista de presença?",
+        "Gerar a lista a partir dos representantes ativos? Os nomes e turmas serão preservados como retrato histórico desta reunião.",
+        "Gerar lista",
+        "Voltar",
+      ))
+    )
+      return;
     setSalvando(true);
     setErro("");
     try {
-      await requisitarPainel("/api/reunioes", { method: "PUT", ...corpoJson({ acao: "gerar_presencas", id: idEditando, filtros: filtrosGeracao }) });
+      await requisitarPainel("/api/reunioes", {
+        method: "PUT",
+        ...corpoJson({ acao: "gerar_presencas", id: idEditando, filtros: filtrosGeracao }),
+      });
       setSucesso("Lista inicial de presença gerada. Agora revise e marque as situações.");
       await recarregarDetalhes();
-    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível gerar a lista de presença."); }
-    finally { setSalvando(false); }
+    } catch (falha) {
+      setErro(
+        falha instanceof Error ? falha.message : "Não foi possível gerar a lista de presença.",
+      );
+    } finally {
+      setSalvando(false);
+    }
   }
 
   async function salvarPresencaManual(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!presencaManual || !idEditando || formulario?.tipo !== "interna_gecep") return;
-    if (!presencaManual.nome.trim()) { setErro("Informe o nome do membro presente na reunião."); return; }
-    if (presencaManual.publicado && !await confirmarNoPainel("Publicar presença?", `Publicar o registro de presença de “${presencaManual.nome.trim()}” no portal? Nome, função, turma e situação poderão ser vistos por qualquer visitante.`, "Publicar presença", "Voltar")) return;
+    if (!presencaManual.nome.trim()) {
+      setErro("Informe o nome do membro presente na reunião.");
+      return;
+    }
+    if (
+      presencaManual.publicado &&
+      !(await confirmarNoPainel(
+        "Publicar presença?",
+        `Publicar o registro de presença de “${presencaManual.nome.trim()}” no portal? Nome, função, turma e situação poderão ser vistos por qualquer visitante.`,
+        "Publicar presença",
+        "Voltar",
+      ))
+    )
+      return;
     setSalvando(true);
     setErro("");
     setSucesso("");
@@ -482,7 +808,9 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
       setSucesso("Membro adicionado à lista histórica de presença.");
       await recarregarDetalhes();
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : "Não foi possível adicionar o membro à presença.");
+      setErro(
+        falha instanceof Error ? falha.message : "Não foi possível adicionar o membro à presença.",
+      );
     } finally {
       setSalvando(false);
     }
@@ -491,65 +819,136 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
   async function aplicarStatus(situacao: string, todasFiltradas = false) {
     if (!idEditando) return;
     const ids = todasFiltradas ? presencasFiltradas.map((item) => item.id) : [...selecionadas];
-    if (!ids.length) { setErro("Selecione pelo menos uma pessoa ou use a opção de aplicar a todos os resultados filtrados."); return; }
+    if (!ids.length) {
+      setErro(
+        "Selecione pelo menos uma pessoa ou use a opção de aplicar a todos os resultados filtrados.",
+      );
+      return;
+    }
     const nome = situacoesPresenca.find(([valor]) => valor === situacao)?.[1] ?? situacao;
-    if (!await confirmarNoPainel("Alterar presenças?", `Marcar ${ids.length} registro(s) como “${nome}”?`, "Confirmar alteração", "Voltar")) return;
+    if (
+      !(await confirmarNoPainel(
+        "Alterar presenças?",
+        `Marcar ${ids.length} registro(s) como “${nome}”?`,
+        "Confirmar alteração",
+        "Voltar",
+      ))
+    )
+      return;
     setSalvando(true);
     setErro("");
     try {
-      await requisitarPainel("/api/reunioes", { method: "PUT", ...corpoJson({ acao: "status_presencas", id: idEditando, ids, situacao }) });
+      await requisitarPainel("/api/reunioes", {
+        method: "PUT",
+        ...corpoJson({ acao: "status_presencas", id: idEditando, ids, situacao }),
+      });
       setSelecionadas(new Set());
       setSucesso("Situações de presença atualizadas com sucesso.");
       await recarregarDetalhes();
-    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível atualizar as presenças."); }
-    finally { setSalvando(false); }
+    } catch (falha) {
+      setErro(falha instanceof Error ? falha.message : "Não foi possível atualizar as presenças.");
+    } finally {
+      setSalvando(false);
+    }
   }
 
   async function alterarPublicacaoPresencas(publicado: boolean) {
     if (!idEditando) return;
     const ids = [...selecionadas];
-    if (!ids.length) { setErro("Selecione as presenças que deseja publicar ou ocultar."); return; }
-    if (!await confirmarNoPainel(publicado ? "Publicar presenças?" : "Ocultar presenças?", `${publicado ? "Publicar" : "Ocultar"} ${ids.length} registro(s) de presença? Somente nome, turma, turno, nível, função e situação poderão aparecer no portal.`, publicado ? "Publicar" : "Ocultar", "Voltar")) return;
-    setSalvando(true); setErro("");
+    if (!ids.length) {
+      setErro("Selecione as presenças que deseja publicar ou ocultar.");
+      return;
+    }
+    if (
+      !(await confirmarNoPainel(
+        publicado ? "Publicar presenças?" : "Ocultar presenças?",
+        `${publicado ? "Publicar" : "Ocultar"} ${ids.length} registro(s) de presença? Somente nome, turma, turno, nível, função e situação poderão aparecer no portal.`,
+        publicado ? "Publicar" : "Ocultar",
+        "Voltar",
+      ))
+    )
+      return;
+    setSalvando(true);
+    setErro("");
     try {
-      await Promise.all(ids.map((id) => requisitarPainel("/api/reunioes", { method: "PUT", ...corpoJson({ entidade: "presencas", reuniaoId: idEditando, id, dados: { publicado } }) })));
-      setSelecionadas(new Set()); setSucesso(publicado ? "Presenças selecionadas publicadas." : "Presenças selecionadas ocultadas."); await recarregarDetalhes();
-    } catch (falha) { setErro(falha instanceof Error ? falha.message : "Não foi possível alterar a publicação das presenças."); }
-    finally { setSalvando(false); }
+      await Promise.all(
+        ids.map((id) =>
+          requisitarPainel("/api/reunioes", {
+            method: "PUT",
+            ...corpoJson({
+              entidade: "presencas",
+              reuniaoId: idEditando,
+              id,
+              dados: { publicado },
+            }),
+          }),
+        ),
+      );
+      setSelecionadas(new Set());
+      setSucesso(
+        publicado ? "Presenças selecionadas publicadas." : "Presenças selecionadas ocultadas.",
+      );
+      await recarregarDetalhes();
+    } catch (falha) {
+      setErro(
+        falha instanceof Error
+          ? falha.message
+          : "Não foi possível alterar a publicação das presenças.",
+      );
+    } finally {
+      setSalvando(false);
+    }
   }
 
   function alternarSelecionada(id: Identificador) {
-    setSelecionadas((atuais) => { const proximas = new Set(atuais); if (proximas.has(id)) proximas.delete(id); else proximas.add(id); return proximas; });
+    setSelecionadas((atuais) => {
+      const proximas = new Set(atuais);
+      if (proximas.has(id)) proximas.delete(id);
+      else proximas.add(id);
+      return proximas;
+    });
   }
 
   function selecionarFiltradas() {
-    const todasSelecionadas = presencasFiltradas.length > 0 && presencasFiltradas.every((item) => selecionadas.has(item.id));
-    setSelecionadas((atuais) => { const proximas = new Set(atuais); for (const item of presencasFiltradas) { if (todasSelecionadas) proximas.delete(item.id); else proximas.add(item.id); } return proximas; });
+    const todasSelecionadas =
+      presencasFiltradas.length > 0 &&
+      presencasFiltradas.every((item) => selecionadas.has(item.id));
+    setSelecionadas((atuais) => {
+      const proximas = new Set(atuais);
+      for (const item of presencasFiltradas) {
+        if (todasSelecionadas) proximas.delete(item.id);
+        else proximas.add(item.id);
+      }
+      return proximas;
+    });
   }
 
   // confirma antes de trocar a etapa e recarrega apenas o que foi descartado
   async function trocarAba(nome: AbaReuniao) {
     if (nome === aba) return;
-    if (mudou && detalhes && !await editar(detalhes, nome)) return;
-    setDocumento(null); setVotacao(null); setItemReuniao(null); setPresencaManual(null);
+    if (mudou && detalhes && !(await editar(detalhes, nome))) return;
+    setDocumento(null);
+    setVotacao(null);
+    setItemReuniao(null);
+    setPresencaManual(null);
     setMudou(false);
     setAba(nome);
   }
 
   async function definirDocumento(valor: DocumentoReuniao | null) {
-    if (valor === null && documento && mudou && !await confirmarSaida(true)) return;
+    if (valor === null && documento && mudou && !(await confirmarSaida(true))) return;
     setDocumento(valor);
     setMudou(Boolean(valor && documento));
   }
 
   async function definirVotacao(valor: VotacaoReuniao | null) {
-    if (valor === null && votacao && mudou && !await confirmarSaida(true)) return;
+    if (valor === null && votacao && mudou && !(await confirmarSaida(true))) return;
     setVotacao(valor);
     setMudou(Boolean(valor && votacao));
   }
 
   async function definirItemReuniao(valor: ItemReuniao | null) {
-    if (valor === null && itemReuniao && mudou && !await confirmarSaida(true)) return;
+    if (valor === null && itemReuniao && mudou && !(await confirmarSaida(true))) return;
     setItemReuniao(valor);
     setMudou(Boolean(valor && itemReuniao));
   }
@@ -568,116 +967,1376 @@ export default function PainelReunioes({ cargo = "geral", aoMudarEstadoSujo }: {
   }
 
   async function fecharPresencaManual() {
-    if (!await confirmarSaida(mudou)) return;
+    if (!(await confirmarSaida(mudou))) return;
     setPresencaManual(null);
     setMudou(false);
   }
 
   return (
-    <section className="pev-painel" onChangeCapture={(evento) => { if (evento.target instanceof Element && evento.target.closest("form.pev-formulario")) setMudou(true); }} aria-labelledby="titulo-painel-reunioes">
-      <CabecalhoPainel rotulo="GESTÃO E MEMÓRIA" titulo="Reuniões, atas e presenças" descricao="Organize reuniões de representantes ou internas, publique resumos e preserve listas históricas de presença." acao={formulario ? undefined : novo} nomeAcao="+ Nova reunião" />
+    <section
+      className="pev-painel"
+      onChangeCapture={(evento) => {
+        if (evento.target instanceof Element && evento.target.closest("form.pev-formulario"))
+          setMudou(true);
+      }}
+      aria-labelledby="titulo-painel-reunioes"
+    >
+      <CabecalhoPainel
+        rotulo="GESTÃO E MEMÓRIA"
+        titulo="Reuniões, atas e presenças"
+        descricao="Organize reuniões de representantes ou internas, publique resumos e preserve listas históricas de presença."
+        acao={formulario ? undefined : novo}
+        nomeAcao="+ Nova reunião"
+      />
       <MensagensPainel erro={erro} sucesso={sucesso} />
 
-      {formulario ? <div className="pev-editor-completo">
-        {idEditando !== null && <nav className="pev-abas" aria-label="Etapas da reunião">{(["informacoes", "itens", "votacoes", "documentos", "presencas"] as AbaReuniao[]).map((nome) => <button type="button" className={aba === nome ? "ativo" : ""} aria-current={aba === nome ? "page" : undefined} onClick={() => trocarAba(nome)} key={nome}>{({ informacoes: "Resumo e informações", itens: "Tarefas e encaminhamentos", votacoes: "Votações", documentos: "Ata e documentos", presencas: "Lista de presença" } as Record<AbaReuniao, string>)[nome]}</button>)}</nav>}
-        {aba === "informacoes" && <FormularioInformacoes cargo={cargo} formulario={formulario} idEditando={idEditando} mudou={mudou} salvando={salvando} mudar={mudar} salvar={salvar} fechar={fechar} documentosNovos={documentosNovos} mudarDocumentosNovos={mudarDocumentosNovos} enviarDocumentosNovos={enviarDocumentosNovos} enviando={enviando} />}
-        {aba === "itens" && idEditando !== null && detalhes && <PainelItens detalhes={detalhes} remover={(item) => void removerComplemento("itens", item)} item={itemReuniao} setItem={definirItemReuniao} salvar={salvarItemReuniao} salvando={salvando} />}
-        {aba === "votacoes" && idEditando !== null && detalhes && <PainelVotacoes detalhes={detalhes} remover={(item) => void removerComplemento("votacoes", item)} votacao={votacao} setVotacao={definirVotacao} salvar={salvarVotacao} salvando={salvando} />}
-        {aba === "documentos" && idEditando !== null && detalhes && <PainelDocumentos detalhes={detalhes} remover={(item) => void removerComplemento("documentos", item)} documento={documento} setDocumento={definirDocumento} salvar={salvarDocumento} enviar={enviarDocumento} salvando={salvando} enviando={enviando} />}
-        {aba === "presencas" && idEditando !== null && detalhes && <PainelPresencas detalhes={detalhes} remover={(item) => void removerComplemento("presencas", item)} presencaManual={presencaManual} mudarPresencaManual={mudarPresencaManual} abrirPresencaManual={abrirPresencaManual} fecharPresencaManual={fecharPresencaManual} salvarPresencaManual={salvarPresencaManual} filtrosGeracao={filtrosGeracao} setFiltrosGeracao={setFiltrosGeracao} gerar={gerarPresencas} busca={buscaPresenca} setBusca={setBuscaPresenca} filtroSituacao={filtroPresenca} setFiltroSituacao={setFiltroPresenca} filtroTurno={filtroTurnoPresenca} setFiltroTurno={setFiltroTurnoPresenca} filtroNivel={filtroNivelPresenca} setFiltroNivel={setFiltroNivelPresenca} filtradas={presencasFiltradas} selecionadas={selecionadas} alternar={alternarSelecionada} selecionarFiltradas={selecionarFiltradas} aplicar={aplicarStatus} alterarPublicacao={alterarPublicacaoPresencas} salvando={salvando} />}
-      </div> : <>
-        <div className="pev-filtros pev-filtros--reunioes"><label className="pev-filtro--busca"><span>Buscar reunião</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Título, local ou conteúdo do resumo" /></label><label><span>Exibir</span><select value={filtroArquivo} onChange={(evento) => { setFiltroArquivo(evento.target.value); setFiltroAno(evento.target.value === "arquivadas" ? "" : String(anoDoPortal())); }}><option value="ativas">Ativas</option><option value="arquivadas">Arquivadas</option><option value="todas">Todas</option></select></label><label><span>Tipo</span><select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}><option value="">Todos</option><option value="representantes">Representantes de turma</option><option value="interna_gecep">Interna do GECEP</option></select></label><label><span>Situação</span><select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}><option value="">Todas</option>{situacoesReuniao.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label><label><span>Ano</span><select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}><option value="">Todos</option>{anos.map((ano) => <option key={ano}>{ano}</option>)}</select></label></div>
-        {carregando && <EstadoVazio titulo="Carregando reuniões…" texto="Aguarde enquanto consultamos atas e listas de presença." />}
-        {!carregando && !filtrados.length && <EstadoVazio titulo={itens.length ? "Nenhuma reunião encontrada" : "Nenhuma reunião cadastrada"} texto={itens.length ? "Altere os filtros ou a busca." : "Use “Nova reunião” para criar o primeiro rascunho."} />}
-        <div className="pev-lista">{filtrados.map((item) => <article className="pev-cartao" key={item.id}><div className="pev-cartao__estados"><span className={classeStatus((item.arquivado || item.data.slice(0, 4) !== String(anoDoPortal())) ? "arquivado" : item.publicado ? "publicado" : "rascunho")}>{(item.arquivado || item.data.slice(0, 4) !== String(anoDoPortal())) ? "Arquivada" : item.publicado ? "Publicada" : "Rascunho"}</span><span className={classeStatus(item.situacao)}>{statusLegivel(item.situacao)}</span></div><div className="pev-cartao__conteudo"><h2>{item.titulo || "Reunião sem título"}</h2><p>{item.tipo === "interna_gecep" ? "Reunião interna do GECEP" : "Reunião com representantes"} · {dataLegivel(item.data)}{item.local ? ` · ${item.local}` : ""}</p><small>{item.presencas.length ? `${item.presencas.length} registros de presença` : "Abra a reunião para consultar presenças"}</small></div><div className="pev-cartao__acoes"><button type="button" className="pev-botao" onClick={() => void editar(item)}>Editar</button>{!item.arquivado && item.situacao !== "cancelada" && <button type="button" className="pev-botao" onClick={() => void executarAcao(item, "cancelar")}>Cancelar reunião</button>}{item.jaPublicado || item.publicado ? !item.arquivado && <button type="button" className="pev-botao pev-botao--perigoso" onClick={() => void executarAcao(item, "arquivar")}>Arquivar</button> : <button type="button" className="pev-botao pev-botao--perigoso" disabled={salvando} onClick={() => void executarAcao(item, "excluir")}>Excluir rascunho</button>}</div></article>)}</div>
-      </>}
+      {formulario ? (
+        <div className="pev-editor-completo">
+          {idEditando !== null && (
+            <nav className="pev-abas" aria-label="Etapas da reunião">
+              {(
+                ["informacoes", "itens", "votacoes", "documentos", "presencas"] as AbaReuniao[]
+              ).map((nome) => (
+                <button
+                  type="button"
+                  className={aba === nome ? "ativo" : ""}
+                  aria-current={aba === nome ? "page" : undefined}
+                  onClick={() => trocarAba(nome)}
+                  key={nome}
+                >
+                  {
+                    (
+                      {
+                        informacoes: "Resumo e informações",
+                        itens: "Tarefas e encaminhamentos",
+                        votacoes: "Votações",
+                        documentos: "Ata e documentos",
+                        presencas: "Lista de presença",
+                      } as Record<AbaReuniao, string>
+                    )[nome]
+                  }
+                </button>
+              ))}
+            </nav>
+          )}
+          {aba === "informacoes" && (
+            <FormularioInformacoes
+              cargo={cargo}
+              formulario={formulario}
+              idEditando={idEditando}
+              mudou={mudou}
+              salvando={salvando}
+              mudar={mudar}
+              salvar={salvar}
+              fechar={fechar}
+              documentosNovos={documentosNovos}
+              mudarDocumentosNovos={mudarDocumentosNovos}
+              enviarDocumentosNovos={enviarDocumentosNovos}
+              enviando={enviando}
+            />
+          )}
+          {aba === "itens" && idEditando !== null && detalhes && (
+            <PainelItens
+              detalhes={detalhes}
+              remover={(item) => void removerComplemento("itens", item)}
+              item={itemReuniao}
+              setItem={definirItemReuniao}
+              salvar={salvarItemReuniao}
+              salvando={salvando}
+            />
+          )}
+          {aba === "votacoes" && idEditando !== null && detalhes && (
+            <PainelVotacoes
+              detalhes={detalhes}
+              remover={(item) => void removerComplemento("votacoes", item)}
+              votacao={votacao}
+              setVotacao={definirVotacao}
+              salvar={salvarVotacao}
+              salvando={salvando}
+            />
+          )}
+          {aba === "documentos" && idEditando !== null && detalhes && (
+            <PainelDocumentos
+              detalhes={detalhes}
+              remover={(item) => void removerComplemento("documentos", item)}
+              documento={documento}
+              setDocumento={definirDocumento}
+              salvar={salvarDocumento}
+              enviar={enviarDocumento}
+              salvando={salvando}
+              enviando={enviando}
+            />
+          )}
+          {aba === "presencas" && idEditando !== null && detalhes && (
+            <PainelPresencas
+              detalhes={detalhes}
+              remover={(item) => void removerComplemento("presencas", item)}
+              presencaManual={presencaManual}
+              mudarPresencaManual={mudarPresencaManual}
+              abrirPresencaManual={abrirPresencaManual}
+              fecharPresencaManual={fecharPresencaManual}
+              salvarPresencaManual={salvarPresencaManual}
+              filtrosGeracao={filtrosGeracao}
+              setFiltrosGeracao={setFiltrosGeracao}
+              gerar={gerarPresencas}
+              busca={buscaPresenca}
+              setBusca={setBuscaPresenca}
+              filtroSituacao={filtroPresenca}
+              setFiltroSituacao={setFiltroPresenca}
+              filtroTurno={filtroTurnoPresenca}
+              setFiltroTurno={setFiltroTurnoPresenca}
+              filtroNivel={filtroNivelPresenca}
+              setFiltroNivel={setFiltroNivelPresenca}
+              filtradas={presencasFiltradas}
+              selecionadas={selecionadas}
+              alternar={alternarSelecionada}
+              selecionarFiltradas={selecionarFiltradas}
+              aplicar={aplicarStatus}
+              alterarPublicacao={alterarPublicacaoPresencas}
+              salvando={salvando}
+            />
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="pev-filtros pev-filtros--reunioes">
+            <label className="pev-filtro--busca">
+              <span>Buscar reunião</span>
+              <input
+                type="search"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Título, local ou conteúdo do resumo"
+              />
+            </label>
+            <label>
+              <span>Exibir</span>
+              <select
+                value={filtroArquivo}
+                onChange={(evento) => {
+                  setFiltroArquivo(evento.target.value);
+                  setFiltroAno(evento.target.value === "arquivadas" ? "" : String(anoDoPortal()));
+                }}
+              >
+                <option value="ativas">Ativas</option>
+                <option value="arquivadas">Arquivadas</option>
+                <option value="todas">Todas</option>
+              </select>
+            </label>
+            <label>
+              <span>Tipo</span>
+              <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
+                <option value="">Todos</option>
+                <option value="representantes">Representantes de turma</option>
+                <option value="interna_gecep">Interna do GECEP</option>
+              </select>
+            </label>
+            <label>
+              <span>Situação</span>
+              <select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}>
+                <option value="">Todas</option>
+                {situacoesReuniao.map(([valor, nome]) => (
+                  <option key={valor} value={valor}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Ano</span>
+              <select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)}>
+                <option value="">Todos</option>
+                {anos.map((ano) => (
+                  <option key={ano}>{ano}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {carregando && (
+            <EstadoVazio
+              titulo="Carregando reuniões…"
+              texto="Aguarde enquanto consultamos atas e listas de presença."
+            />
+          )}
+          {!carregando && !filtrados.length && (
+            <EstadoVazio
+              titulo={itens.length ? "Nenhuma reunião encontrada" : "Nenhuma reunião cadastrada"}
+              texto={
+                itens.length
+                  ? "Altere os filtros ou a busca."
+                  : "Use “Nova reunião” para criar o primeiro rascunho."
+              }
+            />
+          )}
+          <div className="pev-lista">
+            {filtrados.map((item) => (
+              <article className="pev-cartao" key={item.id}>
+                <div className="pev-cartao__estados">
+                  <span
+                    className={classeStatus(
+                      item.arquivado || item.data.slice(0, 4) !== String(anoDoPortal())
+                        ? "arquivado"
+                        : item.publicado
+                          ? "publicado"
+                          : "rascunho",
+                    )}
+                  >
+                    {item.arquivado || item.data.slice(0, 4) !== String(anoDoPortal())
+                      ? "Arquivada"
+                      : item.publicado
+                        ? "Publicada"
+                        : "Rascunho"}
+                  </span>
+                  <span className={classeStatus(item.situacao)}>
+                    {statusLegivel(item.situacao)}
+                  </span>
+                </div>
+                <div className="pev-cartao__conteudo">
+                  <h2>{item.titulo || "Reunião sem título"}</h2>
+                  <p>
+                    {item.tipo === "interna_gecep"
+                      ? "Reunião interna do GECEP"
+                      : "Reunião com representantes"}{" "}
+                    · {dataLegivel(item.data)}
+                    {item.local ? ` · ${item.local}` : ""}
+                  </p>
+                  <small>
+                    {item.presencas.length
+                      ? `${item.presencas.length} registros de presença`
+                      : "Abra a reunião para consultar presenças"}
+                  </small>
+                </div>
+                <div className="pev-cartao__acoes">
+                  <button type="button" className="pev-botao" onClick={() => void editar(item)}>
+                    Editar
+                  </button>
+                  {!item.arquivado && item.situacao !== "cancelada" && (
+                    <button
+                      type="button"
+                      className="pev-botao"
+                      onClick={() => void executarAcao(item, "cancelar")}
+                    >
+                      Cancelar reunião
+                    </button>
+                  )}
+                  {item.jaPublicado || item.publicado ? (
+                    !item.arquivado && (
+                      <button
+                        type="button"
+                        className="pev-botao pev-botao--perigoso"
+                        onClick={() => void executarAcao(item, "arquivar")}
+                      >
+                        Arquivar
+                      </button>
+                    )
+                  ) : (
+                    <button
+                      type="button"
+                      className="pev-botao pev-botao--perigoso"
+                      disabled={salvando}
+                      onClick={() => void executarAcao(item, "excluir")}
+                    >
+                      Excluir rascunho
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }
 
-function FormularioInformacoes({ cargo, formulario, idEditando, mudou, salvando, mudar, salvar, fechar, documentosNovos, mudarDocumentosNovos, enviarDocumentosNovos, enviando }: { cargo: string; formulario: FormularioReuniao; idEditando: Identificador | null; mudou: boolean; salvando: boolean; mudar: <K extends keyof FormularioReuniao>(chave: K, valor: FormularioReuniao[K]) => void; salvar: (evento: FormEvent<HTMLFormElement>) => void; fechar: () => void; documentosNovos: DocumentoReuniao[]; mudarDocumentosNovos: (valor: DocumentoReuniao[]) => void; enviarDocumentosNovos: (arquivos: FileList | null) => void; enviando: boolean }) {
-  return <form className="pev-formulario" onSubmit={salvar}><div className="pev-formulario__topo"><div><small>{idEditando === null ? "NOVA REUNIÃO" : "RESUMO E INFORMAÇÕES"}</small><h2 id="titulo-painel-reunioes">{idEditando === null ? "Cadastrar reunião" : formulario.titulo}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>Fechar</button></div>
-    <fieldset className="pev-bloco"><legend>Identificação</legend><div className="pev-grade-campos pev-grade-campos--tres"><AreaResponsavel cargo={cargo} valor={formulario.areaResponsavel} mudar={(valor) => mudar("areaResponsavel", valor)} /><Campo rotulo="Título"><input value={formulario.titulo} onChange={(e) => mudar("titulo", e.target.value)} required /></Campo><Campo rotulo="Tipo"><select value={formulario.tipo} onChange={(e) => mudar("tipo", e.target.value)}><option value="representantes">Com representantes de turma</option><option value="interna_gecep">Interna do GECEP</option></select></Campo><Campo rotulo="Situação"><select value={formulario.situacao} onChange={(e) => mudar("situacao", e.target.value)}>{situacoesReuniao.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><Campo rotulo="Data"><input type="date" value={formulario.data} onChange={(e) => mudar("data", e.target.value)} required /></Campo><Campo rotulo="Horário inicial"><input type="time" value={formulario.horarioInicial} onChange={(e) => mudar("horarioInicial", e.target.value)} /></Campo><Campo rotulo="Horário final"><input type="time" value={formulario.horarioFinal} onChange={(e) => mudar("horarioFinal", e.target.value)} /></Campo><Campo rotulo="Local"><input value={formulario.local} onChange={(e) => mudar("local", e.target.value)} /></Campo><Campo rotulo="Turno"><select value={formulario.turno} onChange={(e) => mudar("turno", e.target.value)}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><div className="pev-campo"><span>Níveis de ensino</span><div className="pev-opcoes"><label><CheckboxComAjuda checked={formulario.niveisEnsino.includes("fundamental")} onChange={(e) => mudar("niveisEnsino", e.target.checked ? [...formulario.niveisEnsino, "fundamental"] : formulario.niveisEnsino.filter((nivel) => nivel !== "fundamental"))} explicacao={descricaoCheckbox("fundamental")} aria-label={"Fundamental"} /> Fundamental</label><label><CheckboxComAjuda checked={formulario.niveisEnsino.includes("medio")} onChange={(e) => mudar("niveisEnsino", e.target.checked ? [...formulario.niveisEnsino, "medio"] : formulario.niveisEnsino.filter((nivel) => nivel !== "medio"))} explicacao={descricaoCheckbox("medio")} aria-label={"Médio"} /> Médio</label></div></div><Campo rotulo="Responsáveis" largo><input value={formulario.responsaveis} onChange={(e) => mudar("responsaveis", e.target.value)} placeholder="Nomes ou funções responsáveis" /></Campo><Campo rotulo="Descrição curta" largo><textarea rows={3} value={formulario.descricaoCurta} onChange={(e) => mudar("descricaoCurta", e.target.value)} /></Campo></div></fieldset>
-    <MembrosPresentesReuniao valor={formulario.membrosGecepPresentes} mudar={(valor) => mudar("membrosGecepPresentes", valor)} desabilitado={salvando} />
-    <fieldset className="pev-bloco"><legend>Resumo, decisões e ata</legend><div className="pev-grade-campos"><Campo rotulo="Pauta pública" dica="Um item por linha."><textarea rows={6} value={formulario.pauta} onChange={(e) => mudar("pauta", e.target.value)} /></Campo><Campo rotulo="Pauta interna" dica="Nunca aparece no portal."><textarea rows={6} value={formulario.pautaInterna} onChange={(e) => mudar("pautaInterna", e.target.value)} /></Campo><Campo rotulo="Assuntos discutidos"><textarea rows={6} value={formulario.discussoes} onChange={(e) => mudar("discussoes", e.target.value)} /></Campo><Campo rotulo="Resumo público"><textarea rows={6} value={formulario.resumo} onChange={(e) => mudar("resumo", e.target.value)} /></Campo><Campo rotulo="Decisões tomadas"><textarea rows={5} value={formulario.decisoes} onChange={(e) => mudar("decisoes", e.target.value)} /></Campo><Campo rotulo="Propostas apresentadas"><textarea rows={5} value={formulario.propostas} onChange={(e) => mudar("propostas", e.target.value)} /></Campo><Campo rotulo="Encaminhamentos" largo><textarea rows={5} value={formulario.encaminhamentos} onChange={(e) => mudar("encaminhamentos", e.target.value)} /></Campo><Campo rotulo="Ata completa escrita no sistema" largo><textarea rows={9} value={formulario.ata} onChange={(e) => mudar("ata", e.target.value)} /></Campo><Campo rotulo="Transcrição" largo><textarea rows={7} value={formulario.transcricao} onChange={(e) => mudar("transcricao", e.target.value)} /></Campo><Campo rotulo="Observações públicas"><textarea rows={4} value={formulario.observacoesPublicas} onChange={(e) => mudar("observacoesPublicas", e.target.value)} /></Campo><Campo rotulo="Observações internas" dica="Nunca aparecem na página pública."><textarea rows={4} value={formulario.observacoesInternas} onChange={(e) => mudar("observacoesInternas", e.target.value)} /></Campo></div></fieldset>
-    <AnexosNovosReuniao documentos={documentosNovos} mudar={mudarDocumentosNovos} enviar={enviarDocumentosNovos} enviando={enviando} />
-    <div className="pev-publicacao"><label><CheckboxComAjuda checked={formulario.publicado} onChange={(e) => mudar("publicado", e.target.checked)} explicacao={descricaoCheckbox("publicado")} aria-label={"Publicar reunião no portal"} /><span>Publicar reunião no portal</span></label><label><CheckboxComAjuda checked={formulario.quantidadeParticipantesPublicada} onChange={(e) => mudar("quantidadeParticipantesPublicada", e.target.checked)} explicacao={descricaoCheckbox("quantidadeParticipantesPublicada")} aria-label={"Publicar a quantidade total de participantes"} /><span>Publicar a quantidade total de participantes</span></label><p>Somente conteúdo marcado como público será exibido. Observações internas permanecem protegidas.</p></div>{mudou && <p className="pev-alteracoes">Há mudanças não salvas.</p>}<div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={fechar}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando || enviando}>{enviando ? "Enviando anexos…" : salvando ? "Salvando…" : idEditando === null ? "Criar rascunho" : "Salvar reunião"}</button></div>
-  </form>;
+function FormularioInformacoes({
+  cargo,
+  formulario,
+  idEditando,
+  mudou,
+  salvando,
+  mudar,
+  salvar,
+  fechar,
+  documentosNovos,
+  mudarDocumentosNovos,
+  enviarDocumentosNovos,
+  enviando,
+}: {
+  cargo: string;
+  formulario: FormularioReuniao;
+  idEditando: Identificador | null;
+  mudou: boolean;
+  salvando: boolean;
+  mudar: <K extends keyof FormularioReuniao>(chave: K, valor: FormularioReuniao[K]) => void;
+  salvar: (evento: FormEvent<HTMLFormElement>) => void;
+  fechar: () => void;
+  documentosNovos: DocumentoReuniao[];
+  mudarDocumentosNovos: (valor: DocumentoReuniao[]) => void;
+  enviarDocumentosNovos: (arquivos: FileList | null) => void;
+  enviando: boolean;
+}) {
+  return (
+    <form className="pev-formulario" onSubmit={salvar}>
+      <div className="pev-formulario__topo">
+        <div>
+          <small>{idEditando === null ? "NOVA REUNIÃO" : "RESUMO E INFORMAÇÕES"}</small>
+          <h2 id="titulo-painel-reunioes">
+            {idEditando === null ? "Cadastrar reunião" : formulario.titulo}
+          </h2>
+        </div>
+        <button type="button" className="pev-botao pev-botao--texto" onClick={fechar}>
+          Fechar
+        </button>
+      </div>
+      <fieldset className="pev-bloco">
+        <legend>Identificação</legend>
+        <div className="pev-grade-campos pev-grade-campos--tres">
+          <AreaResponsavel
+            cargo={cargo}
+            valor={formulario.areaResponsavel}
+            mudar={(valor) => mudar("areaResponsavel", valor)}
+          />
+          <Campo rotulo="Título">
+            <input
+              value={formulario.titulo}
+              onChange={(e) => mudar("titulo", e.target.value)}
+              required
+            />
+          </Campo>
+          <Campo rotulo="Tipo">
+            <select value={formulario.tipo} onChange={(e) => mudar("tipo", e.target.value)}>
+              <option value="representantes">Com representantes de turma</option>
+              <option value="interna_gecep">Interna do GECEP</option>
+            </select>
+          </Campo>
+          <Campo rotulo="Situação">
+            <select value={formulario.situacao} onChange={(e) => mudar("situacao", e.target.value)}>
+              {situacoesReuniao.map(([valor, nome]) => (
+                <option key={valor} value={valor}>
+                  {nome}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <Campo rotulo="Data">
+            <input
+              type="date"
+              value={formulario.data}
+              onChange={(e) => mudar("data", e.target.value)}
+              required
+            />
+          </Campo>
+          <Campo rotulo="Horário inicial">
+            <input
+              type="time"
+              value={formulario.horarioInicial}
+              onChange={(e) => mudar("horarioInicial", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Horário final">
+            <input
+              type="time"
+              value={formulario.horarioFinal}
+              onChange={(e) => mudar("horarioFinal", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Local">
+            <input value={formulario.local} onChange={(e) => mudar("local", e.target.value)} />
+          </Campo>
+          <Campo rotulo="Turno">
+            <select value={formulario.turno} onChange={(e) => mudar("turno", e.target.value)}>
+              {turnosPainel.map(([valor, nome]) => (
+                <option key={valor} value={valor}>
+                  {nome}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <div className="pev-campo">
+            <span>Níveis de ensino</span>
+            <div className="pev-opcoes">
+              <label>
+                <CheckboxComAjuda
+                  checked={formulario.niveisEnsino.includes("fundamental")}
+                  onChange={(e) =>
+                    mudar(
+                      "niveisEnsino",
+                      e.target.checked
+                        ? [...formulario.niveisEnsino, "fundamental"]
+                        : formulario.niveisEnsino.filter((nivel) => nivel !== "fundamental"),
+                    )
+                  }
+                  explicacao={descricaoCheckbox("fundamental")}
+                  aria-label={"Fundamental"}
+                />{" "}
+                Fundamental
+              </label>
+              <label>
+                <CheckboxComAjuda
+                  checked={formulario.niveisEnsino.includes("medio")}
+                  onChange={(e) =>
+                    mudar(
+                      "niveisEnsino",
+                      e.target.checked
+                        ? [...formulario.niveisEnsino, "medio"]
+                        : formulario.niveisEnsino.filter((nivel) => nivel !== "medio"),
+                    )
+                  }
+                  explicacao={descricaoCheckbox("medio")}
+                  aria-label={"Médio"}
+                />{" "}
+                Médio
+              </label>
+            </div>
+          </div>
+          <Campo rotulo="Responsáveis" largo>
+            <input
+              value={formulario.responsaveis}
+              onChange={(e) => mudar("responsaveis", e.target.value)}
+              placeholder="Nomes ou funções responsáveis"
+            />
+          </Campo>
+          <Campo rotulo="Descrição curta" largo>
+            <textarea
+              rows={3}
+              value={formulario.descricaoCurta}
+              onChange={(e) => mudar("descricaoCurta", e.target.value)}
+            />
+          </Campo>
+        </div>
+      </fieldset>
+      <MembrosPresentesReuniao
+        valor={formulario.membrosGecepPresentes}
+        mudar={(valor) => mudar("membrosGecepPresentes", valor)}
+        desabilitado={salvando}
+      />
+      <fieldset className="pev-bloco">
+        <legend>Resumo, decisões e ata</legend>
+        <div className="pev-grade-campos">
+          <Campo rotulo="Pauta pública" dica="Um item por linha.">
+            <textarea
+              rows={6}
+              value={formulario.pauta}
+              onChange={(e) => mudar("pauta", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Pauta interna" dica="Nunca aparece no portal.">
+            <textarea
+              rows={6}
+              value={formulario.pautaInterna}
+              onChange={(e) => mudar("pautaInterna", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Assuntos discutidos">
+            <textarea
+              rows={6}
+              value={formulario.discussoes}
+              onChange={(e) => mudar("discussoes", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Resumo público">
+            <textarea
+              rows={6}
+              value={formulario.resumo}
+              onChange={(e) => mudar("resumo", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Decisões tomadas">
+            <textarea
+              rows={5}
+              value={formulario.decisoes}
+              onChange={(e) => mudar("decisoes", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Propostas apresentadas">
+            <textarea
+              rows={5}
+              value={formulario.propostas}
+              onChange={(e) => mudar("propostas", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Encaminhamentos" largo>
+            <textarea
+              rows={5}
+              value={formulario.encaminhamentos}
+              onChange={(e) => mudar("encaminhamentos", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Ata completa escrita no sistema" largo>
+            <textarea
+              rows={9}
+              value={formulario.ata}
+              onChange={(e) => mudar("ata", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Transcrição" largo>
+            <textarea
+              rows={7}
+              value={formulario.transcricao}
+              onChange={(e) => mudar("transcricao", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Observações públicas">
+            <textarea
+              rows={4}
+              value={formulario.observacoesPublicas}
+              onChange={(e) => mudar("observacoesPublicas", e.target.value)}
+            />
+          </Campo>
+          <Campo rotulo="Observações internas" dica="Nunca aparecem na página pública.">
+            <textarea
+              rows={4}
+              value={formulario.observacoesInternas}
+              onChange={(e) => mudar("observacoesInternas", e.target.value)}
+            />
+          </Campo>
+        </div>
+      </fieldset>
+      <AnexosNovosReuniao
+        documentos={documentosNovos}
+        mudar={mudarDocumentosNovos}
+        enviar={enviarDocumentosNovos}
+        enviando={enviando}
+      />
+      <div className="pev-publicacao">
+        <label>
+          <CheckboxComAjuda
+            checked={formulario.publicado}
+            onChange={(e) => mudar("publicado", e.target.checked)}
+            explicacao={descricaoCheckbox("publicado")}
+            aria-label={"Publicar reunião no portal"}
+          />
+          <span>Publicar reunião no portal</span>
+        </label>
+        <label>
+          <CheckboxComAjuda
+            checked={formulario.quantidadeParticipantesPublicada}
+            onChange={(e) => mudar("quantidadeParticipantesPublicada", e.target.checked)}
+            explicacao={descricaoCheckbox("quantidadeParticipantesPublicada")}
+            aria-label={"Publicar a quantidade total de participantes"}
+          />
+          <span>Publicar a quantidade total de participantes</span>
+        </label>
+        <p>
+          Somente conteúdo marcado como público será exibido. Observações internas permanecem
+          protegidas.
+        </p>
+      </div>
+      {mudou && <p className="pev-alteracoes">Há mudanças não salvas.</p>}
+      <div className="pev-acoes-formulario">
+        <button type="button" className="pev-botao" onClick={fechar}>
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          className="pev-botao pev-botao--primario"
+          disabled={salvando || enviando}
+        >
+          {enviando
+            ? "Enviando anexos…"
+            : salvando
+              ? "Salvando…"
+              : idEditando === null
+                ? "Criar rascunho"
+                : "Salvar reunião"}
+        </button>
+      </div>
+    </form>
+  );
 }
 
 // permite anexar arquivos novos ou da biblioteca sem sair do cadastro
-function AnexosNovosReuniao({ documentos, mudar, enviar, enviando }: { documentos: DocumentoReuniao[]; mudar: (valor: DocumentoReuniao[]) => void; enviar: (arquivos: FileList | null) => void; enviando: boolean }) {
-  function alterar(indice: number, dados: Partial<DocumentoReuniao>) { mudar(documentos.map((item, posicao) => posicao === indice ? { ...item, ...dados } : item)); }
-  return <fieldset className="pev-bloco reuniao-anexos"><legend>Adicionar documentos <small>(opcional)</small></legend>
-    <p className="pev-introducao">Envie a ata, imagens, planilhas ou outros anexos. Os uploads também ficam na biblioteca de Documentos e começam privados.</p>
-    <div className="pev-grade-campos"><Campo rotulo="Enviar arquivos"><input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp" disabled={enviando} onChange={(evento) => { enviar(evento.target.files); evento.target.value = ""; }} /></Campo><div className="pev-campo"><span>Reutilizar um arquivo</span><EscolherArquivo selecionar={(arquivo) => mudar([...documentos, { ...documentoVazio, titulo: arquivo.nome, tipo: "anexo", arquivoUrl: arquivo.url, ordem: documentos.length + 1 }])} /></div></div>
-    {enviando && <p role="status">Enviando anexos para a biblioteca…</p>}
-    <div className="reuniao-anexos__lista">{documentos.map((item, indice) => <div className="reuniao-anexos__item" key={`${item.arquivoUrl}-${indice}`}>
-      <div className="pev-grade-campos"><Campo rotulo="Título do documento"><input value={item.titulo} onChange={(evento) => alterar(indice, { titulo: evento.target.value })} required /></Campo><Campo rotulo="Tipo de documento"><select value={item.tipo} onChange={(evento) => alterar(indice, { tipo: evento.target.value })}><option value="ata">Ata</option><option value="transcricao">Transcrição</option><option value="lista_presenca">Lista de presença</option><option value="pauta">Pauta</option><option value="apresentacao">Apresentação</option><option value="relatorio">Relatório</option><option value="anexo">Anexo</option></select></Campo></div>
-      <label><CheckboxComAjuda checked={item.publicado} onChange={(evento) => alterar(indice, { publicado: evento.target.checked })} aria-label={`Publicar documento ${item.titulo}`} explicacao="Marcado: o documento poderá aparecer no portal quando a reunião estiver publicada. Desmarcado: o documento permanece privado para a gestão." /><span>Publicar este documento junto da reunião</span></label>
-      <div className="pev-cartao__acoes"><a href={item.arquivoUrl} target="_blank" rel="noreferrer" className="pev-botao">Abrir arquivo</a><button type="button" className="pev-botao" onClick={() => mudar(documentos.filter((_, posicao) => posicao !== indice))}>Retirar anexo</button></div>
-    </div>)}</div>
-  </fieldset>;
+function AnexosNovosReuniao({
+  documentos,
+  mudar,
+  enviar,
+  enviando,
+}: {
+  documentos: DocumentoReuniao[];
+  mudar: (valor: DocumentoReuniao[]) => void;
+  enviar: (arquivos: FileList | null) => void;
+  enviando: boolean;
+}) {
+  function alterar(indice: number, dados: Partial<DocumentoReuniao>) {
+    mudar(documentos.map((item, posicao) => (posicao === indice ? { ...item, ...dados } : item)));
+  }
+  return (
+    <fieldset className="pev-bloco reuniao-anexos">
+      <legend>
+        Adicionar documentos <small>(opcional)</small>
+      </legend>
+      <p className="pev-introducao">
+        Envie a ata, imagens, planilhas ou outros anexos. Os uploads também ficam na biblioteca de
+        Documentos e começam privados.
+      </p>
+      <div className="pev-grade-campos">
+        <Campo rotulo="Enviar arquivos">
+          <input
+            type="file"
+            multiple
+            accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp"
+            disabled={enviando}
+            onChange={(evento) => {
+              enviar(evento.target.files);
+              evento.target.value = "";
+            }}
+          />
+        </Campo>
+        <div className="pev-campo">
+          <span>Reutilizar um arquivo</span>
+          <EscolherArquivo
+            selecionar={(arquivo) =>
+              mudar([
+                ...documentos,
+                {
+                  ...documentoVazio,
+                  titulo: arquivo.nome,
+                  tipo: "anexo",
+                  arquivoUrl: arquivo.url,
+                  ordem: documentos.length + 1,
+                },
+              ])
+            }
+          />
+        </div>
+      </div>
+      {enviando && <p role="status">Enviando anexos para a biblioteca…</p>}
+      <div className="reuniao-anexos__lista">
+        {documentos.map((item, indice) => (
+          <div className="reuniao-anexos__item" key={`${item.arquivoUrl}-${indice}`}>
+            <div className="pev-grade-campos">
+              <Campo rotulo="Título do documento">
+                <input
+                  value={item.titulo}
+                  onChange={(evento) => alterar(indice, { titulo: evento.target.value })}
+                  required
+                />
+              </Campo>
+              <Campo rotulo="Tipo de documento">
+                <select
+                  value={item.tipo}
+                  onChange={(evento) => alterar(indice, { tipo: evento.target.value })}
+                >
+                  <option value="ata">Ata</option>
+                  <option value="transcricao">Transcrição</option>
+                  <option value="lista_presenca">Lista de presença</option>
+                  <option value="pauta">Pauta</option>
+                  <option value="apresentacao">Apresentação</option>
+                  <option value="relatorio">Relatório</option>
+                  <option value="anexo">Anexo</option>
+                </select>
+              </Campo>
+            </div>
+            <label>
+              <CheckboxComAjuda
+                checked={item.publicado}
+                onChange={(evento) => alterar(indice, { publicado: evento.target.checked })}
+                aria-label={`Publicar documento ${item.titulo}`}
+                explicacao="Marcado: o documento poderá aparecer no portal quando a reunião estiver publicada. Desmarcado: o documento permanece privado para a gestão."
+              />
+              <span>Publicar este documento junto da reunião</span>
+            </label>
+            <div className="pev-cartao__acoes">
+              <a href={item.arquivoUrl} target="_blank" rel="noreferrer" className="pev-botao">
+                Abrir arquivo
+              </a>
+              <button
+                type="button"
+                className="pev-botao"
+                onClick={() => mudar(documentos.filter((_, posicao) => posicao !== indice))}
+              >
+                Retirar anexo
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </fieldset>
+  );
 }
 
-type ComplementoRemovivel = { id?: Identificador; jaPublicado?: boolean; titulo?: string; nome?: string };
+type ComplementoRemovivel = {
+  id?: Identificador;
+  jaPublicado?: boolean;
+  titulo?: string;
+  nome?: string;
+};
 type RemoverComplemento = (item: ComplementoRemovivel) => void;
 
 // mostra a ação correspondente ao histórico de cada complemento
-function BotaoRemoverComplemento({ item, remover, salvando }: { item: ComplementoRemovivel; remover: RemoverComplemento; salvando: boolean }) {
-  return <button type="button" className="pev-botao pev-botao--perigoso" disabled={salvando} onClick={() => remover(item)}>{item.jaPublicado ? "Arquivar" : "Excluir rascunho"}</button>;
+function BotaoRemoverComplemento({
+  item,
+  remover,
+  salvando,
+}: {
+  item: ComplementoRemovivel;
+  remover: RemoverComplemento;
+  salvando: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className="pev-botao pev-botao--perigoso"
+      disabled={salvando}
+      onClick={() => remover(item)}
+    >
+      {item.jaPublicado ? "Arquivar" : "Excluir rascunho"}
+    </button>
+  );
 }
 
-function PainelItens({ detalhes, remover, item, setItem, salvar, salvando }: { detalhes: Reuniao; remover: RemoverComplemento; item: ItemReuniao | null; setItem: (valor: ItemReuniao | null) => void; salvar: (evento: FormEvent<HTMLFormElement>) => void; salvando: boolean }) {
-  if (item) return <form className="pev-formulario" onSubmit={salvar}><div className="pev-formulario__topo"><div><small>ITEM ESTRUTURADO</small><h2>{item.id ? "Editar item" : "Adicionar tarefa ou encaminhamento"}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={() => setItem(null)}>Fechar</button></div><div className="pev-grade-campos"><Campo rotulo="Tipo"><select value={item.tipo} onChange={(e) => setItem({ ...item, tipo: e.target.value })}><option value="pauta">Pauta</option><option value="discussao">Discussão</option><option value="decisao">Decisão</option><option value="encaminhamento">Encaminhamento</option><option value="tarefa">Tarefa</option><option value="mocao">Moção</option></select></Campo><Campo rotulo="Título"><input value={item.titulo} onChange={(e) => setItem({ ...item, titulo: e.target.value })} /></Campo><Campo rotulo="Conteúdo" largo><textarea rows={6} value={item.conteudo} onChange={(e) => setItem({ ...item, conteudo: e.target.value })} /></Campo><Campo rotulo="Responsáveis"><input value={item.responsaveis} onChange={(e) => setItem({ ...item, responsaveis: e.target.value })} placeholder="Nomes ou funções" /></Campo><Campo rotulo="Prazo"><input type="date" value={item.prazo} onChange={(e) => setItem({ ...item, prazo: e.target.value })} /></Campo><Campo rotulo="Ordem"><input type="number" min={0} value={item.ordem} onChange={(e) => setItem({ ...item, ordem: Number(e.target.value) })} /></Campo></div><div className="pev-publicacao"><label><CheckboxComAjuda checked={item.publicado} onChange={(e) => setItem({ ...item, publicado: e.target.checked })} explicacao={descricaoCheckbox("item")} aria-label={"Mostrar este item na página pública"} /><span>Mostrar este item na página pública</span></label><p>Tarefas internas, responsáveis sensíveis ou moções reservadas devem permanecer desmarcados.</p></div><div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={() => setItem(null)}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>{salvando ? "Salvando…" : "Salvar item"}</button></div></form>;
-  return <section className="pev-subpainel"><div className="pev-subpainel__topo"><div><h2>Tarefas, decisões e encaminhamentos</h2><p>Cadastre cada responsabilidade separadamente para deixar prazo e responsáveis fáceis de consultar.</p></div><button type="button" className="pev-botao pev-botao--primario" onClick={() => setItem({ ...itemVazio, ordem: detalhes.itens.length + 1 })}>+ Adicionar item</button></div>{!detalhes.itens.length && <EstadoVazio titulo="Nenhum item estruturado" texto="Adicione tarefas, decisões, encaminhamentos ou moções sem editar código." />}<div className="pev-grade-subitens">{[...detalhes.itens].sort((a, b) => a.ordem - b.ordem).map((registro, indice) => <article key={registro.id ?? indice}><span className={classeStatus(registro.publicado ? "publicado" : "rascunho")}>{registro.publicado ? "Público" : "Interno"}</span><h3>{registro.titulo || statusLegivel(registro.tipo)}</h3><p>{registro.conteudo}</p><small>{[registro.responsaveis && `Responsáveis: ${registro.responsaveis}`, registro.prazo && `Prazo: ${dataLegivel(registro.prazo)}`].filter(Boolean).join(" · ") || "Sem responsáveis ou prazo informados"}</small><button type="button" className="pev-botao" onClick={() => setItem({ ...registro })}>Editar item</button><BotaoRemoverComplemento item={registro} remover={remover} salvando={salvando} /></article>)}</div></section>;
+function PainelItens({
+  detalhes,
+  remover,
+  item,
+  setItem,
+  salvar,
+  salvando,
+}: {
+  detalhes: Reuniao;
+  remover: RemoverComplemento;
+  item: ItemReuniao | null;
+  setItem: (valor: ItemReuniao | null) => void;
+  salvar: (evento: FormEvent<HTMLFormElement>) => void;
+  salvando: boolean;
+}) {
+  if (item)
+    return (
+      <form className="pev-formulario" onSubmit={salvar}>
+        <div className="pev-formulario__topo">
+          <div>
+            <small>ITEM ESTRUTURADO</small>
+            <h2>{item.id ? "Editar item" : "Adicionar tarefa ou encaminhamento"}</h2>
+          </div>
+          <button
+            type="button"
+            className="pev-botao pev-botao--texto"
+            onClick={() => setItem(null)}
+          >
+            Fechar
+          </button>
+        </div>
+        <div className="pev-grade-campos">
+          <Campo rotulo="Tipo">
+            <select value={item.tipo} onChange={(e) => setItem({ ...item, tipo: e.target.value })}>
+              <option value="pauta">Pauta</option>
+              <option value="discussao">Discussão</option>
+              <option value="decisao">Decisão</option>
+              <option value="encaminhamento">Encaminhamento</option>
+              <option value="tarefa">Tarefa</option>
+              <option value="mocao">Moção</option>
+            </select>
+          </Campo>
+          <Campo rotulo="Título">
+            <input
+              value={item.titulo}
+              onChange={(e) => setItem({ ...item, titulo: e.target.value })}
+            />
+          </Campo>
+          <Campo rotulo="Conteúdo" largo>
+            <textarea
+              rows={6}
+              value={item.conteudo}
+              onChange={(e) => setItem({ ...item, conteudo: e.target.value })}
+            />
+          </Campo>
+          <Campo rotulo="Responsáveis">
+            <input
+              value={item.responsaveis}
+              onChange={(e) => setItem({ ...item, responsaveis: e.target.value })}
+              placeholder="Nomes ou funções"
+            />
+          </Campo>
+          <Campo rotulo="Prazo">
+            <input
+              type="date"
+              value={item.prazo}
+              onChange={(e) => setItem({ ...item, prazo: e.target.value })}
+            />
+          </Campo>
+          <Campo rotulo="Ordem">
+            <input
+              type="number"
+              min={0}
+              value={item.ordem}
+              onChange={(e) => setItem({ ...item, ordem: Number(e.target.value) })}
+            />
+          </Campo>
+        </div>
+        <div className="pev-publicacao">
+          <label>
+            <CheckboxComAjuda
+              checked={item.publicado}
+              onChange={(e) => setItem({ ...item, publicado: e.target.checked })}
+              explicacao={descricaoCheckbox("item")}
+              aria-label={"Mostrar este item na página pública"}
+            />
+            <span>Mostrar este item na página pública</span>
+          </label>
+          <p>
+            Tarefas internas, responsáveis sensíveis ou moções reservadas devem permanecer
+            desmarcados.
+          </p>
+        </div>
+        <div className="pev-acoes-formulario">
+          <button type="button" className="pev-botao" onClick={() => setItem(null)}>
+            Cancelar
+          </button>
+          <button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>
+            {salvando ? "Salvando…" : "Salvar item"}
+          </button>
+        </div>
+      </form>
+    );
+  return (
+    <section className="pev-subpainel">
+      <div className="pev-subpainel__topo">
+        <div>
+          <h2>Tarefas, decisões e encaminhamentos</h2>
+          <p>
+            Cadastre cada responsabilidade separadamente para deixar prazo e responsáveis fáceis de
+            consultar.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="pev-botao pev-botao--primario"
+          onClick={() => setItem({ ...itemVazio, ordem: detalhes.itens.length + 1 })}
+        >
+          + Adicionar item
+        </button>
+      </div>
+      {!detalhes.itens.length && (
+        <EstadoVazio
+          titulo="Nenhum item estruturado"
+          texto="Adicione tarefas, decisões, encaminhamentos ou moções sem editar código."
+        />
+      )}
+      <div className="pev-grade-subitens">
+        {[...detalhes.itens]
+          .sort((a, b) => a.ordem - b.ordem)
+          .map((registro, indice) => (
+            <article key={registro.id ?? indice}>
+              <span className={classeStatus(registro.publicado ? "publicado" : "rascunho")}>
+                {registro.publicado ? "Público" : "Interno"}
+              </span>
+              <h3>{registro.titulo || statusLegivel(registro.tipo)}</h3>
+              <p>{registro.conteudo}</p>
+              <small>
+                {[
+                  registro.responsaveis && `Responsáveis: ${registro.responsaveis}`,
+                  registro.prazo && `Prazo: ${dataLegivel(registro.prazo)}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || "Sem responsáveis ou prazo informados"}
+              </small>
+              <button type="button" className="pev-botao" onClick={() => setItem({ ...registro })}>
+                Editar item
+              </button>
+              <BotaoRemoverComplemento item={registro} remover={remover} salvando={salvando} />
+            </article>
+          ))}
+      </div>
+    </section>
+  );
 }
 
-function PainelVotacoes({ detalhes, remover, votacao, setVotacao, salvar, salvando }: { detalhes: Reuniao; remover: RemoverComplemento; votacao: VotacaoReuniao | null; setVotacao: (valor: VotacaoReuniao | null) => void; salvar: (evento: FormEvent<HTMLFormElement>) => void; salvando: boolean }) {
+function PainelVotacoes({
+  detalhes,
+  remover,
+  votacao,
+  setVotacao,
+  salvar,
+  salvando,
+}: {
+  detalhes: Reuniao;
+  remover: RemoverComplemento;
+  votacao: VotacaoReuniao | null;
+  setVotacao: (valor: VotacaoReuniao | null) => void;
+  salvar: (evento: FormEvent<HTMLFormElement>) => void;
+  salvando: boolean;
+}) {
   if (votacao) {
-    const mudarOpcao = (indice: number, dados: Partial<VotacaoReuniao["opcoes"][number]>) => setVotacao({
-      ...votacao,
-      opcoes: votacao.opcoes.map((item, i) => i === indice ? { ...item, ...dados } : item),
-    });
+    const mudarOpcao = (indice: number, dados: Partial<VotacaoReuniao["opcoes"][number]>) =>
+      setVotacao({
+        ...votacao,
+        opcoes: votacao.opcoes.map((item, i) => (i === indice ? { ...item, ...dados } : item)),
+      });
 
-    return <form className="pev-formulario" onSubmit={salvar}>
-      <div className="pev-formulario__topo"><div><small>VOTAÇÃO DA REUNIÃO</small><h2>{votacao.id ? "Editar votação" : "Adicionar votação"}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={() => setVotacao(null)}>Fechar</button></div>
-      <div className="pev-grade-campos">
-        <Campo rotulo="Título"><input value={votacao.titulo} onChange={(e) => setVotacao({ ...votacao, titulo: e.target.value })} required /></Campo>
-        <Campo rotulo="Pergunta ou proposta"><input value={votacao.pergunta} onChange={(e) => setVotacao({ ...votacao, pergunta: e.target.value })} required /></Campo>
-        <Campo rotulo="Ordem"><input type="number" min={0} value={votacao.ordem} onChange={(e) => setVotacao({ ...votacao, ordem: Number(e.target.value) })} /></Campo>
-        <Campo rotulo="Contexto" largo><textarea rows={4} value={votacao.contexto} onChange={(e) => setVotacao({ ...votacao, contexto: e.target.value })} /></Campo>
-      </div>
-      <fieldset className="pev-bloco"><legend>Opções e quantidade de votos</legend><div className="pev-opcoes-votacao">{votacao.opcoes.map((opcao, indice) => <div key={opcao.id ?? indice}><label><span>Opção {indice + 1}</span><input value={opcao.texto} onChange={(e) => mudarOpcao(indice, { texto: e.target.value })} required /></label><label><span>Votos</span><input type="number" min={0} value={opcao.quantidadeVotos} onChange={(e) => mudarOpcao(indice, { quantidadeVotos: Number(e.target.value) })} /></label>{votacao.opcoes.length > 2 && <button type="button" className="pev-botao pev-botao--perigoso" onClick={() => setVotacao({ ...votacao, opcoes: votacao.opcoes.filter((_, i) => i !== indice) })}>Remover</button>}</div>)}</div><button type="button" className="pev-botao" onClick={() => setVotacao({ ...votacao, opcoes: [...votacao.opcoes, { texto: "", quantidadeVotos: 0, ordem: votacao.opcoes.length + 1, ativo: true }] })}>+ Adicionar opção</button></fieldset>
-      <div className="pev-grade-campos">
-        <Campo rotulo="Abstenções"><input type="number" min={0} value={votacao.abstencoes} onChange={(e) => setVotacao({ ...votacao, abstencoes: Number(e.target.value) })} /></Campo>
-        <Campo rotulo="Resultado"><input value={votacao.resultado} onChange={(e) => setVotacao({ ...votacao, resultado: e.target.value })} /></Campo>
-        <Campo rotulo="Decisão final" largo><textarea rows={3} value={votacao.decisaoFinal} onChange={(e) => setVotacao({ ...votacao, decisaoFinal: e.target.value })} placeholder="Decisão ou encaminhamento aprovado" /></Campo>
-        <Campo rotulo="Observação pública" largo><textarea rows={3} value={votacao.observacaoPublica} onChange={(e) => setVotacao({ ...votacao, observacaoPublica: e.target.value })} /></Campo>
-        <Campo rotulo="Observação interna" dica="Nunca aparece na página pública." largo><textarea rows={3} value={votacao.observacaoInterna} onChange={(e) => setVotacao({ ...votacao, observacaoInterna: e.target.value })} /></Campo>
-      </div>
-      <div className="pev-publicacao"><label><CheckboxComAjuda checked={votacao.publicado} onChange={(e) => setVotacao({ ...votacao, publicado: e.target.checked })} explicacao={descricaoCheckbox("votacao")} aria-label={"Mostrar resultado geral no portal"} /><span>Mostrar resultado geral no portal</span></label><p>Não cadastre votos individuais. Somente totais e resultado geral serão publicados.</p></div>
-      <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={() => setVotacao(null)}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>{salvando ? "Salvando…" : "Salvar votação"}</button></div>
-    </form>;
+    return (
+      <form className="pev-formulario" onSubmit={salvar}>
+        <div className="pev-formulario__topo">
+          <div>
+            <small>VOTAÇÃO DA REUNIÃO</small>
+            <h2>{votacao.id ? "Editar votação" : "Adicionar votação"}</h2>
+          </div>
+          <button
+            type="button"
+            className="pev-botao pev-botao--texto"
+            onClick={() => setVotacao(null)}
+          >
+            Fechar
+          </button>
+        </div>
+        <div className="pev-grade-campos">
+          <Campo rotulo="Título">
+            <input
+              value={votacao.titulo}
+              onChange={(e) => setVotacao({ ...votacao, titulo: e.target.value })}
+              required
+            />
+          </Campo>
+          <Campo rotulo="Pergunta ou proposta">
+            <input
+              value={votacao.pergunta}
+              onChange={(e) => setVotacao({ ...votacao, pergunta: e.target.value })}
+              required
+            />
+          </Campo>
+          <Campo rotulo="Ordem">
+            <input
+              type="number"
+              min={0}
+              value={votacao.ordem}
+              onChange={(e) => setVotacao({ ...votacao, ordem: Number(e.target.value) })}
+            />
+          </Campo>
+          <Campo rotulo="Contexto" largo>
+            <textarea
+              rows={4}
+              value={votacao.contexto}
+              onChange={(e) => setVotacao({ ...votacao, contexto: e.target.value })}
+            />
+          </Campo>
+        </div>
+        <fieldset className="pev-bloco">
+          <legend>Opções e quantidade de votos</legend>
+          <div className="pev-opcoes-votacao">
+            {votacao.opcoes.map((opcao, indice) => (
+              <div key={opcao.id ?? indice}>
+                <label>
+                  <span>Opção {indice + 1}</span>
+                  <input
+                    value={opcao.texto}
+                    onChange={(e) => mudarOpcao(indice, { texto: e.target.value })}
+                    required
+                  />
+                </label>
+                <label>
+                  <span>Votos</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={opcao.quantidadeVotos}
+                    onChange={(e) =>
+                      mudarOpcao(indice, { quantidadeVotos: Number(e.target.value) })
+                    }
+                  />
+                </label>
+                {votacao.opcoes.length > 2 && (
+                  <button
+                    type="button"
+                    className="pev-botao pev-botao--perigoso"
+                    onClick={() =>
+                      setVotacao({
+                        ...votacao,
+                        opcoes: votacao.opcoes.filter((_, i) => i !== indice),
+                      })
+                    }
+                  >
+                    Remover
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="pev-botao"
+            onClick={() =>
+              setVotacao({
+                ...votacao,
+                opcoes: [
+                  ...votacao.opcoes,
+                  { texto: "", quantidadeVotos: 0, ordem: votacao.opcoes.length + 1, ativo: true },
+                ],
+              })
+            }
+          >
+            + Adicionar opção
+          </button>
+        </fieldset>
+        <div className="pev-grade-campos">
+          <Campo rotulo="Abstenções">
+            <input
+              type="number"
+              min={0}
+              value={votacao.abstencoes}
+              onChange={(e) => setVotacao({ ...votacao, abstencoes: Number(e.target.value) })}
+            />
+          </Campo>
+          <Campo rotulo="Resultado">
+            <input
+              value={votacao.resultado}
+              onChange={(e) => setVotacao({ ...votacao, resultado: e.target.value })}
+            />
+          </Campo>
+          <Campo rotulo="Decisão final" largo>
+            <textarea
+              rows={3}
+              value={votacao.decisaoFinal}
+              onChange={(e) => setVotacao({ ...votacao, decisaoFinal: e.target.value })}
+              placeholder="Decisão ou encaminhamento aprovado"
+            />
+          </Campo>
+          <Campo rotulo="Observação pública" largo>
+            <textarea
+              rows={3}
+              value={votacao.observacaoPublica}
+              onChange={(e) => setVotacao({ ...votacao, observacaoPublica: e.target.value })}
+            />
+          </Campo>
+          <Campo rotulo="Observação interna" dica="Nunca aparece na página pública." largo>
+            <textarea
+              rows={3}
+              value={votacao.observacaoInterna}
+              onChange={(e) => setVotacao({ ...votacao, observacaoInterna: e.target.value })}
+            />
+          </Campo>
+        </div>
+        <div className="pev-publicacao">
+          <label>
+            <CheckboxComAjuda
+              checked={votacao.publicado}
+              onChange={(e) => setVotacao({ ...votacao, publicado: e.target.checked })}
+              explicacao={descricaoCheckbox("votacao")}
+              aria-label={"Mostrar resultado geral no portal"}
+            />
+            <span>Mostrar resultado geral no portal</span>
+          </label>
+          <p>Não cadastre votos individuais. Somente totais e resultado geral serão publicados.</p>
+        </div>
+        <div className="pev-acoes-formulario">
+          <button type="button" className="pev-botao" onClick={() => setVotacao(null)}>
+            Cancelar
+          </button>
+          <button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>
+            {salvando ? "Salvando…" : "Salvar votação"}
+          </button>
+        </div>
+      </form>
+    );
   }
 
-  return <section className="pev-subpainel"><div className="pev-subpainel__topo"><div><h2>Votações</h2><p>Registre opções, totais, abstenções e escolha se o resultado geral será público.</p></div><button type="button" className="pev-botao pev-botao--primario" onClick={() => setVotacao({ ...votacaoVazia, ordem: detalhes.votacoes.length + 1, opcoes: votacaoVazia.opcoes.map((item) => ({ ...item })) })}>+ Adicionar votação</button></div>{!detalhes.votacoes.length && <EstadoVazio titulo="Nenhuma votação registrada" texto="Adicione uma votação somente quando houver dados reais da reunião." />}<div className="pev-grade-subitens">{[...detalhes.votacoes].sort((a, b) => a.ordem - b.ordem).map((item, indice) => <article key={item.id ?? indice}><span className={classeStatus(item.publicado ? "publicado" : "rascunho")}>{item.publicado ? "Pública" : "Interna"}</span><h3>{item.titulo}</h3><p>{item.pergunta}</p><small>{item.opcoes.map((opcao) => `${opcao.texto}: ${opcao.quantidadeVotos}`).join(" · ")}</small>{item.decisaoFinal && <p><strong>Decisão:</strong> {item.decisaoFinal}</p>}<button type="button" className="pev-botao" onClick={() => setVotacao({ ...item, opcoes: item.opcoes.map((opcao) => ({ ...opcao })) })}>Editar votação</button><BotaoRemoverComplemento item={item} remover={remover} salvando={salvando} /></article>)}</div></section>;
+  return (
+    <section className="pev-subpainel">
+      <div className="pev-subpainel__topo">
+        <div>
+          <h2>Votações</h2>
+          <p>Registre opções, totais, abstenções e escolha se o resultado geral será público.</p>
+        </div>
+        <button
+          type="button"
+          className="pev-botao pev-botao--primario"
+          onClick={() =>
+            setVotacao({
+              ...votacaoVazia,
+              ordem: detalhes.votacoes.length + 1,
+              opcoes: votacaoVazia.opcoes.map((item) => ({ ...item })),
+            })
+          }
+        >
+          + Adicionar votação
+        </button>
+      </div>
+      {!detalhes.votacoes.length && (
+        <EstadoVazio
+          titulo="Nenhuma votação registrada"
+          texto="Adicione uma votação somente quando houver dados reais da reunião."
+        />
+      )}
+      <div className="pev-grade-subitens">
+        {[...detalhes.votacoes]
+          .sort((a, b) => a.ordem - b.ordem)
+          .map((item, indice) => (
+            <article key={item.id ?? indice}>
+              <span className={classeStatus(item.publicado ? "publicado" : "rascunho")}>
+                {item.publicado ? "Pública" : "Interna"}
+              </span>
+              <h3>{item.titulo}</h3>
+              <p>{item.pergunta}</p>
+              <small>
+                {item.opcoes.map((opcao) => `${opcao.texto}: ${opcao.quantidadeVotos}`).join(" · ")}
+              </small>
+              {item.decisaoFinal && (
+                <p>
+                  <strong>Decisão:</strong> {item.decisaoFinal}
+                </p>
+              )}
+              <button
+                type="button"
+                className="pev-botao"
+                onClick={() =>
+                  setVotacao({ ...item, opcoes: item.opcoes.map((opcao) => ({ ...opcao })) })
+                }
+              >
+                Editar votação
+              </button>
+              <BotaoRemoverComplemento item={item} remover={remover} salvando={salvando} />
+            </article>
+          ))}
+      </div>
+    </section>
+  );
 }
 
-function PainelDocumentos({ detalhes, remover, documento, setDocumento, salvar, enviar, salvando, enviando }: { detalhes: Reuniao; remover: RemoverComplemento; documento: DocumentoReuniao | null; setDocumento: (valor: DocumentoReuniao | null) => void; salvar: (evento: FormEvent<HTMLFormElement>) => void; enviar: (arquivo?: File) => void; salvando: boolean; enviando: boolean }) {
-  if (documento) return <form className="pev-formulario" onSubmit={salvar}><div className="pev-formulario__topo"><div><small>ATA E ANEXOS</small><h2>{documento.id ? "Editar documento" : "Adicionar documento"}</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={() => setDocumento(null)}>Fechar</button></div><div className="pev-grade-campos"><Campo rotulo="Título"><input value={documento.titulo} onChange={(e) => setDocumento({ ...documento, titulo: e.target.value })} required /></Campo><Campo rotulo="Tipo"><select value={documento.tipo} onChange={(e) => setDocumento({ ...documento, tipo: e.target.value })}><option value="ata">Ata</option><option value="transcricao">Transcrição</option><option value="lista_presenca">Lista de presença</option><option value="pauta">Pauta</option><option value="apresentacao">Apresentação</option><option value="relatorio">Relatório</option><option value="anexo">Anexo</option></select></Campo><Campo rotulo="Descrição" largo><textarea rows={4} value={documento.descricao} onChange={(e) => setDocumento({ ...documento, descricao: e.target.value })} /></Campo><Campo rotulo="Data do documento"><input type="date" value={documento.data} onChange={(e) => setDocumento({ ...documento, data: e.target.value })} /></Campo><Campo rotulo="Ordem"><input type="number" min={0} value={documento.ordem} onChange={(e) => setDocumento({ ...documento, ordem: Number(e.target.value) })} /></Campo><Campo rotulo="Link autorizado" dica="Links internos como /api/arquivos/... também são aceitos."><input type="text" value={documento.linkExterno} onChange={(e) => setDocumento({ ...documento, linkExterno: e.target.value })} placeholder="https:// ou /api/arquivos/…" /></Campo><Campo rotulo="Arquivo" dica="Todo upload começa privado; o servidor define a visibilidade definitiva ao salvar."><input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp" onChange={(e) => void enviar(e.target.files?.[0])} disabled={enviando} /><EscolherArquivo selecionar={(arquivo) => setDocumento({ ...documento, arquivoUrl: arquivo.url })} />{documento.arquivoUrl && <span className="pev-arquivo-salvo"><a href={documento.arquivoUrl} target="_blank" rel="noreferrer">Abrir arquivo enviado</a><button type="button" onClick={() => setDocumento({ ...documento, arquivoUrl: "" })}>Remover</button></span>}</Campo></div><div className="pev-publicacao"><label><CheckboxComAjuda checked={documento.publicado} onChange={(e) => setDocumento({ ...documento, publicado: e.target.checked })} explicacao={descricaoCheckbox("publicado")} aria-label={"Documento público"} /><span>Documento público</span></label><p>O arquivo só será liberado depois que o servidor confirmar a publicação da reunião e deste documento.</p></div><div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={() => setDocumento(null)}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando || enviando}>{enviando ? "Enviando…" : salvando ? "Salvando…" : "Salvar documento"}</button></div></form>;
-  return <section className="pev-subpainel"><div className="pev-subpainel__topo"><div><h2>Ata e documentos</h2><p>Uploads começam privados. A publicação efetiva ocorre somente depois da validação do servidor.</p></div><button type="button" className="pev-botao pev-botao--primario" onClick={() => setDocumento({ ...documentoVazio })}>+ Adicionar documento</button></div>{!detalhes.documentos.length && <EstadoVazio titulo="Nenhum documento anexado" texto="Adicione a ata, pauta, lista de presença ou outro arquivo autorizado." />}<div className="pev-grade-subitens">{detalhes.documentos.map((item, indice) => <article key={item.id ?? indice}><span className={classeStatus(item.publicado ? "publicado" : "rascunho")}>{item.publicado ? "Público" : "Privado"}</span><h3>{item.titulo}</h3><p>{item.tipo.replaceAll("_", " ")}{item.data ? ` · ${dataLegivel(item.data)}` : ""}</p><div>{(item.arquivoUrl || item.linkExterno) && <a className="pev-botao" href={item.arquivoUrl || item.linkExterno} target="_blank" rel="noreferrer">Abrir</a>}<button type="button" className="pev-botao" onClick={() => setDocumento({ ...item })}>Editar</button><BotaoRemoverComplemento item={item} remover={remover} salvando={salvando} /></div></article>)}</div></section>;
+function PainelDocumentos({
+  detalhes,
+  remover,
+  documento,
+  setDocumento,
+  salvar,
+  enviar,
+  salvando,
+  enviando,
+}: {
+  detalhes: Reuniao;
+  remover: RemoverComplemento;
+  documento: DocumentoReuniao | null;
+  setDocumento: (valor: DocumentoReuniao | null) => void;
+  salvar: (evento: FormEvent<HTMLFormElement>) => void;
+  enviar: (arquivo?: File) => void;
+  salvando: boolean;
+  enviando: boolean;
+}) {
+  if (documento)
+    return (
+      <form className="pev-formulario" onSubmit={salvar}>
+        <div className="pev-formulario__topo">
+          <div>
+            <small>ATA E ANEXOS</small>
+            <h2>{documento.id ? "Editar documento" : "Adicionar documento"}</h2>
+          </div>
+          <button
+            type="button"
+            className="pev-botao pev-botao--texto"
+            onClick={() => setDocumento(null)}
+          >
+            Fechar
+          </button>
+        </div>
+        <div className="pev-grade-campos">
+          <Campo rotulo="Título">
+            <input
+              value={documento.titulo}
+              onChange={(e) => setDocumento({ ...documento, titulo: e.target.value })}
+              required
+            />
+          </Campo>
+          <Campo rotulo="Tipo">
+            <select
+              value={documento.tipo}
+              onChange={(e) => setDocumento({ ...documento, tipo: e.target.value })}
+            >
+              <option value="ata">Ata</option>
+              <option value="transcricao">Transcrição</option>
+              <option value="lista_presenca">Lista de presença</option>
+              <option value="pauta">Pauta</option>
+              <option value="apresentacao">Apresentação</option>
+              <option value="relatorio">Relatório</option>
+              <option value="anexo">Anexo</option>
+            </select>
+          </Campo>
+          <Campo rotulo="Descrição" largo>
+            <textarea
+              rows={4}
+              value={documento.descricao}
+              onChange={(e) => setDocumento({ ...documento, descricao: e.target.value })}
+            />
+          </Campo>
+          <Campo rotulo="Data do documento">
+            <input
+              type="date"
+              value={documento.data}
+              onChange={(e) => setDocumento({ ...documento, data: e.target.value })}
+            />
+          </Campo>
+          <Campo rotulo="Ordem">
+            <input
+              type="number"
+              min={0}
+              value={documento.ordem}
+              onChange={(e) => setDocumento({ ...documento, ordem: Number(e.target.value) })}
+            />
+          </Campo>
+          <Campo
+            rotulo="Link autorizado"
+            dica="Links internos como /api/arquivos/... também são aceitos."
+          >
+            <input
+              type="text"
+              value={documento.linkExterno}
+              onChange={(e) => setDocumento({ ...documento, linkExterno: e.target.value })}
+              placeholder="https:// ou /api/arquivos/…"
+            />
+          </Campo>
+          <Campo
+            rotulo="Arquivo"
+            dica="Todo upload começa privado; o servidor define a visibilidade definitiva ao salvar."
+          >
+            <input
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.odt,.ods,.odp"
+              onChange={(e) => void enviar(e.target.files?.[0])}
+              disabled={enviando}
+            />
+            <EscolherArquivo
+              selecionar={(arquivo) => setDocumento({ ...documento, arquivoUrl: arquivo.url })}
+            />
+            {documento.arquivoUrl && (
+              <span className="pev-arquivo-salvo">
+                <a href={documento.arquivoUrl} target="_blank" rel="noreferrer">
+                  Abrir arquivo enviado
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setDocumento({ ...documento, arquivoUrl: "" })}
+                >
+                  Remover
+                </button>
+              </span>
+            )}
+          </Campo>
+        </div>
+        <div className="pev-publicacao">
+          <label>
+            <CheckboxComAjuda
+              checked={documento.publicado}
+              onChange={(e) => setDocumento({ ...documento, publicado: e.target.checked })}
+              explicacao={descricaoCheckbox("publicado")}
+              aria-label={"Documento público"}
+            />
+            <span>Documento público</span>
+          </label>
+          <p>
+            O arquivo só será liberado depois que o servidor confirmar a publicação da reunião e
+            deste documento.
+          </p>
+        </div>
+        <div className="pev-acoes-formulario">
+          <button type="button" className="pev-botao" onClick={() => setDocumento(null)}>
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="pev-botao pev-botao--primario"
+            disabled={salvando || enviando}
+          >
+            {enviando ? "Enviando…" : salvando ? "Salvando…" : "Salvar documento"}
+          </button>
+        </div>
+      </form>
+    );
+  return (
+    <section className="pev-subpainel">
+      <div className="pev-subpainel__topo">
+        <div>
+          <h2>Ata e documentos</h2>
+          <p>
+            Uploads começam privados. A publicação efetiva ocorre somente depois da validação do
+            servidor.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="pev-botao pev-botao--primario"
+          onClick={() => setDocumento({ ...documentoVazio })}
+        >
+          + Adicionar documento
+        </button>
+      </div>
+      {!detalhes.documentos.length && (
+        <EstadoVazio
+          titulo="Nenhum documento anexado"
+          texto="Adicione a ata, pauta, lista de presença ou outro arquivo autorizado."
+        />
+      )}
+      <div className="pev-grade-subitens">
+        {detalhes.documentos.map((item, indice) => (
+          <article key={item.id ?? indice}>
+            <span className={classeStatus(item.publicado ? "publicado" : "rascunho")}>
+              {item.publicado ? "Público" : "Privado"}
+            </span>
+            <h3>{item.titulo}</h3>
+            <p>
+              {item.tipo.replaceAll("_", " ")}
+              {item.data ? ` · ${dataLegivel(item.data)}` : ""}
+            </p>
+            <div>
+              {(item.arquivoUrl || item.linkExterno) && (
+                <a
+                  className="pev-botao"
+                  href={item.arquivoUrl || item.linkExterno}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Abrir
+                </a>
+              )}
+              <button type="button" className="pev-botao" onClick={() => setDocumento({ ...item })}>
+                Editar
+              </button>
+              <BotaoRemoverComplemento item={item} remover={remover} salvando={salvando} />
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
-function PainelPresencas({ detalhes, remover, presencaManual, mudarPresencaManual, abrirPresencaManual, fecharPresencaManual, salvarPresencaManual, filtrosGeracao, setFiltrosGeracao, gerar, busca, setBusca, filtroSituacao, setFiltroSituacao, filtroTurno, setFiltroTurno, filtroNivel, setFiltroNivel, filtradas, selecionadas, alternar, selecionarFiltradas, aplicar, alterarPublicacao, salvando }: {
-  detalhes: Reuniao; remover: RemoverComplemento;
+function PainelPresencas({
+  detalhes,
+  remover,
+  presencaManual,
+  mudarPresencaManual,
+  abrirPresencaManual,
+  fecharPresencaManual,
+  salvarPresencaManual,
+  filtrosGeracao,
+  setFiltrosGeracao,
+  gerar,
+  busca,
+  setBusca,
+  filtroSituacao,
+  setFiltroSituacao,
+  filtroTurno,
+  setFiltroTurno,
+  filtroNivel,
+  setFiltroNivel,
+  filtradas,
+  selecionadas,
+  alternar,
+  selecionarFiltradas,
+  aplicar,
+  alterarPublicacao,
+  salvando,
+}: {
+  detalhes: Reuniao;
+  remover: RemoverComplemento;
   presencaManual: PresencaManual | null;
   mudarPresencaManual: (valor: PresencaManual) => void;
   abrirPresencaManual: () => void;
   fecharPresencaManual: () => void;
   salvarPresencaManual: (evento: FormEvent<HTMLFormElement>) => void;
   filtrosGeracao: { nivelEnsino: string; turno: string; serie: string; turma: string };
-  setFiltrosGeracao: (valor: { nivelEnsino: string; turno: string; serie: string; turma: string }) => void;
+  setFiltrosGeracao: (valor: {
+    nivelEnsino: string;
+    turno: string;
+    serie: string;
+    turma: string;
+  }) => void;
   gerar: (evento: FormEvent<HTMLFormElement>) => void;
   busca: string;
   setBusca: (valor: string) => void;
@@ -698,42 +2357,369 @@ function PainelPresencas({ detalhes, remover, presencaManual, mudarPresencaManua
   const reuniaoInterna = detalhes.tipo === "interna_gecep";
 
   if (presencaManual) {
-    return <form className="pev-formulario" onSubmit={salvarPresencaManual}>
-      <div className="pev-formulario__topo"><div><small>REUNIÃO INTERNA DO GECEP</small><h2>Adicionar membro à presença</h2></div><button type="button" className="pev-botao pev-botao--texto" onClick={fecharPresencaManual}>Fechar</button></div>
-      <p className="pev-introducao">Este registro preserva um retrato histórico da pessoa na data da reunião. Não informe telefone, e-mail ou outros dados pessoais.</p>
-      <div className="pev-grade-campos pev-grade-campos--tres">
-        <Campo rotulo="Nome"><input value={presencaManual.nome} onChange={(e) => mudarPresencaManual({ ...presencaManual, nome: e.target.value })} required /></Campo>
-        <Campo rotulo="Nível de ensino"><select value={presencaManual.nivelEnsino} onChange={(e) => mudarPresencaManual({ ...presencaManual, nivelEnsino: e.target.value })}>{niveisPainel.map(([valor, nome]) => <option key={valor} value={valor}>{valor ? nome : "Não informado"}</option>)}</select></Campo>
-        <Campo rotulo="Ano ou série"><input value={presencaManual.serie} onChange={(e) => mudarPresencaManual({ ...presencaManual, serie: e.target.value })} /></Campo>
-        <Campo rotulo="Turma"><input value={presencaManual.turma} onChange={(e) => mudarPresencaManual({ ...presencaManual, turma: e.target.value })} /></Campo>
-        <Campo rotulo="Turno"><select value={presencaManual.turno} onChange={(e) => mudarPresencaManual({ ...presencaManual, turno: e.target.value })}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{valor ? nome : "Não informado"}</option>)}</select></Campo>
-        <Campo rotulo="Função"><input value={presencaManual.funcao} onChange={(e) => mudarPresencaManual({ ...presencaManual, funcao: e.target.value })} placeholder="Ex.: membro, diretoria, convidado" /></Campo>
-        <Campo rotulo="Situação"><select value={presencaManual.situacao} onChange={(e) => mudarPresencaManual({ ...presencaManual, situacao: e.target.value })}>{situacoesPresenca.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo>
-        <Campo rotulo="Observação pública" largo><textarea rows={3} value={presencaManual.observacaoPublica} onChange={(e) => mudarPresencaManual({ ...presencaManual, observacaoPublica: e.target.value })} /></Campo>
-        <Campo rotulo="Observação interna" dica="Nunca aparece no portal." largo><textarea rows={3} value={presencaManual.observacaoInterna} onChange={(e) => mudarPresencaManual({ ...presencaManual, observacaoInterna: e.target.value })} /></Campo>
-      </div>
-      <div className="pev-publicacao"><label><CheckboxComAjuda checked={presencaManual.publicado} onChange={(e) => mudarPresencaManual({ ...presencaManual, publicado: e.target.checked })} explicacao={descricaoCheckbox("presenca")} aria-label={"Publicar esta presença no portal"} /><span>Publicar esta presença no portal</span></label><p>Por padrão, o registro fica oculto. A publicação exige confirmação ao salvar.</p></div>
-      <div className="pev-acoes-formulario"><button type="button" className="pev-botao" onClick={fecharPresencaManual}>Cancelar</button><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>{salvando ? "Salvando…" : "Adicionar à presença"}</button></div>
-    </form>;
+    return (
+      <form className="pev-formulario" onSubmit={salvarPresencaManual}>
+        <div className="pev-formulario__topo">
+          <div>
+            <small>REUNIÃO INTERNA DO GECEP</small>
+            <h2>Adicionar membro à presença</h2>
+          </div>
+          <button
+            type="button"
+            className="pev-botao pev-botao--texto"
+            onClick={fecharPresencaManual}
+          >
+            Fechar
+          </button>
+        </div>
+        <p className="pev-introducao">
+          Este registro preserva um retrato histórico da pessoa na data da reunião. Não informe
+          telefone, e-mail ou outros dados pessoais.
+        </p>
+        <div className="pev-grade-campos pev-grade-campos--tres">
+          <Campo rotulo="Nome">
+            <input
+              value={presencaManual.nome}
+              onChange={(e) => mudarPresencaManual({ ...presencaManual, nome: e.target.value })}
+              required
+            />
+          </Campo>
+          <Campo rotulo="Nível de ensino">
+            <select
+              value={presencaManual.nivelEnsino}
+              onChange={(e) =>
+                mudarPresencaManual({ ...presencaManual, nivelEnsino: e.target.value })
+              }
+            >
+              {niveisPainel.map(([valor, nome]) => (
+                <option key={valor} value={valor}>
+                  {valor ? nome : "Não informado"}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <Campo rotulo="Ano ou série">
+            <input
+              value={presencaManual.serie}
+              onChange={(e) => mudarPresencaManual({ ...presencaManual, serie: e.target.value })}
+            />
+          </Campo>
+          <Campo rotulo="Turma">
+            <input
+              value={presencaManual.turma}
+              onChange={(e) => mudarPresencaManual({ ...presencaManual, turma: e.target.value })}
+            />
+          </Campo>
+          <Campo rotulo="Turno">
+            <select
+              value={presencaManual.turno}
+              onChange={(e) => mudarPresencaManual({ ...presencaManual, turno: e.target.value })}
+            >
+              {turnosPainel.map(([valor, nome]) => (
+                <option key={valor} value={valor}>
+                  {valor ? nome : "Não informado"}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <Campo rotulo="Função">
+            <input
+              value={presencaManual.funcao}
+              onChange={(e) => mudarPresencaManual({ ...presencaManual, funcao: e.target.value })}
+              placeholder="Ex.: membro, diretoria, convidado"
+            />
+          </Campo>
+          <Campo rotulo="Situação">
+            <select
+              value={presencaManual.situacao}
+              onChange={(e) => mudarPresencaManual({ ...presencaManual, situacao: e.target.value })}
+            >
+              {situacoesPresenca.map(([valor, nome]) => (
+                <option key={valor} value={valor}>
+                  {nome}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <Campo rotulo="Observação pública" largo>
+            <textarea
+              rows={3}
+              value={presencaManual.observacaoPublica}
+              onChange={(e) =>
+                mudarPresencaManual({ ...presencaManual, observacaoPublica: e.target.value })
+              }
+            />
+          </Campo>
+          <Campo rotulo="Observação interna" dica="Nunca aparece no portal." largo>
+            <textarea
+              rows={3}
+              value={presencaManual.observacaoInterna}
+              onChange={(e) =>
+                mudarPresencaManual({ ...presencaManual, observacaoInterna: e.target.value })
+              }
+            />
+          </Campo>
+        </div>
+        <div className="pev-publicacao">
+          <label>
+            <CheckboxComAjuda
+              checked={presencaManual.publicado}
+              onChange={(e) =>
+                mudarPresencaManual({ ...presencaManual, publicado: e.target.checked })
+              }
+              explicacao={descricaoCheckbox("presenca")}
+              aria-label={"Publicar esta presença no portal"}
+            />
+            <span>Publicar esta presença no portal</span>
+          </label>
+          <p>Por padrão, o registro fica oculto. A publicação exige confirmação ao salvar.</p>
+        </div>
+        <div className="pev-acoes-formulario">
+          <button type="button" className="pev-botao" onClick={fecharPresencaManual}>
+            Cancelar
+          </button>
+          <button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>
+            {salvando ? "Salvando…" : "Adicionar à presença"}
+          </button>
+        </div>
+      </form>
+    );
   }
 
-  return <section className="pev-subpainel">
-    <div className="pev-subpainel__topo"><div><h2>Lista de presença</h2><p>Os nomes e turmas desta lista são cópias históricas e não mudam quando um mandato é alterado.</p></div>{reuniaoInterna && <button type="button" className="pev-botao pev-botao--primario" onClick={abrirPresencaManual}>+ Adicionar membro</button>}</div>
-    {!reuniaoInterna && !detalhes.presencas.length && <form className="pev-gerar-presencas" onSubmit={gerar}><h3>Gerar lista inicial de representantes ativos</h3><div className="pev-grade-campos pev-grade-campos--quatro"><Campo rotulo="Nível"><select value={filtrosGeracao.nivelEnsino} onChange={(e) => setFiltrosGeracao({ ...filtrosGeracao, nivelEnsino: e.target.value })}>{niveisPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><Campo rotulo="Turno"><select value={filtrosGeracao.turno} onChange={(e) => setFiltrosGeracao({ ...filtrosGeracao, turno: e.target.value })}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></Campo><Campo rotulo="Ano / série"><input value={filtrosGeracao.serie} onChange={(e) => setFiltrosGeracao({ ...filtrosGeracao, serie: e.target.value })} /></Campo><Campo rotulo="Turma"><input value={filtrosGeracao.turma} onChange={(e) => setFiltrosGeracao({ ...filtrosGeracao, turma: e.target.value })} /></Campo></div><button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>{salvando ? "Gerando…" : "Gerar lista de presença"}</button></form>}
-    {reuniaoInterna && !detalhes.presencas.length && <EstadoVazio titulo="Nenhum membro registrado" texto="Adicione manualmente somente as pessoas que realmente participaram desta reunião interna." />}
-    {detalhes.presencas.length > 0 && <>
-      <div className="pev-filtros"><label className="pev-filtro--busca"><span>Buscar pessoa ou turma</span><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} /></label><label><span>Situação</span><select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}><option value="">Todas</option>{situacoesPresenca.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label><label><span>Turno</span><select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)}>{turnosPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label><label><span>Nível</span><select value={filtroNivel} onChange={(e) => setFiltroNivel(e.target.value)}>{niveisPainel.map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label></div>
-      <div className="pev-acoes-lote"><button type="button" className="pev-botao" onClick={selecionarFiltradas}>Selecionar resultados filtrados</button><span>{selecionadas.size} selecionado(s)</span><label><span>Marcar selecionados como</span><select defaultValue="" onChange={(e) => { if (e.target.value) void aplicar(e.target.value); e.target.value = ""; }} disabled={salvando}><option value="">Escolha…</option>{situacoesPresenca.filter(([valor]) => valor !== "nao_informada").map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></label><button type="button" className="pev-botao" onClick={() => void aplicar("presente", true)} disabled={salvando || !filtradas.length}>Todos filtrados presentes</button><button type="button" className="pev-botao" onClick={() => void aplicar("ausente", true)} disabled={salvando || !filtradas.length}>Todos filtrados ausentes</button><button type="button" className="pev-botao" onClick={() => void alterarPublicacao(true)} disabled={salvando || !selecionadas.size}>Publicar selecionados</button><button type="button" className="pev-botao" onClick={() => void alterarPublicacao(false)} disabled={salvando || !selecionadas.size}>Ocultar selecionados</button></div>
-      <div className="pev-tabela-wrap"><table className="pev-tabela"><thead><tr><th scope="col">Selecionar</th><th scope="col">Nome preservado</th><th scope="col">Turma</th><th scope="col">Turno / nível</th><th scope="col">Função</th><th scope="col">Situação</th><th scope="col">Portal</th></tr></thead><tbody>{filtradas.map((item) => <tr key={item.id}><td><CheckboxComAjuda aria-label={`Selecionar ${item.nome}`} checked={selecionadas.has(item.id)} onChange={() => alternar(item.id)} explicacao={descricaoCheckbox("selecionada")} /></td><td>{item.nome}</td><td>{item.turma || "—"}</td><td>{[item.turno, item.nivelEnsino].filter(Boolean).join(" · ") || "—"}</td><td>{item.funcao || "—"}</td><td><span className={classeStatus(item.situacao)}>{statusLegivel(item.situacao)}</span></td><td><span className={classeStatus(item.publicado ? "publicado" : "rascunho")}>{item.publicado ? "Público" : "Oculto"}</span><BotaoRemoverComplemento item={item} remover={remover} salvando={salvando} /></td></tr>)}</tbody></table></div>
-      {!filtradas.length && <EstadoVazio titulo="Nenhuma presença encontrada" texto="Altere os filtros para visualizar outros registros." />}
-    </>}
-  </section>;
+  return (
+    <section className="pev-subpainel">
+      <div className="pev-subpainel__topo">
+        <div>
+          <h2>Lista de presença</h2>
+          <p>
+            Os nomes e turmas desta lista são cópias históricas e não mudam quando um mandato é
+            alterado.
+          </p>
+        </div>
+        {reuniaoInterna && (
+          <button
+            type="button"
+            className="pev-botao pev-botao--primario"
+            onClick={abrirPresencaManual}
+          >
+            + Adicionar membro
+          </button>
+        )}
+      </div>
+      {!reuniaoInterna && !detalhes.presencas.length && (
+        <form className="pev-gerar-presencas" onSubmit={gerar}>
+          <h3>Gerar lista inicial de representantes ativos</h3>
+          <div className="pev-grade-campos pev-grade-campos--quatro">
+            <Campo rotulo="Nível">
+              <select
+                value={filtrosGeracao.nivelEnsino}
+                onChange={(e) =>
+                  setFiltrosGeracao({ ...filtrosGeracao, nivelEnsino: e.target.value })
+                }
+              >
+                {niveisPainel.map(([valor, nome]) => (
+                  <option key={valor} value={valor}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+            <Campo rotulo="Turno">
+              <select
+                value={filtrosGeracao.turno}
+                onChange={(e) => setFiltrosGeracao({ ...filtrosGeracao, turno: e.target.value })}
+              >
+                {turnosPainel.map(([valor, nome]) => (
+                  <option key={valor} value={valor}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+            <Campo rotulo="Ano / série">
+              <input
+                value={filtrosGeracao.serie}
+                onChange={(e) => setFiltrosGeracao({ ...filtrosGeracao, serie: e.target.value })}
+              />
+            </Campo>
+            <Campo rotulo="Turma">
+              <input
+                value={filtrosGeracao.turma}
+                onChange={(e) => setFiltrosGeracao({ ...filtrosGeracao, turma: e.target.value })}
+              />
+            </Campo>
+          </div>
+          <button type="submit" className="pev-botao pev-botao--primario" disabled={salvando}>
+            {salvando ? "Gerando…" : "Gerar lista de presença"}
+          </button>
+        </form>
+      )}
+      {reuniaoInterna && !detalhes.presencas.length && (
+        <EstadoVazio
+          titulo="Nenhum membro registrado"
+          texto="Adicione manualmente somente as pessoas que realmente participaram desta reunião interna."
+        />
+      )}
+      {detalhes.presencas.length > 0 && (
+        <>
+          <div className="pev-filtros">
+            <label className="pev-filtro--busca">
+              <span>Buscar pessoa ou turma</span>
+              <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            </label>
+            <label>
+              <span>Situação</span>
+              <select value={filtroSituacao} onChange={(e) => setFiltroSituacao(e.target.value)}>
+                <option value="">Todas</option>
+                {situacoesPresenca.map(([valor, nome]) => (
+                  <option key={valor} value={valor}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Turno</span>
+              <select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)}>
+                {turnosPainel.map(([valor, nome]) => (
+                  <option key={valor} value={valor}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Nível</span>
+              <select value={filtroNivel} onChange={(e) => setFiltroNivel(e.target.value)}>
+                {niveisPainel.map(([valor, nome]) => (
+                  <option key={valor} value={valor}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="pev-acoes-lote">
+            <button type="button" className="pev-botao" onClick={selecionarFiltradas}>
+              Selecionar resultados filtrados
+            </button>
+            <span>{selecionadas.size} selecionado(s)</span>
+            <label>
+              <span>Marcar selecionados como</span>
+              <select
+                defaultValue=""
+                onChange={(e) => {
+                  if (e.target.value) void aplicar(e.target.value);
+                  e.target.value = "";
+                }}
+                disabled={salvando}
+              >
+                <option value="">Escolha…</option>
+                {situacoesPresenca
+                  .filter(([valor]) => valor !== "nao_informada")
+                  .map(([valor, nome]) => (
+                    <option key={valor} value={valor}>
+                      {nome}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="pev-botao"
+              onClick={() => void aplicar("presente", true)}
+              disabled={salvando || !filtradas.length}
+            >
+              Todos filtrados presentes
+            </button>
+            <button
+              type="button"
+              className="pev-botao"
+              onClick={() => void aplicar("ausente", true)}
+              disabled={salvando || !filtradas.length}
+            >
+              Todos filtrados ausentes
+            </button>
+            <button
+              type="button"
+              className="pev-botao"
+              onClick={() => void alterarPublicacao(true)}
+              disabled={salvando || !selecionadas.size}
+            >
+              Publicar selecionados
+            </button>
+            <button
+              type="button"
+              className="pev-botao"
+              onClick={() => void alterarPublicacao(false)}
+              disabled={salvando || !selecionadas.size}
+            >
+              Ocultar selecionados
+            </button>
+          </div>
+          <div className="pev-tabela-wrap">
+            <table className="pev-tabela">
+              <thead>
+                <tr>
+                  <th scope="col">Selecionar</th>
+                  <th scope="col">Nome preservado</th>
+                  <th scope="col">Turma</th>
+                  <th scope="col">Turno / nível</th>
+                  <th scope="col">Função</th>
+                  <th scope="col">Situação</th>
+                  <th scope="col">Portal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtradas.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <CheckboxComAjuda
+                        aria-label={`Selecionar ${item.nome}`}
+                        checked={selecionadas.has(item.id)}
+                        onChange={() => alternar(item.id)}
+                        explicacao={descricaoCheckbox("selecionada")}
+                      />
+                    </td>
+                    <td>{item.nome}</td>
+                    <td>{item.turma || "—"}</td>
+                    <td>{[item.turno, item.nivelEnsino].filter(Boolean).join(" · ") || "—"}</td>
+                    <td>{item.funcao || "—"}</td>
+                    <td>
+                      <span className={classeStatus(item.situacao)}>
+                        {statusLegivel(item.situacao)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={classeStatus(item.publicado ? "publicado" : "rascunho")}>
+                        {item.publicado ? "Público" : "Oculto"}
+                      </span>
+                      <BotaoRemoverComplemento item={item} remover={remover} salvando={salvando} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!filtradas.length && (
+            <EstadoVazio
+              titulo="Nenhuma presença encontrada"
+              texto="Altere os filtros para visualizar outros registros."
+            />
+          )}
+        </>
+      )}
+    </section>
+  );
 }
 
 function montarDetalheReuniao(resultado: unknown, alternativa: Record<string, unknown>) {
   if (!resultado || typeof resultado !== "object") return alternativa;
   const detalhe = resultado as Record<string, unknown>;
-  const item = detalhe.item && typeof detalhe.item === "object" ? detalhe.item as Record<string, unknown> : detalhe;
+  const item =
+    detalhe.item && typeof detalhe.item === "object"
+      ? (detalhe.item as Record<string, unknown>)
+      : detalhe;
   return {
     ...item,
     documentos: Array.isArray(detalhe.documentos) ? detalhe.documentos : item.documentos,
@@ -744,12 +2730,123 @@ function montarDetalheReuniao(resultado: unknown, alternativa: Record<string, un
 }
 
 function normalizarReuniao(registro: Record<string, unknown>): Reuniao {
-  const lista = (chave: string) => Array.isArray(registro[chave]) ? registro[chave] as Record<string, unknown>[] : [];
-  const niveis = Array.isArray(registro.niveisEnsino) ? registro.niveisEnsino.filter((item): item is string => typeof item === "string") : obterTexto(registro, "nivelEnsino").split(",").filter(Boolean);
-  return { areaResponsavel: obterTexto(registro, "areaResponsavel") || "geral", id: (registro.id as Identificador) ?? crypto.randomUUID(), titulo: obterTexto(registro, "titulo"), slug: obterTexto(registro, "slug"), tipo: obterTexto(registro, "tipo") || "representantes", data: obterTexto(registro, "data"), horarioInicial: obterTexto(registro, "horarioInicial", "horario"), horarioFinal: obterTexto(registro, "horarioFinal"), local: obterTexto(registro, "local"), descricaoCurta: obterTexto(registro, "descricaoCurta"), responsaveis: obterTexto(registro, "responsaveis"), pauta: obterTexto(registro, "pauta"), pautaInterna: obterTexto(registro, "pautaInterna"), discussoes: obterTexto(registro, "discussoes", "assuntosDiscutidos"), resumo: obterTexto(registro, "resumo"), decisoes: obterTexto(registro, "decisoes"), propostas: obterTexto(registro, "propostas"), encaminhamentos: obterTexto(registro, "encaminhamentos"), ata: obterTexto(registro, "ata"), transcricao: obterTexto(registro, "transcricao"), observacoesPublicas: obterTexto(registro, "observacoesPublicas", "observacoes"), observacoesInternas: obterTexto(registro, "observacoesInternas"), situacao: obterTexto(registro, "situacao") || "agendada", turno: obterTexto(registro, "turno"), niveisEnsino: niveis, publicado: obterBooleano(registro, "publicado"), jaPublicado: obterBooleano(registro, "jaPublicado"), quantidadeParticipantesPublicada: obterBooleano(registro, "quantidadeParticipantesPublicada"), arquivado: obterBooleano(registro, "arquivado") || !obterBooleano(registro, "ativo", true), membrosGecepPresentes: lista("membrosGecepPresentes").map((item) => ({ membroId: obterNumero(item, "membroId"), cargoChave: obterTexto(item, "cargoChave"), vaga: obterTexto(item, "vaga"), nome: obterTexto(item, "nome"), cargo: obterTexto(item, "cargo"), vagaNome: obterTexto(item, "vagaNome"), turno: obterTexto(item, "turno") })), documentos: lista("documentos").map(normalizarDocumento), votacoes: lista("votacoes").map(normalizarVotacao), presencas: lista("presencas").map(normalizarPresenca), itens: lista("itens").map(normalizarItemReuniao), atualizadoEm: obterTexto(registro, "atualizadoEm") || undefined };
+  const lista = (chave: string) =>
+    Array.isArray(registro[chave]) ? (registro[chave] as Record<string, unknown>[]) : [];
+  const niveis = Array.isArray(registro.niveisEnsino)
+    ? registro.niveisEnsino.filter((item): item is string => typeof item === "string")
+    : obterTexto(registro, "nivelEnsino").split(",").filter(Boolean);
+  return {
+    areaResponsavel: obterTexto(registro, "areaResponsavel") || "geral",
+    id: (registro.id as Identificador) ?? crypto.randomUUID(),
+    titulo: obterTexto(registro, "titulo"),
+    slug: obterTexto(registro, "slug"),
+    tipo: obterTexto(registro, "tipo") || "representantes",
+    data: obterTexto(registro, "data"),
+    horarioInicial: obterTexto(registro, "horarioInicial", "horario"),
+    horarioFinal: obterTexto(registro, "horarioFinal"),
+    local: obterTexto(registro, "local"),
+    descricaoCurta: obterTexto(registro, "descricaoCurta"),
+    responsaveis: obterTexto(registro, "responsaveis"),
+    pauta: obterTexto(registro, "pauta"),
+    pautaInterna: obterTexto(registro, "pautaInterna"),
+    discussoes: obterTexto(registro, "discussoes", "assuntosDiscutidos"),
+    resumo: obterTexto(registro, "resumo"),
+    decisoes: obterTexto(registro, "decisoes"),
+    propostas: obterTexto(registro, "propostas"),
+    encaminhamentos: obterTexto(registro, "encaminhamentos"),
+    ata: obterTexto(registro, "ata"),
+    transcricao: obterTexto(registro, "transcricao"),
+    observacoesPublicas: obterTexto(registro, "observacoesPublicas", "observacoes"),
+    observacoesInternas: obterTexto(registro, "observacoesInternas"),
+    situacao: obterTexto(registro, "situacao") || "agendada",
+    turno: obterTexto(registro, "turno"),
+    niveisEnsino: niveis,
+    publicado: obterBooleano(registro, "publicado"),
+    jaPublicado: obterBooleano(registro, "jaPublicado"),
+    quantidadeParticipantesPublicada: obterBooleano(registro, "quantidadeParticipantesPublicada"),
+    arquivado: obterBooleano(registro, "arquivado") || !obterBooleano(registro, "ativo", true),
+    membrosGecepPresentes: lista("membrosGecepPresentes").map((item) => ({
+      membroId: obterNumero(item, "membroId"),
+      cargoChave: obterTexto(item, "cargoChave"),
+      vaga: obterTexto(item, "vaga"),
+      nome: obterTexto(item, "nome"),
+      cargo: obterTexto(item, "cargo"),
+      vagaNome: obterTexto(item, "vagaNome"),
+      turno: obterTexto(item, "turno"),
+    })),
+    documentos: lista("documentos").map(normalizarDocumento),
+    votacoes: lista("votacoes").map(normalizarVotacao),
+    presencas: lista("presencas").map(normalizarPresenca),
+    itens: lista("itens").map(normalizarItemReuniao),
+    atualizadoEm: obterTexto(registro, "atualizadoEm") || undefined,
+  };
 }
 
-function normalizarDocumento(item: Record<string, unknown>): DocumentoReuniao { return { jaPublicado: obterBooleano(item, "jaPublicado"), id: item.id as Identificador | undefined, titulo: obterTexto(item, "titulo"), tipo: obterTexto(item, "tipo"), descricao: obterTexto(item, "descricao"), arquivoUrl: obterTexto(item, "arquivoUrl", "url"), linkExterno: obterTexto(item, "linkExterno", "link"), data: obterTexto(item, "data", "dataDocumento"), ordem: obterNumero(item, "ordem"), publicado: obterBooleano(item, "publicado") }; }
-function normalizarVotacao(item: Record<string, unknown>): VotacaoReuniao { const opcoes = Array.isArray(item.opcoes) ? item.opcoes as Record<string, unknown>[] : []; return { jaPublicado: obterBooleano(item, "jaPublicado"), id: item.id as Identificador | undefined, titulo: obterTexto(item, "titulo"), pergunta: obterTexto(item, "pergunta", "proposta"), contexto: obterTexto(item, "contexto"), opcoes: opcoes.map((opcao, indice) => ({ id: opcao.id as Identificador | undefined, texto: obterTexto(opcao, "texto", "nome"), quantidadeVotos: obterNumero(opcao, "quantidadeVotos"), ordem: obterNumero(opcao, "ordem") || indice + 1, ativo: obterBooleano(opcao, "ativo", true) })), abstencoes: obterNumero(item, "abstencoes"), resultado: obterTexto(item, "resultado"), decisaoFinal: obterTexto(item, "decisaoFinal"), observacaoPublica: obterTexto(item, "observacaoPublica", "observacao"), observacaoInterna: obterTexto(item, "observacaoInterna"), ordem: obterNumero(item, "ordem"), publicado: obterBooleano(item, "publicado", true) }; }
-function normalizarPresenca(item: Record<string, unknown>): PresencaReuniao { return { jaPublicado: obterBooleano(item, "jaPublicado"), id: (item.id as Identificador) ?? crypto.randomUUID(), nome: obterTexto(item, "nomePreservado", "nome"), turma: obterTexto(item, "turmaPreservada", "turma"), turno: obterTexto(item, "turnoPreservado", "turno"), nivelEnsino: obterTexto(item, "nivelEnsinoPreservado", "nivelEnsino"), serie: obterTexto(item, "seriePreservada", "serie", "anoSerie"), funcao: obterTexto(item, "funcaoPreservada", "funcao"), situacao: obterTexto(item, "situacao") || "nao_informada", observacaoPublica: obterTexto(item, "observacaoPublica", "observacao"), observacaoInterna: obterTexto(item, "observacaoInterna"), publicado: obterBooleano(item, "publicado") }; }
-function normalizarItemReuniao(item: Record<string, unknown>): ItemReuniao { return { jaPublicado: obterBooleano(item, "jaPublicado"), id: item.id as Identificador | undefined, tipo: obterTexto(item, "tipo") || "item", titulo: obterTexto(item, "titulo"), conteudo: obterTexto(item, "conteudo", "descricao"), responsaveis: obterTexto(item, "responsaveis"), prazo: obterTexto(item, "prazo"), ordem: obterNumero(item, "ordem"), publicado: obterBooleano(item, "publicado"), ativo: obterBooleano(item, "ativo", true) }; }
+function normalizarDocumento(item: Record<string, unknown>): DocumentoReuniao {
+  return {
+    jaPublicado: obterBooleano(item, "jaPublicado"),
+    id: item.id as Identificador | undefined,
+    titulo: obterTexto(item, "titulo"),
+    tipo: obterTexto(item, "tipo"),
+    descricao: obterTexto(item, "descricao"),
+    arquivoUrl: obterTexto(item, "arquivoUrl", "url"),
+    linkExterno: obterTexto(item, "linkExterno", "link"),
+    data: obterTexto(item, "data", "dataDocumento"),
+    ordem: obterNumero(item, "ordem"),
+    publicado: obterBooleano(item, "publicado"),
+  };
+}
+function normalizarVotacao(item: Record<string, unknown>): VotacaoReuniao {
+  const opcoes = Array.isArray(item.opcoes) ? (item.opcoes as Record<string, unknown>[]) : [];
+  return {
+    jaPublicado: obterBooleano(item, "jaPublicado"),
+    id: item.id as Identificador | undefined,
+    titulo: obterTexto(item, "titulo"),
+    pergunta: obterTexto(item, "pergunta", "proposta"),
+    contexto: obterTexto(item, "contexto"),
+    opcoes: opcoes.map((opcao, indice) => ({
+      id: opcao.id as Identificador | undefined,
+      texto: obterTexto(opcao, "texto", "nome"),
+      quantidadeVotos: obterNumero(opcao, "quantidadeVotos"),
+      ordem: obterNumero(opcao, "ordem") || indice + 1,
+      ativo: obterBooleano(opcao, "ativo", true),
+    })),
+    abstencoes: obterNumero(item, "abstencoes"),
+    resultado: obterTexto(item, "resultado"),
+    decisaoFinal: obterTexto(item, "decisaoFinal"),
+    observacaoPublica: obterTexto(item, "observacaoPublica", "observacao"),
+    observacaoInterna: obterTexto(item, "observacaoInterna"),
+    ordem: obterNumero(item, "ordem"),
+    publicado: obterBooleano(item, "publicado", true),
+  };
+}
+function normalizarPresenca(item: Record<string, unknown>): PresencaReuniao {
+  return {
+    jaPublicado: obterBooleano(item, "jaPublicado"),
+    id: (item.id as Identificador) ?? crypto.randomUUID(),
+    nome: obterTexto(item, "nomePreservado", "nome"),
+    turma: obterTexto(item, "turmaPreservada", "turma"),
+    turno: obterTexto(item, "turnoPreservado", "turno"),
+    nivelEnsino: obterTexto(item, "nivelEnsinoPreservado", "nivelEnsino"),
+    serie: obterTexto(item, "seriePreservada", "serie", "anoSerie"),
+    funcao: obterTexto(item, "funcaoPreservada", "funcao"),
+    situacao: obterTexto(item, "situacao") || "nao_informada",
+    observacaoPublica: obterTexto(item, "observacaoPublica", "observacao"),
+    observacaoInterna: obterTexto(item, "observacaoInterna"),
+    publicado: obterBooleano(item, "publicado"),
+  };
+}
+function normalizarItemReuniao(item: Record<string, unknown>): ItemReuniao {
+  return {
+    jaPublicado: obterBooleano(item, "jaPublicado"),
+    id: item.id as Identificador | undefined,
+    tipo: obterTexto(item, "tipo") || "item",
+    titulo: obterTexto(item, "titulo"),
+    conteudo: obterTexto(item, "conteudo", "descricao"),
+    responsaveis: obterTexto(item, "responsaveis"),
+    prazo: obterTexto(item, "prazo"),
+    ordem: obterNumero(item, "ordem"),
+    publicado: obterBooleano(item, "publicado"),
+    ativo: obterBooleano(item, "ativo", true),
+  };
+}

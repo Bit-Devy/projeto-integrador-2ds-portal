@@ -1,6 +1,4 @@
-// importa o tipo de local público
 import type { LocalMapaPublico } from "./tipos";
-// importa a normalização dos textos de busca
 import { normalizarTextoBusca } from "./normalizacao";
 
 // define os dados usados na busca por atividade
@@ -19,7 +17,10 @@ export function localPesquisavelComoAtividade(local: LocalEspecial) {
 }
 
 // busca locais especiais pelo termo informado
-export function buscarLocaisEspeciaisComoAtividade<T extends LocalEspecial>(locais: T[], termo: string) {
+export function buscarLocaisEspeciaisComoAtividade<T extends LocalEspecial>(
+  locais: T[],
+  termo: string,
+) {
   // cria as variações aceitas do termo
   const buscas = variacoesDoTermo(termo);
   if (!buscas.length) return [];

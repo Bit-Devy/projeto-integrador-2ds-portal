@@ -1,6 +1,5 @@
 "use client";
 
-// importa a confirmação de alterações do próprio painel
 import { confirmarNoPainel } from "./confirmacao-painel";
 
 import { useEffect } from "react";
@@ -29,10 +28,12 @@ export async function requisitarPainel<T>(url: string, opcoes?: RequestInit): Pr
   const resposta = await fetch(url, opcoes);
   const tipo = resposta.headers.get("content-type") ?? "";
   const resultado = tipo.includes("application/json")
-    ? await resposta.json() as T & { erro?: string; mensagem?: string }
-    : {} as T & { erro?: string; mensagem?: string };
+    ? ((await resposta.json()) as T & { erro?: string; mensagem?: string })
+    : ({} as T & { erro?: string; mensagem?: string });
   if (!resposta.ok) {
-    throw new Error(resultado.erro || resultado.mensagem || "Não foi possível concluir a operação.");
+    throw new Error(
+      resultado.erro || resultado.mensagem || "Não foi possível concluir a operação.",
+    );
   }
   return resultado;
 }
@@ -54,24 +55,33 @@ export function extrairLista<T>(resultado: unknown, chaves: string[]): T[] {
   return [];
 }
 
-// As coleções administrativas são paginadas no servidor. Os painéis precisam
+// as coleções administrativas são paginadas no servidor. os painéis precisam
 // percorrer todas as páginas para que registros antigos não desapareçam dos
-// filtros e da edição quando a base ultrapassar o primeiro lote.
-export async function requisitarTodasPaginasPainel<T>(url: string, chaves: string[], limite = 100): Promise<T[]> {
+// filtros e da edição quando a base ultrapassar o primeiro lote
+export async function requisitarTodasPaginasPainel<T>(
+  url: string,
+  chaves: string[],
+  limite = 100,
+): Promise<T[]> {
   const itens: T[] = [];
   let pagina = 1;
   while (pagina <= 10_000) {
     const separador = url.includes("?") ? "&" : "?";
-    const resultado = await requisitarPainel<unknown>(`${url}${separador}pagina=${pagina}&limite=${limite}`);
+    const resultado = await requisitarPainel<unknown>(
+      `${url}${separador}pagina=${pagina}&limite=${limite}`,
+    );
     const lote = extrairLista<T>(resultado, chaves);
     itens.push(...lote);
-    const paginacao = resultado && typeof resultado === "object"
-      ? (resultado as Record<string, unknown>).paginacao
-      : null;
-    const totalPaginas = paginacao && typeof paginacao === "object"
-      ? Number((paginacao as Record<string, unknown>).totalPaginas)
-      : 0;
-    if ((Number.isFinite(totalPaginas) && pagina >= totalPaginas) || lote.length < limite) return itens;
+    const paginacao =
+      resultado && typeof resultado === "object"
+        ? (resultado as Record<string, unknown>).paginacao
+        : null;
+    const totalPaginas =
+      paginacao && typeof paginacao === "object"
+        ? Number((paginacao as Record<string, unknown>).totalPaginas)
+        : 0;
+    if ((Number.isFinite(totalPaginas) && pagina >= totalPaginas) || lote.length < limite)
+      return itens;
     pagina += 1;
   }
   throw new Error("A lista administrativa excedeu o limite seguro de páginas.");
@@ -90,7 +100,8 @@ export function obterBooleano(registro: Record<string, unknown>, chave: string, 
   const valor = registro[chave];
   if (typeof valor === "boolean") return valor;
   if (typeof valor === "number") return valor === 1;
-  if (typeof valor === "string") return ["1", "true", "sim", "publicado", "ativo"].includes(valor.toLowerCase());
+  if (typeof valor === "string")
+    return ["1", "true", "sim", "publicado", "ativo"].includes(valor.toLowerCase());
   return padrao;
 }
 
@@ -120,11 +131,23 @@ export function dataLegivel(valor?: string) {
 export function statusLegivel(valor?: string) {
   if (!valor) return "Rascunho";
   const mapa: Record<string, string> = {
-    rascunho: "Rascunho", publicado: "Publicado", agendado: "Agendado", futuro: "Próximo",
-    em_andamento: "Em andamento", acontecendo: "Acontecendo agora", encerrado: "Encerrado",
-    adiado: "Adiado", cancelado: "Cancelado", arquivado: "Arquivado", ativo: "Ativo",
-    inativo: "Inativo", agendada: "Agendada", realizada: "Realizada", wo: "W.O.",
-    data_a_definir: "Data a definir", ausente_justificado: "Ausência justificada",
+    rascunho: "Rascunho",
+    publicado: "Publicado",
+    agendado: "Agendado",
+    futuro: "Próximo",
+    em_andamento: "Em andamento",
+    acontecendo: "Acontecendo agora",
+    encerrado: "Encerrado",
+    adiado: "Adiado",
+    cancelado: "Cancelado",
+    arquivado: "Arquivado",
+    ativo: "Ativo",
+    inativo: "Inativo",
+    agendada: "Agendada",
+    realizada: "Realizada",
+    wo: "W.O.",
+    data_a_definir: "Data a definir",
+    ausente_justificado: "Ausência justificada",
     nao_se_aplica: "Não se aplica",
   };
   return mapa[valor] ?? valor.replaceAll("_", " ").replace(/^./, (letra) => letra.toUpperCase());
@@ -135,8 +158,13 @@ export function classeStatus(valor?: string) {
 }
 
 export function criarSlug(valor: string) {
-  return valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 90);
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 90);
 }
 
 export function useAvisoMudancas(mudou: boolean, aoMudarEstadoSujo?: AoMudarEstadoSujo) {
@@ -144,13 +172,16 @@ export function useAvisoMudancas(mudou: boolean, aoMudarEstadoSujo?: AoMudarEsta
     aoMudarEstadoSujo?.(mudou);
   }, [aoMudarEstadoSujo, mudou]);
 
-  useEffect(() => () => {
-    aoMudarEstadoSujo?.(false);
-  }, [aoMudarEstadoSujo]);
+  useEffect(
+    () => () => {
+      aoMudarEstadoSujo?.(false);
+    },
+    [aoMudarEstadoSujo],
+  );
 
   useEffect(() => {
-    // Quando existe um contêiner, ele registra um único aviso para todos os
-    // painéis. O uso isolado mantém o comportamento anterior do componente.
+    // quando existe um contêiner, ele registra um único aviso para todos os
+    // painéis. o uso isolado mantém o comportamento anterior do componente
     if (!mudou || aoMudarEstadoSujo) return;
     const avisar = (evento: BeforeUnloadEvent) => {
       if (Date.now() <= navegacaoAutorizadaAte) return;
@@ -163,37 +194,68 @@ export function useAvisoMudancas(mudou: boolean, aoMudarEstadoSujo?: AoMudarEsta
 }
 
 export async function confirmarSaida(mudou: boolean) {
-  return !mudou || await confirmarNoPainel("Alterações não salvas", "Se continuar, as alterações não salvas serão descartadas.");
+  return (
+    !mudou ||
+    (await confirmarNoPainel(
+      "Alterações não salvas",
+      "Se continuar, as alterações não salvas serão descartadas.",
+    ))
+  );
 }
 
-// Evita um segundo diálogo nativo logo após a confirmação explícita de um
-// link que deixa o painel. A autorização expira rapidamente e não interfere
-// em recarregamentos ou fechamentos posteriores.
+// evita um segundo diálogo nativo logo após a confirmação explícita de um
+// link que deixa o painel. a autorização expira rapidamente e não interfere
+// em recarregamentos ou fechamentos posteriores
 export function autorizarNavegacaoPainel() {
   navegacaoAutorizadaAte = Date.now() + 1_000;
 }
 
-export async function enviarArquivoPainel(arquivo: File, visibilidade: "publica" | "privada" = "publica") {
+export async function enviarArquivoPainel(
+  arquivo: File,
+  visibilidade: "publica" | "privada" = "publica",
+) {
   const dados = new FormData();
   dados.append("arquivo", arquivo);
   dados.append("visibilidade", visibilidade);
-  return requisitarPainel<{ url: string; nome?: string }>("/api/arquivos", { method: "POST", body: dados });
+  return requisitarPainel<{ url: string; nome?: string }>("/api/arquivos", {
+    method: "POST",
+    body: dados,
+  });
 }
 
 export function MensagensPainel({ erro, sucesso }: { erro?: string; sucesso?: string }) {
   return (
     <div className="pev-mensagens" aria-live="polite">
-      {erro && <p className="pev-aviso pev-aviso--erro" role="alert">{erro}</p>}
-      {sucesso && <p className="pev-aviso pev-aviso--sucesso" role="status">{sucesso}</p>}
+      {erro && (
+        <p className="pev-aviso pev-aviso--erro" role="alert">
+          {erro}
+        </p>
+      )}
+      {sucesso && (
+        <p className="pev-aviso pev-aviso--sucesso" role="status">
+          {sucesso}
+        </p>
+      )}
     </div>
   );
 }
 
 export function EstadoVazio({ titulo, texto }: { titulo: string; texto: string }) {
-  return <div className="pev-vazio"><strong>{titulo}</strong><p>{texto}</p></div>;
+  return (
+    <div className="pev-vazio">
+      <strong>{titulo}</strong>
+      <p>{texto}</p>
+    </div>
+  );
 }
 
-export function CabecalhoPainel({ rotulo, titulo, descricao, acao, nomeAcao }: {
+export function CabecalhoPainel({
+  rotulo,
+  titulo,
+  descricao,
+  acao,
+  nomeAcao,
+}: {
   rotulo: string;
   titulo: string;
   descricao: string;
@@ -202,13 +264,26 @@ export function CabecalhoPainel({ rotulo, titulo, descricao, acao, nomeAcao }: {
 }) {
   return (
     <header className="pev-cabecalho">
-      <div><span>{rotulo}</span><h1>{titulo}</h1><p>{descricao}</p></div>
-      {acao && nomeAcao && <button type="button" className="pev-botao pev-botao--primario" onClick={acao}>{nomeAcao}</button>}
+      <div>
+        <span>{rotulo}</span>
+        <h1>{titulo}</h1>
+        <p>{descricao}</p>
+      </div>
+      {acao && nomeAcao && (
+        <button type="button" className="pev-botao pev-botao--primario" onClick={acao}>
+          {nomeAcao}
+        </button>
+      )}
     </header>
   );
 }
 
-export function Campo({ rotulo, dica, largo, children }: {
+export function Campo({
+  rotulo,
+  dica,
+  largo,
+  children,
+}: {
   rotulo: string;
   dica?: string;
   largo?: boolean;
@@ -223,10 +298,23 @@ export function Campo({ rotulo, dica, largo, children }: {
   );
 }
 
-export function BotaoPerigoso({ children, onClick, disabled }: {
+export function BotaoPerigoso({
+  children,
+  onClick,
+  disabled,
+}: {
   children: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
 }) {
-  return <button type="button" className="pev-botao pev-botao--perigoso" onClick={onClick} disabled={disabled}>{children}</button>;
+  return (
+    <button
+      type="button"
+      className="pev-botao pev-botao--perigoso"
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {children}
+    </button>
+  );
 }

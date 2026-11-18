@@ -1,6 +1,4 @@
-// importa as verificações dos resultados
 import assert from "node:assert/strict";
-// importa a criação dos testes
 import test from "node:test";
 
 // verifica a resposta da tela inicial
@@ -30,10 +28,7 @@ test("renderiza a página inicial do GECEP", async () => {
 
   // confirma o resultado e o tipo da resposta
   assert.equal(response.status, 200);
-  assert.match(
-    response.headers.get("content-type") ?? "",
-    /^text\/html\b/i,
-  );
+  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   // confirma que a página contém o nome do grêmio
   const html = await response.text();
   assert.match(html, /GECEP/);

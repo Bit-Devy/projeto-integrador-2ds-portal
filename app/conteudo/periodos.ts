@@ -1,21 +1,42 @@
 // encontra o ano atual sem prender o portal a uma gestão
+// pra conferir a virada de ano no ambiente local
+// anoDoPortal(new Date(2027, 0, 1))
 export function anoDoPortal(data = new Date()) {
-  return Number(new Intl.DateTimeFormat("pt-BR", { year: "numeric", timeZone: "America/Sao_Paulo" }).format(data));
+  return Number(
+    new Intl.DateTimeFormat("pt-BR", { year: "numeric", timeZone: "America/Sao_Paulo" }).format(
+      data,
+    ),
+  );
 }
 
 // usa o dia do paraná também nas consultas feitas perto da virada do ano
-export function dataDoPortal(data = new Date()) { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(data); }
-export function dataSqlDoPortal(data = new Date()) { return `'${dataDoPortal(data)}'`; }
+export function dataDoPortal(data = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(data);
+}
+export function dataSqlDoPortal(data = new Date()) {
+  return `'${dataDoPortal(data)}'`;
+}
 
 // aceita todos os anos ou um ano válido informado no endereço
 export function anoInicial(valor?: string) {
-  return valor === "todos" || /^(19|20|21)\d{2}$/.test(valor || "") ? valor! : String(anoDoPortal());
+  return valor === "todos" || /^(19|20|21)\d{2}$/.test(valor || "")
+    ? valor!
+    : String(anoDoPortal());
 }
 
 // reúne o histórico e permite preparar o próximo ano
 export function anosDisponiveis(datas: string[], selecionado: string, atual = anoDoPortal()) {
   const ano = Number(selecionado) || atual;
-  return [...new Set([atual, atual + 1, ano - 1, ano, ano + 1, ...datas.map((data) => Number(data.slice(0, 4)))])]
+  return [
+    ...new Set([
+      atual,
+      atual + 1,
+      ano - 1,
+      ano,
+      ano + 1,
+      ...datas.map((data) => Number(data.slice(0, 4))),
+    ]),
+  ]
     .filter((valor) => Number.isInteger(valor) && valor >= 1900 && valor <= 2199)
     .sort((a, b) => b - a);
 }
@@ -26,7 +47,10 @@ export function pertenceAoAno(data: string, ano: string) {
 }
 
 // confere o prazo do destaque até o final do dia no paraná
-export function destaqueValido(noticia: { destaque: boolean; destaqueAte?: string }, agora = new Date()) {
+export function destaqueValido(
+  noticia: { destaque: boolean; destaqueAte?: string },
+  agora = new Date(),
+) {
   const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(agora);
   return noticia.destaque && (!noticia.destaqueAte || noticia.destaqueAte >= hoje);
 }

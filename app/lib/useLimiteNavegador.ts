@@ -1,9 +1,7 @@
 // ativa os recursos do navegador
 "use client";
 
-// importa o controle dos avisos e do tempo de espera
 import { useCallback, useEffect, useState } from "react";
-// importa os tipos dos limites
 import type { AcaoLimitada, EstadoLimite } from "./limites-tipos";
 
 // consulta o servidor e libera o formulário quando a espera termina
@@ -25,8 +23,9 @@ export function useLimiteNavegador(acao: AcaoLimitada) {
     setErroConsulta("");
     try {
       const resposta = await fetch(`/api/limites?acao=${acao}`, { cache: "no-store" });
-      if (!resposta.ok) throw new Error("Não foi possível verificar a disponibilidade. Tente novamente.");
-      const dados = await resposta.json() as { limite: EstadoLimite };
+      if (!resposta.ok)
+        throw new Error("Não foi possível verificar a disponibilidade. Tente novamente.");
+      const dados = (await resposta.json()) as { limite: EstadoLimite };
       receberLimite(dados.limite);
     } catch {
       setErroConsulta("Não foi possível verificar a disponibilidade. Tente novamente.");
@@ -37,18 +36,28 @@ export function useLimiteNavegador(acao: AcaoLimitada) {
 
   // consulta o prazo ao abrir a página ou voltar para esta aba
   useEffect(() => {
-    const inicio = setTimeout(() => { void atualizar(); }, 0);
+    const inicio = setTimeout(() => {
+      void atualizar();
+    }, 0);
     function aoVoltar() {
       if (document.visibilityState === "visible") void atualizar();
     }
     document.addEventListener("visibilitychange", aoVoltar);
-    return () => { clearTimeout(inicio); document.removeEventListener("visibilitychange", aoVoltar); };
+    return () => {
+      clearTimeout(inicio);
+      document.removeEventListener("visibilitychange", aoVoltar);
+    };
   }, [atualizar]);
 
   // confere novamente o servidor quando o bloqueio termina
   useEffect(() => {
     if (!liberarEm) return;
-    const temporizador = setTimeout(() => { void atualizar(); }, Math.max(0, liberarEm - Date.now()) + 1000);
+    const temporizador = setTimeout(
+      () => {
+        void atualizar();
+      },
+      Math.max(0, liberarEm - Date.now()) + 1000,
+    );
     return () => clearTimeout(temporizador);
   }, [liberarEm, atualizar]);
 

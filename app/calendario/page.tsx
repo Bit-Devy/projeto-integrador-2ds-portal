@@ -16,7 +16,11 @@ export default async function PaginaCalendario() {
   if (!(await obterModulos()).calendario) notFound();
   return (
     <main id="conteudo">
-      <CabecalhoPagina titulo="Calendário" resumo="Acompanhe as datas do colégio e do GECEP e organize sua vida escolar." caminho="Calendário" />
+      <CabecalhoPagina
+        titulo="Calendário"
+        resumo="Acompanhe as datas do colégio e do GECEP e organize sua vida escolar."
+        caminho="Calendário"
+      />
       <CalendarioPortal calendarios={await obterCalendarios()} />
     </main>
   );

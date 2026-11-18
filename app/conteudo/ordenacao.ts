@@ -1,4 +1,3 @@
-// importa os tipos dos registros de conteúdo
 import type { RegistroBase, RegistroConteudo } from "./tipos";
 
 // define um conteúdo que pode ter uma data
@@ -11,7 +10,11 @@ type ConteudoComData = RegistroBase & {
 export function ordenarConteudosMaisRecentes<T>(itens: readonly T[]) {
   // escolhe a melhor data disponível para cada item
   return ordenar(itens, (item) => ({
-    data: (item as ConteudoComData).data || (item as ConteudoComData).dataDocumento || (item as ConteudoComData).criadoEm || "",
+    data:
+      (item as ConteudoComData).data ||
+      (item as ConteudoComData).dataDocumento ||
+      (item as ConteudoComData).criadoEm ||
+      "",
     id: (item as ConteudoComData).id ?? 0,
   }));
 }

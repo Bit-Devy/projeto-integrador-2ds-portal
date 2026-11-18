@@ -1,11 +1,7 @@
-// ativa recursos do navegador
 "use client";
 
-// importa o componente de link
 import Link from "next/link";
-// importa tipos e controle de estados
 import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
-// importa dados da rota e navegação
 import { usePathname, useRouter } from "next/navigation";
 // recebe do servidor quais páginas podem aparecer na navegação
 import type { ModulosPortal } from "../servicos/tipos";
@@ -77,19 +73,49 @@ const itensMenu: ItemMenu[] = [
 // cria o identificador de um submenu
 function idDoSubmenu(nome: string) {
   // limpa acentos e caracteres especiais
-  return `submenu-${nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  return `submenu-${nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")}`;
 }
 
 // monta a estrutura comum do portal
-export default function EstruturaPortal({ children, modulosIniciais }: { children: ReactNode; modulosIniciais: ModulosPortal }) {
+export default function EstruturaPortal({
+  children,
+  modulosIniciais,
+}: {
+  children: ReactNode;
+  modulosIniciais: ModulosPortal;
+}) {
   const [modulos, setModulos] = useState(modulosIniciais);
-  const menuVisivel = itensMenu.filter((item) => item.destino !== "/calendario" || modulos.calendario).map((item) => item.nome === "Mais" ? { ...item, subitens: item.subitens?.filter((subitem) => subitem.destino !== "/cantina" || modulos.cantina) } : item);
+  const menuVisivel = itensMenu
+    .filter((item) => item.destino !== "/calendario" || modulos.calendario)
+    .map((item) =>
+      item.nome === "Mais"
+        ? {
+            ...item,
+            subitens: item.subitens?.filter(
+              (subitem) => subitem.destino !== "/cantina" || modulos.cantina,
+            ),
+          }
+        : item,
+    );
   // reflete as chaves salvas no painel sem precisar sair da sessão
   useEffect(() => {
     const controle = new AbortController();
-    const atualizar = () => { fetch("/api/modulos", { signal: controle.signal, cache: "no-store" }).then(async (resposta) => { if (resposta.ok) setModulos((await resposta.json()).modulos); }).catch(() => {}); };
+    const atualizar = () => {
+      fetch("/api/modulos", { signal: controle.signal, cache: "no-store" })
+        .then(async (resposta) => {
+          if (resposta.ok) setModulos((await resposta.json()).modulos);
+        })
+        .catch(() => {});
+    };
     window.addEventListener("gecep-modulos-atualizados", atualizar);
-    return () => { controle.abort(); window.removeEventListener("gecep-modulos-atualizados", atualizar); };
+    return () => {
+      controle.abort();
+      window.removeEventListener("gecep-modulos-atualizados", atualizar);
+    };
   }, []);
   // lê a página atual
   const caminhoAtual = usePathname();
@@ -103,7 +129,7 @@ export default function EstruturaPortal({ children, modulosIniciais }: { childre
   const [textoMaior, setTextoMaior] = useState(false);
   // guarda o texto da busca
   const [busca, setBusca] = useState("");
-  // permite devolver o foco ao botão ao fechar o menu móvel com Escape
+  // permite devolver o foco ao botão ao fechar o menu móvel com escape
   const botaoMenuCelular = useRef<HTMLButtonElement>(null);
 
   // fecha o menu com escape mesmo quando o foco ainda está no botão do cabeçalho
@@ -165,10 +191,22 @@ export default function EstruturaPortal({ children, modulosIniciais }: { childre
         <div className="barra-governo-conteudo" aria-hidden="true" />
         {/* botões de acessibilidade */}
         <div className="atalhos-acessibilidade" role="group" aria-label="Opções de acessibilidade">
-          <button type="button" onClick={() => setTextoMaior(true)} aria-pressed={textoMaior} aria-label="Aumentar o texto" title="Aumentar o texto">
+          <button
+            type="button"
+            onClick={() => setTextoMaior(true)}
+            aria-pressed={textoMaior}
+            aria-label="Aumentar o texto"
+            title="Aumentar o texto"
+          >
             A+
           </button>
-          <button type="button" onClick={() => setTextoMaior(false)} aria-pressed={!textoMaior} aria-label="Diminuir o texto para o tamanho normal" title="Diminuir o texto para o tamanho normal">
+          <button
+            type="button"
+            onClick={() => setTextoMaior(false)}
+            aria-pressed={!textoMaior}
+            aria-label="Diminuir o texto para o tamanho normal"
+            title="Diminuir o texto para o tamanho normal"
+          >
             A
           </button>
         </div>
@@ -191,7 +229,12 @@ export default function EstruturaPortal({ children, modulosIniciais }: { childre
           </button>
 
           {/* marca do colégio */}
-          <Link className="marca-colegio" href="/" onClick={fecharMenu} aria-label="Página inicial do GECEP">
+          <Link
+            className="marca-colegio"
+            href="/"
+            onClick={fecharMenu}
+            aria-label="Página inicial do GECEP"
+          >
             <img
               src="https://web.celepar.pr.gov.br/drupal/images/seed/logo-cep-105x105.png"
               alt="Brasão do Colégio Estadual do Paraná"
@@ -201,8 +244,16 @@ export default function EstruturaPortal({ children, modulosIniciais }: { childre
           <div className="divisor-marcas" aria-hidden="true" />
 
           {/* marca do grêmio */}
-          <Link className="marca-gecep" href="/" onClick={fecharMenu} aria-label="GECEP — página inicial">
-            <img src="/logo-gecep-com-texto.png" alt="GECEP — Grêmio Estudantil do Colégio Estadual do Paraná" />
+          <Link
+            className="marca-gecep"
+            href="/"
+            onClick={fecharMenu}
+            aria-label="GECEP — página inicial"
+          >
+            <img
+              src="/logo-gecep-com-texto.png"
+              alt="GECEP — Grêmio Estudantil do Colégio Estadual do Paraná"
+            />
           </Link>
 
           {/* busca do portal */}
@@ -260,18 +311,24 @@ export default function EstruturaPortal({ children, modulosIniciais }: { childre
                 className={`item-menu ${item.subitens ? "item-menu-tem-submenu" : ""} ${submenuAberto === item.nome ? "submenu-aberto" : ""} ${ativo ? "item-menu-ativo" : ""}`}
                 onPointerEnter={(evento) => {
                   // abre ao passar o mouse apenas no menu de computador
-                  if (evento.pointerType === "mouse" && window.matchMedia("(min-width: 781px)").matches) {
+                  if (
+                    evento.pointerType === "mouse" &&
+                    window.matchMedia("(min-width: 781px)").matches
+                  ) {
                     setSubmenuAberto(item.subitens ? item.nome : null);
                   }
                 }}
                 onPointerLeave={(evento) => {
-                  if (evento.pointerType === "mouse" && !evento.currentTarget.contains(document.activeElement)) {
-                    setSubmenuAberto((atual) => atual === item.nome ? null : atual);
+                  if (
+                    evento.pointerType === "mouse" &&
+                    !evento.currentTarget.contains(document.activeElement)
+                  ) {
+                    setSubmenuAberto((atual) => (atual === item.nome ? null : atual));
                   }
                 }}
                 onBlur={(evento) => {
                   if (!evento.currentTarget.contains(evento.relatedTarget as Node | null)) {
-                    setSubmenuAberto((atual) => atual === item.nome ? null : atual);
+                    setSubmenuAberto((atual) => (atual === item.nome ? null : atual));
                   }
                 }}
                 onKeyDown={(evento) => {
@@ -279,7 +336,9 @@ export default function EstruturaPortal({ children, modulosIniciais }: { childre
                     evento.preventDefault();
                     evento.stopPropagation();
                     setSubmenuAberto(null);
-                    evento.currentTarget.querySelector<HTMLButtonElement>(".botao-submenu")?.focus();
+                    evento.currentTarget
+                      .querySelector<HTMLButtonElement>(".botao-submenu")
+                      ?.focus();
                   }
                 }}
                 key={item.nome}
@@ -307,23 +366,32 @@ export default function EstruturaPortal({ children, modulosIniciais }: { childre
                       aria-expanded={submenuAberto === item.nome}
                       aria-controls={idDoSubmenu(item.nome)}
                       aria-label={`${submenuAberto === item.nome ? "Fechar" : "Abrir"} submenu ${item.nome}`}
-                      onClick={() => setSubmenuAberto((atual) => atual === item.nome ? null : item.nome)}
+                      onClick={() =>
+                        setSubmenuAberto((atual) => (atual === item.nome ? null : item.nome))
+                      }
                     >
                       <span aria-hidden="true">▾</span>
                     </button>
                     <ul className="submenu" id={idDoSubmenu(item.nome)}>
                       {item.subitens.map((subitem) => {
                         const destinoSemAncora = subitem.destino.split("#")[0];
-                        const paginaAtual = !subitem.destino.includes("#") && (
-                          destinoSemAncora === item.destino
+                        const paginaAtual =
+                          !subitem.destino.includes("#") &&
+                          (destinoSemAncora === item.destino
                             ? caminhoAtual === destinoSemAncora
-                            : caminhoAtual === destinoSemAncora || caminhoAtual.startsWith(`${destinoSemAncora}/`)
+                            : caminhoAtual === destinoSemAncora ||
+                              caminhoAtual.startsWith(`${destinoSemAncora}/`));
+                        return (
+                          <li key={subitem.nome}>
+                            <Link
+                              href={subitem.destino}
+                              onClick={fecharMenu}
+                              aria-current={paginaAtual ? "page" : undefined}
+                            >
+                              {subitem.nome}
+                            </Link>
+                          </li>
                         );
-                        return <li key={subitem.nome}>
-                          <Link href={subitem.destino} onClick={fecharMenu} aria-current={paginaAtual ? "page" : undefined}>
-                            {subitem.nome}
-                          </Link>
-                        </li>;
                       })}
                     </ul>
                   </>

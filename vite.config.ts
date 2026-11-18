@@ -1,11 +1,8 @@
-// importa a integração com as páginas
 import vinext from "vinext";
-// importa a criação da configuração
 import { defineConfig } from "vite";
 
 // monta a configuração do servidor local
 export default defineConfig(async () => {
-  // importa a integração com a plataforma
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   // define o servidor e as integrações usadas

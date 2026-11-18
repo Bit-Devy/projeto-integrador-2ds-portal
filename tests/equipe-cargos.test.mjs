@@ -10,42 +10,79 @@ import { contatosDoMembro, enderecoContatoEquipe } from "../app/conteudo/contato
 import { abrirPortalMemoria } from "./apoio/portal-memoria.mjs";
 
 test("as vagas da equipe seguem o estatuto e usam somente cargos disponíveis no painel", () => {
-  assert.deepEqual(vagasDoCargo("presidente").map((item) => item.chave), ["titular"]);
+  assert.deepEqual(
+    vagasDoCargo("presidente").map((item) => item.chave),
+    ["titular"],
+  );
   assert.equal(vagasDoCargo("esportes").length, 2);
-  assert.deepEqual(vagasDoCargo("conselho-fiscal-tarde").map((item) => item.chave), ["efetivo", "suplente"]);
+  assert.deepEqual(
+    vagasDoCargo("conselho-fiscal-tarde").map((item) => item.chave),
+    ["efetivo", "suplente"],
+  );
   assert.equal(vagasDoCargo("geral").length, 3);
   assert.equal(vagasDoCargo("coe-secretario").length, 1);
   assert.equal(vagasDoCargo("apoio")[0].chave, "apoio");
   for (const cargo of cargosPainel) assert.ok(vagasDoCargo(cargo.chave).length);
-  for (const chave of ["representante", "vice-representante", "professor-conselheiro", "coe-fiscal", "inventado"]) assert.deepEqual(vagasDoCargo(chave), []);
+  for (const chave of [
+    "representante",
+    "vice-representante",
+    "professor-conselheiro",
+    "coe-fiscal",
+    "inventado",
+  ])
+    assert.deepEqual(vagasDoCargo(chave), []);
   assert.equal(obterCargoEquipe({ cargo: "Presidente" }).chave, "presidente");
   assert.equal(obterCargoEquipe({ cargoChave: "inventado", cargo: "Presidente" }), undefined);
   assert.equal(dadosMembroEquipe(1, { nome: "Pessoa anterior", cargo: "Diretoria Social" }), null);
-  assert.equal(dadosMembroEquipe(1, { nome: "Pessoa anterior", cargo: "Presidente" }).vaga, "titular");
-  assert.equal(dadosMembroEquipe(1, { nome: "Pessoa fiscal", cargoChave: "conselho-fiscal-tarde", vaga: "suplente", turno: "manha" }).turno, "tarde");
+  assert.equal(
+    dadosMembroEquipe(1, { nome: "Pessoa anterior", cargo: "Presidente" }).vaga,
+    "titular",
+  );
+  assert.equal(
+    dadosMembroEquipe(1, {
+      nome: "Pessoa fiscal",
+      cargoChave: "conselho-fiscal-tarde",
+      vaga: "suplente",
+      turno: "manha",
+    }).turno,
+    "tarde",
+  );
 });
 
 test("a ficha pública oferece até três contatos e preserva o link antigo na edição", async () => {
   const portal = await abrirPortalMemoria();
   const api = "/api/conteudo";
-  const dados = { nome: "Pessoa da ficha de teste", diretoria: "Equipe", cargoChave: "apoio", vaga: "apoio" };
+  const dados = {
+    nome: "Pessoa da ficha de teste",
+    diretoria: "Equipe",
+    cargoChave: "apoio",
+    vaga: "apoio",
+  };
   const contatos = [
     { tipo: "whatsapp", valor: "(41) 99999-0000" },
     { tipo: "email", valor: "equipe@example.org" },
     { tipo: "instagram", valor: "https://www.instagram.com/gecep.teste/?igsh=exemplo" },
   ];
   const telefone = { tipo: "telefone", valor: "+55 (41) 3333-0000" };
-  const publicar = async (campos, esperado = 201, publicado = true) => (await portal.chamar(api, {
-    method: "POST", corpo: { tipo: "membros", publicado, dados: { ...dados, ...campos } }, esperado,
-  })).json();
-  const dadosPublicos = async () => (await (await portal.chamar(`${api}?tipo=membros&ano=todos`, { jar: new Map() })).json()).itens;
+  const publicar = async (campos, esperado = 201, publicado = true) =>
+    (
+      await portal.chamar(api, {
+        method: "POST",
+        corpo: { tipo: "membros", publicado, dados: { ...dados, ...campos } },
+        esperado,
+      })
+    ).json();
+  const dadosPublicos = async () =>
+    (await (await portal.chamar(`${api}?tipo=membros&ano=todos`, { jar: new Map() })).json()).itens;
 
   try {
     const { item } = await publicar({ contatos });
     const publicado = (await dadosPublicos()).find((registro) => registro.id === item.id);
     assert.deepEqual(publicado.dados.contatos, contatos);
     assert.deepEqual(contatosDoMembro(publicado.dados).map(enderecoContatoEquipe), [
-      "https://wa.me/5541999990000", "mailto:equipe@example.org", "https://www.instagram.com/gecep.teste/",
+      "https://wa.me/5541999990000",
+      "mailto:equipe@example.org",
+      "https://www.instagram.com/gecep.teste/",
     ]);
     assert.equal(enderecoContatoEquipe(telefone), "tel:+554133330000");
     await publicar({ contatos: [...contatos, telefone] }, 400);
@@ -55,75 +92,226 @@ test("a ficha pública oferece até três contatos e preserva o link antigo na e
       { tipo: "whatsapp", valor: "12" },
       { tipo: "email", valor: "email-incompleto" },
       { tipo: "link", valor: "ftp://example.org" },
-    ]) await publicar({ contatos: [invalido] }, 400);
+    ])
+      await publicar({ contatos: [invalido] }, 400);
 
-    const { item: rascunho } = await publicar({ nome: "Rascunho com contato", contatos: [telefone] }, 201, false);
-    assert.equal((await dadosPublicos()).some((registro) => registro.id === rascunho.id), false);
+    const { item: rascunho } = await publicar(
+      { nome: "Rascunho com contato", contatos: [telefone] },
+      201,
+      false,
+    );
+    assert.equal(
+      (await dadosPublicos()).some((registro) => registro.id === rascunho.id),
+      false,
+    );
 
-    const { item: antigo } = await publicar({ nome: "Integrante antigo", contato: "https://example.org/equipe" });
+    const { item: antigo } = await publicar({
+      nome: "Integrante antigo",
+      contato: "https://example.org/equipe",
+    });
     const listaAntiga = contatosDoMembro(antigo.dados);
     assert.deepEqual(listaAntiga, [{ tipo: "link", valor: "https://example.org/equipe" }]);
-    const atualizar = async (lista) => (await (await portal.chamar(api, { method: "PUT", corpo: {
-      tipo: "membros", id: antigo.id, publicado: true, dados: { ...antigo.dados, contatos: lista },
-    } })).json()).item;
+    const atualizar = async (lista) =>
+      (
+        await (
+          await portal.chamar(api, {
+            method: "PUT",
+            corpo: {
+              tipo: "membros",
+              id: antigo.id,
+              publicado: true,
+              dados: { ...antigo.dados, contatos: lista },
+            },
+          })
+        ).json()
+      ).item;
     const editado = await atualizar([...listaAntiga, telefone]);
     assert.deepEqual(contatosDoMembro(editado.dados), [...listaAntiga, telefone]);
     assert.equal(editado.dados.contato, undefined);
     await atualizar([]);
     const semContatos = (await dadosPublicos()).find((registro) => registro.id === antigo.id);
     assert.deepEqual(contatosDoMembro(semContatos.dados), []);
-  } finally { await portal.fechar(); }
+  } finally {
+    await portal.fechar();
+  }
 });
 
 test("a gravação impede duas publicações na mesma vaga mesmo sem uma consulta anterior", () => {
   const sqlite = new DatabaseSync(":memory:");
   try {
-    sqlite.exec("CREATE TABLE conteudos (id INTEGER PRIMARY KEY, tipo TEXT, titulo TEXT, dados_json TEXT, publicado INTEGER, criado_em TEXT DEFAULT '2026-01-01')");
-    const inserir = sqlite.prepare(`INSERT INTO conteudos (tipo, titulo, dados_json, publicado) SELECT ?, ?, ?, ? WHERE ${condicaoVagaLivre}`);
+    sqlite.exec(
+      "CREATE TABLE conteudos (id INTEGER PRIMARY KEY, tipo TEXT, titulo TEXT, dados_json TEXT, publicado INTEGER, criado_em TEXT DEFAULT '2026-01-01')",
+    );
+    const inserir = sqlite.prepare(
+      `INSERT INTO conteudos (tipo, titulo, dados_json, publicado) SELECT ?, ?, ?, ? WHERE ${condicaoVagaLivre}`,
+    );
     const dados = JSON.stringify({ ano: 2026, cargoChave: "social", vaga: "diretor-1" });
-    assert.equal(inserir.run("membros", "Primeira pessoa", dados, 1, "membros", 1, dados, -1, dados, dados, dados).changes, 1);
-    assert.equal(inserir.run("membros", "Segunda pessoa", dados, 1, "membros", 1, dados, -1, dados, dados, dados).changes, 0);
-    assert.equal(inserir.run("membros", "Rascunho", dados, 0, "membros", 0, dados, -1, dados, dados, dados).changes, 1);
+    assert.equal(
+      inserir.run(
+        "membros",
+        "Primeira pessoa",
+        dados,
+        1,
+        "membros",
+        1,
+        dados,
+        -1,
+        dados,
+        dados,
+        dados,
+      ).changes,
+      1,
+    );
+    assert.equal(
+      inserir.run(
+        "membros",
+        "Segunda pessoa",
+        dados,
+        1,
+        "membros",
+        1,
+        dados,
+        -1,
+        dados,
+        dados,
+        dados,
+      ).changes,
+      0,
+    );
+    assert.equal(
+      inserir.run("membros", "Rascunho", dados, 0, "membros", 0, dados, -1, dados, dados, dados)
+        .changes,
+      1,
+    );
     sqlite.exec("UPDATE conteudos SET publicado = 0 WHERE id = 1");
-    assert.equal(inserir.run("membros", "Substituição", dados, 1, "membros", 1, dados, -1, dados, dados, dados).changes, 1);
-  } finally { sqlite.close(); }
+    assert.equal(
+      inserir.run("membros", "Substituição", dados, 1, "membros", 1, dados, -1, dados, dados, dados)
+        .changes,
+      1,
+    );
+  } finally {
+    sqlite.close();
+  }
 });
 
 test("a equipe publica por cargo e vaga e oferece apenas nomes publicados às reuniões", async () => {
   const sqlite = new DatabaseSync(":memory:");
   try {
-    for (const arquivo of (await readdir("drizzle")).filter((nome) => nome.endsWith(".sql")).sort()) sqlite.exec(await readFile(`drizzle/${arquivo}`, "utf8"));
+    for (const arquivo of (await readdir("drizzle")).filter((nome) => nome.endsWith(".sql")).sort())
+      sqlite.exec(await readFile(`drizzle/${arquivo}`, "utf8"));
     const preparar = (sql, valores = []) => ({
       bind: (...recebidos) => preparar(sql, recebidos),
-      async first(coluna) { const linha = sqlite.prepare(sql).get(...valores) ?? null; return coluna ? linha?.[coluna] : linha; },
-      async all() { return { results: sqlite.prepare(sql).all(...valores), success: true, meta: { changes: sqlite.prepare("SELECT changes() AS total").get().total } }; },
-      async run() { const resultado = sqlite.prepare(sql).run(...valores); return { success: true, meta: { changes: resultado.changes, last_row_id: Number(resultado.lastInsertRowid) } }; },
+      async first(coluna) {
+        const linha = sqlite.prepare(sql).get(...valores) ?? null;
+        return coluna ? linha?.[coluna] : linha;
+      },
+      async all() {
+        return {
+          results: sqlite.prepare(sql).all(...valores),
+          success: true,
+          meta: { changes: sqlite.prepare("SELECT changes() AS total").get().total },
+        };
+      },
+      async run() {
+        const resultado = sqlite.prepare(sql).run(...valores);
+        return {
+          success: true,
+          meta: { changes: resultado.changes, last_row_id: Number(resultado.lastInsertRowid) },
+        };
+      },
     });
-    const d1 = { prepare: preparar, async batch(comandos) {
-      sqlite.exec("SAVEPOINT lote");
-      try { const resultados = []; for (const comando of comandos) resultados.push(await comando.all()); sqlite.exec("RELEASE lote"); return resultados; }
-      catch (erro) { sqlite.exec("ROLLBACK TO lote; RELEASE lote"); throw erro; }
-    } };
+    const d1 = {
+      prepare: preparar,
+      async batch(comandos) {
+        sqlite.exec("SAVEPOINT lote");
+        try {
+          const resultados = [];
+          for (const comando of comandos) resultados.push(await comando.all());
+          sqlite.exec("RELEASE lote");
+          return resultados;
+        } catch (erro) {
+          sqlite.exec("ROLLBACK TO lote; RELEASE lote");
+          throw erro;
+        }
+      },
+    };
     const { default: worker } = await import(`../dist/server/index.js?equipe=${Date.now()}`);
     const senha = "senha.admin*2026.teste";
-    const ambiente = { DB: d1, ADMIN_LOGIN: "admin", ADMIN_PASSWORD: senha, SESSION_SECRET: "segredo exclusivo dos testes isolados da equipe", ASSETS: { fetch: async () => new Response("", { status: 404 }) } };
+    const ambiente = {
+      DB: d1,
+      ADMIN_LOGIN: "admin",
+      ADMIN_PASSWORD: senha,
+      SESSION_SECRET: "segredo exclusivo dos testes isolados da equipe",
+      ASSETS: { fetch: async () => new Response("", { status: 404 }) },
+    };
     const jar = new Map();
-    async function chamar(caminho, { method = "GET", corpo, formulario, esperado = 200, autenticado = true } = {}) {
-      const headers = { origin: "http://localhost", ...(autenticado ? { cookie: [...jar].map(([nome, valor]) => `${nome}=${valor}`).join("; ") } : {}) };
+    async function chamar(
+      caminho,
+      { method = "GET", corpo, formulario, esperado = 200, autenticado = true } = {},
+    ) {
+      const headers = {
+        origin: "http://localhost",
+        ...(autenticado
+          ? { cookie: [...jar].map(([nome, valor]) => `${nome}=${valor}`).join("; ") }
+          : {}),
+      };
       if (corpo) headers["content-type"] = "application/json";
       if (formulario) headers["content-type"] = "application/x-www-form-urlencoded";
-      const resposta = await worker.fetch(new Request(`http://localhost${caminho}`, { method, headers, body: formulario ? new URLSearchParams(formulario) : corpo ? JSON.stringify(corpo) : undefined }), ambiente, { waitUntil() {}, passThroughOnException() {} });
-      assert.equal(resposta.status, esperado, `${method} ${caminho}: ${resposta.status === esperado ? "" : await resposta.clone().text()}`);
-      for (const cookie of resposta.headers.getSetCookie()) { const [nome, ...valor] = cookie.split(";")[0].split("="); jar.set(nome, valor.join("=")); }
+      const resposta = await worker.fetch(
+        new Request(`http://localhost${caminho}`, {
+          method,
+          headers,
+          body: formulario
+            ? new URLSearchParams(formulario)
+            : corpo
+              ? JSON.stringify(corpo)
+              : undefined,
+        }),
+        ambiente,
+        { waitUntil() {}, passThroughOnException() {} },
+      );
+      assert.equal(
+        resposta.status,
+        esperado,
+        `${method} ${caminho}: ${resposta.status === esperado ? "" : await resposta.clone().text()}`,
+      );
+      for (const cookie of resposta.headers.getSetCookie()) {
+        const [nome, ...valor] = cookie.split(";")[0].split("=");
+        jar.set(nome, valor.join("="));
+      }
       return resposta;
     }
     await chamar("/api/equipe-presencas", { autenticado: false, esperado: 401 });
-    await chamar("/api/login", { method: "POST", formulario: { login: "admin", senha, geral: "1", returnTo: "/painel" }, esperado: 303 });
+    await chamar("/api/login", {
+      method: "POST",
+      formulario: { login: "admin", senha, geral: "1", returnTo: "/painel" },
+      esperado: 303,
+    });
     async function publicar(nome, cargoChave, vaga, extras = {}, esperado = 201) {
-      const resposta = await chamar("/api/conteudo", { method: "POST", esperado, corpo: { tipo: "membros", publicado: true, dados: { nome, cargoChave, vaga, diretoria: "Gestão fictícia", turma: "1A", biografia: "Integrante usado somente no teste isolado", fotoUrl: "", contato: "", ...extras } } });
+      const resposta = await chamar("/api/conteudo", {
+        method: "POST",
+        esperado,
+        corpo: {
+          tipo: "membros",
+          publicado: true,
+          dados: {
+            nome,
+            cargoChave,
+            vaga,
+            diretoria: "Gestão fictícia",
+            turma: "1A",
+            biografia: "Integrante usado somente no teste isolado",
+            fotoUrl: "",
+            contato: "",
+            ...extras,
+          },
+        },
+      });
       return resposta.json();
     }
-    const primeira = await publicar("Nome publicado 1", "esportes", "diretor-1", { turno: "manha" });
+    const primeira = await publicar("Nome publicado 1", "esportes", "diretor-1", {
+      turno: "manha",
+    });
     await publicar("Nome publicado 2", "esportes", "diretor-2", { turno: "tarde" });
     await publicar("Vaga repetida", "esportes", "diretor-1", {}, 400);
     await publicar("Vaga inexistente", "esportes", "diretor-3", {}, 400);
@@ -131,21 +319,63 @@ test("a equipe publica por cargo e vaga e oferece apenas nomes publicados às re
     await publicar("Fiscal tarde", "conselho-fiscal-tarde", "efetivo", { turno: "manha" });
     await publicar("Apoio 1", "apoio", "apoio");
     await publicar("Apoio 2", "apoio", "apoio");
-    const rascunho = await chamar("/api/conteudo", { method: "POST", esperado: 201, corpo: { tipo: "membros", publicado: false, dados: { nome: "Nome em rascunho", cargoChave: "esportes", vaga: "diretor-1", diretoria: "Esportes" } } });
+    const rascunho = await chamar("/api/conteudo", {
+      method: "POST",
+      esperado: 201,
+      corpo: {
+        tipo: "membros",
+        publicado: false,
+        dados: {
+          nome: "Nome em rascunho",
+          cargoChave: "esportes",
+          vaga: "diretor-1",
+          diretoria: "Esportes",
+        },
+      },
+    });
     assert.equal((await rascunho.json()).item.publicado, false);
     let lista = (await (await chamar("/api/equipe-presencas")).json()).itens;
     assert.equal(lista.length, 5);
-    assert.deepEqual(lista.filter((item) => item.cargoChave === "esportes").map((item) => item.nome), ["Nome publicado 1", "Nome publicado 2"]);
+    assert.deepEqual(
+      lista.filter((item) => item.cargoChave === "esportes").map((item) => item.nome),
+      ["Nome publicado 1", "Nome publicado 2"],
+    );
     assert.equal(lista.find((item) => item.nome === "Fiscal tarde").turno, "tarde");
-    assert.equal(lista.some((item) => item.nome === "Nome em rascunho"), false);
-    assert.equal(lista.some((item) => item.nome.includes("Administração geral")), false);
+    assert.equal(
+      lista.some((item) => item.nome === "Nome em rascunho"),
+      false,
+    );
+    assert.equal(
+      lista.some((item) => item.nome.includes("Administração geral")),
+      false,
+    );
 
     // retirar alguém do público libera somente a sua própria vaga para a próxima pessoa
-    await chamar("/api/conteudo", { method: "PUT", corpo: { id: primeira.item.id, tipo: "membros", publicado: false, dados: primeira.item.dados } });
+    await chamar("/api/conteudo", {
+      method: "PUT",
+      corpo: {
+        id: primeira.item.id,
+        tipo: "membros",
+        publicado: false,
+        dados: primeira.item.dados,
+      },
+    });
     await publicar("Substituição publicada", "esportes", "diretor-1");
-    await chamar("/api/conteudo", { method: "PUT", esperado: 400, corpo: { id: primeira.item.id, tipo: "membros", publicado: true, dados: primeira.item.dados } });
+    await chamar("/api/conteudo", {
+      method: "PUT",
+      esperado: 400,
+      corpo: { id: primeira.item.id, tipo: "membros", publicado: true, dados: primeira.item.dados },
+    });
     lista = (await (await chamar("/api/equipe-presencas")).json()).itens;
-    assert.equal(lista.some((item) => item.nome === "Nome publicado 1"), false);
-    assert.equal(lista.some((item) => item.nome === "Substituição publicada"), true);
-  } finally { sqlite.close(); }
+    assert.equal(
+      lista.some((item) => item.nome === "Nome publicado 1"),
+      false,
+    );
+    assert.equal(
+      lista.some((item) => item.nome === "Substituição publicada"),
+      true,
+    );
+  } finally {
+    sqlite.close();
+  }
 });

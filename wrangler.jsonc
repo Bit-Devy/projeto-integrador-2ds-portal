@@ -13,14 +13,14 @@
       "binding": "DB",
       "database_name": "portal-gecep-local",
       "database_id": "00000000-0000-4000-8000-000000000000",
-      "migrations_dir": "drizzle"
-    }
+      "migrations_dir": "drizzle",
+    },
   ],
   // conecta o espaço de arquivos do portal
   "r2_buckets": [
     {
       "binding": "BUCKET",
-      "bucket_name": "portal-gecep-arquivos"
-    }
-  ]
+      "bucket_name": "portal-gecep-arquivos",
+    },
+  ],
 }

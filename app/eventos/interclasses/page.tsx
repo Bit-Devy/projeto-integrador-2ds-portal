@@ -7,9 +7,26 @@ export const metadata: Metadata = {
 };
 
 type Busca = Record<string, string | string[] | undefined>;
-function primeiro(valor: string | string[] | undefined) { return Array.isArray(valor) ? valor[0] || "" : valor || ""; }
+function primeiro(valor: string | string[] | undefined) {
+  return Array.isArray(valor) ? valor[0] || "" : valor || "";
+}
 
-export default async function PaginaInterclasses({ searchParams }: { searchParams: Promise<Busca> }) {
+export default async function PaginaInterclasses({
+  searchParams,
+}: {
+  searchParams: Promise<Busca>;
+}) {
   const busca = await searchParams;
-  return <ListaInterclasses filtrosIniciais={{ situacao: primeiro(busca.situacao), ano: primeiro(busca.ano), modalidade: primeiro(busca.modalidade), categoria: primeiro(busca.categoria), turno: primeiro(busca.turno), busca: primeiro(busca.busca) }} />;
+  return (
+    <ListaInterclasses
+      filtrosIniciais={{
+        situacao: primeiro(busca.situacao),
+        ano: primeiro(busca.ano),
+        modalidade: primeiro(busca.modalidade),
+        categoria: primeiro(busca.categoria),
+        turno: primeiro(busca.turno),
+        busca: primeiro(busca.busca),
+      }}
+    />
+  );
 }

@@ -6,7 +6,11 @@ export const metadata: Metadata = {
   description: "Participantes, programação, placar e informações públicas da partida.",
 };
 
-export default async function PaginaJogo({ params }: { params: Promise<{ campeonato: string; jogo: string }> }) {
+export default async function PaginaJogo({
+  params,
+}: {
+  params: Promise<{ campeonato: string; jogo: string }>;
+}) {
   const valores = await params;
   return <DetalheJogo campeonato={valores.campeonato} jogo={valores.jogo} />;
 }

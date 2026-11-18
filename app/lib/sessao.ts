@@ -1,9 +1,11 @@
-// importa o acesso aos cookies
 import { cookies } from "next/headers";
-// importa o redirecionamento do next
 import { redirect } from "next/navigation";
-// importa as variáveis do ambiente
-import { segredoSessao, garantirAcessos, confirmarSenhaDoAcesso, type AcessoSalvo } from "./senhas-painel";
+import {
+  segredoSessao,
+  garantirAcessos,
+  confirmarSenhaDoAcesso,
+  type AcessoSalvo,
+} from "./senhas-painel";
 import { obterCargo } from "./cargos";
 import { getD1 } from "../../db";
 import { obterPermissoesCargo } from "./permissoes-cargos";
@@ -40,12 +42,35 @@ export async function obterUsuarioPeloToken(token: string): Promise<UsuarioPaine
     const conteudo = await tokenValido(token);
     if (!conteudo) return null;
     const [tipo, validade, id, versao, entrada] = conteudo.split(":");
-    if (tipo !== "cargo" || !validade || !/^\d+$/.test(id || "") || !/^\d+$/.test(versao || "") || !/^\d+$/.test(entrada || "")) return null;
+    if (
+      tipo !== "cargo" ||
+      !validade ||
+      !/^\d+$/.test(id || "") ||
+      !/^\d+$/.test(versao || "") ||
+      !/^\d+$/.test(entrada || "")
+    )
+      return null;
     await garantirAcessos();
-    const acesso = await getD1().prepare("SELECT * FROM acessos_painel WHERE id = ? AND versao = ?").bind(Number(id), Number(versao)).first<AcessoSalvo>();
+    const acesso = await getD1()
+      .prepare("SELECT * FROM acessos_painel WHERE id = ? AND versao = ?")
+      .bind(Number(id), Number(versao))
+      .first<AcessoSalvo>();
     if (!acesso || !obterCargo(acesso.cargo)) return null;
-    if (!await getD1().prepare("SELECT id FROM entradas_painel WHERE id = ? AND acesso_id = ?").bind(Number(entrada), acesso.id).first()) return null;
-    return { nome: acesso.nome, cargo: acesso.cargo, acessoId: acesso.id, versao: acesso.versao, entradaId: Number(entrada), permissoes: await obterPermissoesCargo(acesso.cargo) };
+    if (
+      !(await getD1()
+        .prepare("SELECT id FROM entradas_painel WHERE id = ? AND acesso_id = ?")
+        .bind(Number(entrada), acesso.id)
+        .first())
+    )
+      return null;
+    return {
+      nome: acesso.nome,
+      cargo: acesso.cargo,
+      acessoId: acesso.id,
+      versao: acesso.versao,
+      entradaId: Number(entrada),
+      permissoes: await obterPermissoesCargo(acesso.cargo),
+    };
   } catch {
     // cookies incompletos ou adulterados são tratados como sessão ausente
     return null;
@@ -60,7 +85,10 @@ export async function exigirUsuarioPainel(retorno = "/painel") {
 }
 
 // cria o código guardado no navegador depois do login
-export async function criarTokenSessao(acesso: Pick<AcessoSalvo, "id" | "versao">, entradaId: number) {
+export async function criarTokenSessao(
+  acesso: Pick<AcessoSalvo, "id" | "versao">,
+  entradaId: number,
+) {
   // exige um segredo configurado no ambiente
   const segredo = obterSegredo();
   if (!segredo) throw new Error("Defina SESSION_SECRET antes de usar o painel.");
@@ -75,7 +103,9 @@ export async function criarTokenSessao(acesso: Pick<AcessoSalvo, "id" | "versao"
 // compara a senha recebida sem revelar diferenças de tempo
 export async function validarSenhaAdministrativa(senhaRecebida: string) {
   const usuario = await obterUsuarioPainel();
-  return Boolean(usuario && await confirmarSenhaDoAcesso(senhaRecebida, usuario.acessoId, usuario.versao));
+  return Boolean(
+    usuario && (await confirmarSenhaDoAcesso(senhaRecebida, usuario.acessoId, usuario.versao)),
+  );
 }
 
 // impede redirecionamentos para endereços externos
@@ -132,19 +162,26 @@ function criarChave(segredo: string, usos: KeyUsage[]) {
 }
 
 // lê o segredo da sessão
-function obterSegredo() { return segredoSessao(); }
+function obterSegredo() {
+  return segredoSessao();
+}
 
 // transforma bytes em texto seguro para endereço
 function bytesParaBase64Url(bytes: Uint8Array) {
   let texto = "";
-  bytes.forEach((byte) => { texto += String.fromCharCode(byte); });
+  bytes.forEach((byte) => {
+    texto += String.fromCharCode(byte);
+  });
   return btoa(texto).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 // transforma o texto da assinatura em bytes
 function base64UrlParaBytes(texto: string) {
   // restaura os caracteres e o preenchimento do base64
-  const base64 = texto.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(texto.length / 4) * 4, "=");
+  const base64 = texto
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .padEnd(Math.ceil(texto.length / 4) * 4, "=");
   const binario = atob(base64);
   return Uint8Array.from(binario, (caractere) => caractere.charCodeAt(0));
 }

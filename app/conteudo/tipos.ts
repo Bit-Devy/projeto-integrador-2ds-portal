@@ -1,4 +1,3 @@
-// importa os dados dos serviços do estudante
 import type { CompromissoCalendario, ItemCardapio } from "../servicos/tipos";
 import type { ContatoEquipe } from "./contatos-equipe";
 

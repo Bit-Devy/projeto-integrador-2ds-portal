@@ -1,6 +1,4 @@
-// importa a preparação das tabelas
 import { garantirBanco } from "../../../db/inicializar";
-// importa as operações do banco do mapa
 import {
   atualizarRegistroMapa,
   criarRegistroMapa,
@@ -10,15 +8,10 @@ import {
   obterDadosMapa,
   obterHistoricoTurma,
 } from "../../mapa/banco";
-// importa o tipo das entidades do mapa
 import type { EntidadeMapa } from "../../mapa/tipos";
-// importa os formatos privado e público do mapa
 import type { DadosMapa, DadosMapaPublico } from "../../mapa/tipos";
-// importa a normalização dos turnos
 import { normalizarTurno } from "../../mapa/normalizacao";
-// importa os recursos de validação do mapa
 import { ErroMapa, objetoRecebido } from "../../mapa/validacao";
-// importa as verificações de administrador e origem
 import { exigirAdministradorApi, origemValida } from "../../lib/autorizacao";
 
 // lista as entidades aceitas pela api
@@ -40,9 +33,14 @@ export async function GET(request: Request) {
     // exige administrador para dados privados ou exportação
     if (todos || exportar) {
       const secao = parametros.get("secao");
-      if (secao && !["turmas", "locais"].includes(secao)) throw new ErroMapa("Escolha uma seção válida do mapa.");
-      let { resposta } = await exigirAdministradorApi(secao === "turmas" ? "turmas" : "mapa", false);
-      if (resposta?.status === 403 && !secao) ({ resposta } = await exigirAdministradorApi("turmas", false));
+      if (secao && !["turmas", "locais"].includes(secao))
+        throw new ErroMapa("Escolha uma seção válida do mapa.");
+      let { resposta } = await exigirAdministradorApi(
+        secao === "turmas" ? "turmas" : "mapa",
+        false,
+      );
+      if (resposta?.status === 403 && !secao)
+        ({ resposta } = await exigirAdministradorApi("turmas", false));
       if (resposta) return resposta;
     }
     // valida o turno recebido
@@ -150,7 +148,9 @@ async function autorizarEscrita(request: Request) {
   }
   // separa a edição das turmas da edição das salas físicas
   let corpo: Record<string, unknown> = {};
-  try { corpo = await request.clone().json(); } catch {}
+  try {
+    corpo = await request.clone().json();
+  } catch {}
   const entidade = new URL(request.url).searchParams.get("entidade") || corpo?.entidade;
   const recurso = ["turmas", "ensalamentos"].includes(String(entidade)) ? "turmas" : "mapa";
   const { resposta } = await exigirAdministradorApi(recurso, true);
@@ -174,21 +174,36 @@ function validarEntidade(valor: unknown): EntidadeMapa {
 function responderErro(erro: unknown) {
   // mantém a mensagem e o estado dos erros esperados
   if (erro instanceof ErroMapa) {
-    return Response.json({ erro: erro.message, conflitos: erro.conflitos }, { status: erro.status });
+    return Response.json(
+      { erro: erro.message, conflitos: erro.conflitos },
+      { status: erro.status },
+    );
   }
   // informa quando o json recebido está quebrado
   if (erro instanceof SyntaxError) {
-    return Response.json({ erro: "O corpo da solicitação não contém JSON válido." }, { status: 400 });
+    return Response.json(
+      { erro: "O corpo da solicitação não contém JSON válido." },
+      { status: 400 },
+    );
   }
   // explica conflitos entre registros relacionados
   if (erro instanceof Error && /sala_ocupada/i.test(erro.message)) {
-    return Response.json({ erro: "A ocupação da sala mudou. Confira os dados antes de tentar novamente." }, { status: 409 });
+    return Response.json(
+      { erro: "A ocupação da sala mudou. Confira os dados antes de tentar novamente." },
+      { status: 409 },
+    );
   }
   if (erro instanceof Error && /foreign key constraint/i.test(erro.message)) {
-    return Response.json({ erro: "O registro ainda está relacionado a outros dados do mapa." }, { status: 409 });
+    return Response.json(
+      { erro: "O registro ainda está relacionado a outros dados do mapa." },
+      { status: 409 },
+    );
   }
   console.error("Erro na API do mapa do colégio:", erro);
-  return Response.json({ erro: "Não foi possível concluir a operação no mapa do colégio." }, { status: 500 });
+  return Response.json(
+    { erro: "Não foi possível concluir a operação no mapa do colégio." },
+    { status: 500 },
+  );
 }
 
 // cria uma resposta com a regra de cache correta
@@ -196,7 +211,9 @@ function respostaJson(dados: unknown, status: number, privado: boolean) {
   return Response.json(dados, {
     status,
     headers: {
-      "cache-control": privado ? "private, no-store" : "public, max-age=60, stale-while-revalidate=300",
+      "cache-control": privado
+        ? "private, no-store"
+        : "public, max-age=60, stale-while-revalidate=300",
     },
   });
 }
@@ -205,26 +222,68 @@ function respostaJson(dados: unknown, status: number, privado: boolean) {
 function dadosPublicos(dados: DadosMapa): DadosMapaPublico {
   return {
     // seleciona somente os campos públicos de cada entidade
-    categorias: dados.categorias.map(({ id, grupo, slug, nome, ordem }) => ({ id, grupo, slug, nome, ordem })),
+    categorias: dados.categorias.map(({ id, grupo, slug, nome, ordem }) => ({
+      id,
+      grupo,
+      slug,
+      nome,
+      ordem,
+    })),
     locais: dados.locais.map((local) => ({
-      id: local.id, nome: local.nome, numero: local.numero, nomeAlternativo: local.nomeAlternativo,
-      tipo: local.tipo, ala: local.ala, andar: local.andar, bloco: local.bloco, setor: local.setor,
-      corredor: local.corredor, referencia: local.referencia, descricao: local.descricao,
-      instrucoes: local.instrucoes, observacoes: local.observacoes, acessibilidade: local.acessibilidade,
-      horario: local.horario, imagemUrl: local.imagemUrl, ordem: local.ordem, atualizadoEm: local.atualizadoEm,
+      id: local.id,
+      nome: local.nome,
+      numero: local.numero,
+      nomeAlternativo: local.nomeAlternativo,
+      tipo: local.tipo,
+      ala: local.ala,
+      andar: local.andar,
+      bloco: local.bloco,
+      setor: local.setor,
+      corredor: local.corredor,
+      referencia: local.referencia,
+      descricao: local.descricao,
+      instrucoes: local.instrucoes,
+      observacoes: local.observacoes,
+      acessibilidade: local.acessibilidade,
+      horario: local.horario,
+      imagemUrl: local.imagemUrl,
+      ordem: local.ordem,
+      atualizadoEm: local.atualizadoEm,
     })),
     turmas: dados.turmas.map((turma) => ({
-      ano: turma.ano, id: turma.id, nome: turma.nome, nivelEnsino: turma.nivelEnsino, nomeNormalizado: turma.nomeNormalizado, aliases: turma.aliases,
-      turno: turma.turno, turnoParcial: turma.turnoParcial, horarioInicial: turma.horarioInicial, horarioFinal: turma.horarioFinal, diasSemana: turma.diasSemana,
-      tipo: turma.tipo, curso: turma.curso, serie: turma.serie, turma: turma.turma,
-      descricao: turma.descricao, observacoes: turma.observacoes, inicioValidade: turma.inicioValidade,
-      fimValidade: turma.fimValidade, ordem: turma.ordem, atualizadoEm: turma.atualizadoEm,
+      ano: turma.ano,
+      id: turma.id,
+      nome: turma.nome,
+      nivelEnsino: turma.nivelEnsino,
+      nomeNormalizado: turma.nomeNormalizado,
+      aliases: turma.aliases,
+      turno: turma.turno,
+      turnoParcial: turma.turnoParcial,
+      horarioInicial: turma.horarioInicial,
+      horarioFinal: turma.horarioFinal,
+      diasSemana: turma.diasSemana,
+      tipo: turma.tipo,
+      curso: turma.curso,
+      serie: turma.serie,
+      turma: turma.turma,
+      descricao: turma.descricao,
+      observacoes: turma.observacoes,
+      inicioValidade: turma.inicioValidade,
+      fimValidade: turma.fimValidade,
+      ordem: turma.ordem,
+      atualizadoEm: turma.atualizadoEm,
     })),
     ensalamentos: dados.ensalamentos.map((ensalamento) => ({
-      id: ensalamento.id, turmaAtividadeId: ensalamento.turmaAtividadeId, localId: ensalamento.localId,
-      turno: ensalamento.turno, tipo: ensalamento.tipo, observacoes: ensalamento.observacoes,
-      inicioValidade: ensalamento.inicioValidade, fimValidade: ensalamento.fimValidade,
-      ordem: ensalamento.ordem, atualizadoEm: ensalamento.atualizadoEm,
+      id: ensalamento.id,
+      turmaAtividadeId: ensalamento.turmaAtividadeId,
+      localId: ensalamento.localId,
+      turno: ensalamento.turno,
+      tipo: ensalamento.tipo,
+      observacoes: ensalamento.observacoes,
+      inicioValidade: ensalamento.inicioValidade,
+      fimValidade: ensalamento.fimValidade,
+      ordem: ensalamento.ordem,
+      atualizadoEm: ensalamento.atualizadoEm,
     })),
   };
 }

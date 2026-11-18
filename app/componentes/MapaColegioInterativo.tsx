@@ -1,13 +1,12 @@
-// ativa recursos do navegador
 "use client";
 
-// importa tipos, efeitos e controles de estado
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { rotuloDiasDeAula } from "../mapa/dias-de-aula";
-// importa funções de busca por locais especiais
-import { buscarLocaisEspeciaisComoAtividade, localPesquisavelComoAtividade } from "../mapa/busca-publica";
-// importa os tipos dos dados do mapa
+import {
+  buscarLocaisEspeciaisComoAtividade,
+  localPesquisavelComoAtividade,
+} from "../mapa/busca-publica";
 import type {
   CategoriaMapaPublica as CategoriaMapa,
   DadosMapaPublico as DadosMapa,
@@ -71,14 +70,20 @@ export default function MapaColegioInterativo({ turmaInicial }: { turmaInicial?:
     fetch("/api/mapa", { cache: "no-store", signal: controle.signal })
       .then(async (resposta) => {
         // lê e valida a resposta
-        const resultado = await resposta.json().catch(() => null) as (DadosMapa & { erro?: string }) | null;
-        if (!resposta.ok) throw new Error(resultado?.erro || "Não foi possível carregar o mapa do colégio.");
-        if (!dadosMapaValidos(resultado)) throw new Error("Os dados do mapa estão em um formato inválido.");
+        const resultado = (await resposta.json().catch(() => null)) as
+          | (DadosMapa & { erro?: string })
+          | null;
+        if (!resposta.ok)
+          throw new Error(resultado?.erro || "Não foi possível carregar o mapa do colégio.");
+        if (!dadosMapaValidos(resultado))
+          throw new Error("Os dados do mapa estão em um formato inválido.");
         setDados(resultado);
       })
       .catch((falha) => {
         if (falha instanceof Error && falha.name === "AbortError") return;
-        setErro(falha instanceof Error ? falha.message : "Não foi possível carregar o mapa do colégio.");
+        setErro(
+          falha instanceof Error ? falha.message : "Não foi possível carregar o mapa do colégio.",
+        );
       })
       .finally(() => {
         if (!controle.signal.aborted) setCarregando(false);
@@ -104,11 +109,14 @@ export default function MapaColegioInterativo({ turmaInicial }: { turmaInicial?:
       <section className="limite pagina-conteudo pagina-mapa-colegio">
         <EstadoMapa tipo="erro" titulo="Erro ao carregar" alerta>
           {erro || "Não foi possível carregar o mapa do colégio."}
-          <button type="button" onClick={() => {
-            setCarregando(true);
-            setErro("");
-            setTentativa((valor) => valor + 1);
-          }}>
+          <button
+            type="button"
+            onClick={() => {
+              setCarregando(true);
+              setErro("");
+              setTentativa((valor) => valor + 1);
+            }}
+          >
             Tentar novamente
           </button>
         </EstadoMapa>
@@ -129,7 +137,11 @@ export default function MapaColegioInterativo({ turmaInicial }: { turmaInicial?:
       </div>
 
       {/* busca por turma e atividade */}
-      <BuscaTurma key={turmaInicial ?? "busca"} dados={dados} turmaInicial={dados.turmas.find((turma) => turma.id === turmaInicial)} />
+      <BuscaTurma
+        key={turmaInicial ?? "busca"}
+        dados={dados}
+        turmaInicial={dados.turmas.find((turma) => turma.id === turmaInicial)}
+      />
       {/* busca por sala e local */}
       <BuscaLocal dados={dados} />
     </section>
@@ -137,37 +149,46 @@ export default function MapaColegioInterativo({ turmaInicial }: { turmaInicial?:
 }
 
 // mostra a busca por turma ou atividade
-function BuscaTurma({ dados, turmaInicial }: { dados: DadosMapa; turmaInicial?: TurmaAtividadeMapa }) {
+function BuscaTurma({
+  dados,
+  turmaInicial,
+}: {
+  dados: DadosMapa;
+  turmaInicial?: TurmaAtividadeMapa;
+}) {
   // guarda os filtros e resultados
   const [turno, setTurno] = useState<Turno>(turmaInicial?.turno || "");
   const [tipo, setTipo] = useState(turmaInicial?.tipo || "");
   const [termo, setTermo] = useState(turmaInicial?.nome || "");
   const [estado, setEstado] = useState<EstadoConsulta>(turmaInicial ? "resultado" : "incompleto");
-  const [resultados, setResultados] = useState<ResultadoBuscaPrincipal[]>(() => turmaInicial
-    ? resultadosDaTurma(dados, turmaInicial, turmaInicial.turno, turmaInicial.tipo).map((resultado) => ({ origem: "turma", resultado })) : []);
+  const [resultados, setResultados] = useState<ResultadoBuscaPrincipal[]>(() =>
+    turmaInicial
+      ? resultadosDaTurma(dados, turmaInicial, turmaInicial.turno, turmaInicial.tipo).map(
+          (resultado) => ({ origem: "turma", resultado }),
+        )
+      : [],
+  );
 
   // mostra o ensalamento selecionado no link do representante
   useEffect(() => {
     if (!turmaInicial) return;
-    const quadro = requestAnimationFrame(() => document.getElementById("resultados-busca-turma")?.scrollIntoView({ block: "start" }));
+    const quadro = requestAnimationFrame(() =>
+      document.getElementById("resultados-busca-turma")?.scrollIntoView({ block: "start" }),
+    );
     return () => cancelAnimationFrame(quadro);
   }, [turmaInicial]);
 
   // monta os tipos permitidos para o turno
-  const opcoesTipo = useMemo(
-    () => tiposParaTurno(dados, turno),
-    [dados, turno],
-  );
+  const opcoesTipo = useMemo(() => tiposParaTurno(dados, turno), [dados, turno]);
   // monta as turmas permitidas pelos filtros
   const turmasDisponiveis = useMemo(
-    () => turno && tipo ? turmasCompativeis(dados, turno, tipo) : [],
+    () => (turno && tipo ? turmasCompativeis(dados, turno, tipo) : []),
     [dados, tipo, turno],
   );
   // separa os locais que também são atividades
   const locaisEspeciais = useMemo(
-    () => valoresEquivalentes(tipo, "outro")
-      ? dados.locais.filter(localPesquisavelComoAtividade)
-      : [],
+    () =>
+      valoresEquivalentes(tipo, "outro") ? dados.locais.filter(localPesquisavelComoAtividade) : [],
     [dados.locais, tipo],
   );
 
@@ -208,9 +229,9 @@ function BuscaTurma({ dados, turmaInicial }: { dados: DadosMapa; turmaInicial?: 
     // procura locais especiais quando o tipo é outro
     const resultadosLocais: ResultadoBuscaPrincipal[] = valoresEquivalentes(tipo, "outro")
       ? buscarLocaisEspeciaisComoAtividade(dados.locais, busca).map((local) => ({
-        origem: "local",
-        resultado: montarResultadoLocal(dados, local, "", ""),
-      }))
+          origem: "local",
+          resultado: montarResultadoLocal(dados, local, "", ""),
+        }))
       : [];
     // reúne todos os tipos de resultado
     const novosResultados = [...resultadosTurmas, ...resultadosLocais];
@@ -225,7 +246,9 @@ function BuscaTurma({ dados, turmaInicial }: { dados: DadosMapa; turmaInicial?: 
         <span aria-hidden="true">01</span>
         <div>
           <h2 id="titulo-busca-turma">Onde fica minha turma ou atividade?</h2>
-          <p>Selecione os filtros na ordem e depois informe o nome usado para a turma ou atividade.</p>
+          <p>
+            Selecione os filtros na ordem e depois informe o nome usado para a turma ou atividade.
+          </p>
         </div>
       </header>
 
@@ -242,7 +265,11 @@ function BuscaTurma({ dados, turmaInicial }: { dados: DadosMapa; turmaInicial?: 
               required
             >
               <option value="">Selecione o turno</option>
-              {turnos.map((item) => <option value={item.valor} key={item.valor}>{item.nome}</option>)}
+              {turnos.map((item) => (
+                <option value={item.valor} key={item.valor}>
+                  {item.nome}
+                </option>
+              ))}
             </select>
             <small id="ajuda-turno-turma">As opções seguintes dependem do turno.</small>
           </label>
@@ -250,11 +277,24 @@ function BuscaTurma({ dados, turmaInicial }: { dados: DadosMapa; turmaInicial?: 
           <label>
             {/* escolha do tipo */}
             <span>2. Tipo de atividade</span>
-            <select value={tipo} onChange={(evento) => mudarTipo(evento.target.value)} disabled={!turno} required>
+            <select
+              value={tipo}
+              onChange={(evento) => mudarTipo(evento.target.value)}
+              disabled={!turno}
+              required
+            >
               <option value="">{turno ? "Selecione o tipo" : "Escolha primeiro o turno"}</option>
-              {opcoesTipo.map((item) => <option value={item.valor} key={item.valor}>{item.nome}</option>)}
+              {opcoesTipo.map((item) => (
+                <option value={item.valor} key={item.valor}>
+                  {item.nome}
+                </option>
+              ))}
             </select>
-            <small>{turno && !opcoesTipo.length ? "Nenhum tipo publicado para este turno." : "Os tipos seguem o turno; “Outro” também reúne espaços especiais sem turno informado."}</small>
+            <small>
+              {turno && !opcoesTipo.length
+                ? "Nenhum tipo publicado para este turno."
+                : "Os tipos seguem o turno; “Outro” também reúne espaços especiais sem turno informado."}
+            </small>
           </label>
 
           <label>
@@ -268,19 +308,34 @@ function BuscaTurma({ dados, turmaInicial }: { dados: DadosMapa; turmaInicial?: 
                 limparResultado();
               }}
               list="opcoes-turmas-mapa"
-              placeholder={tipo ? (valoresEquivalentes(tipo, "outro") ? "Ex.: Reforço, DANCEP ou Laboratório" : "Ex.: 3º J") : "Escolha primeiro o tipo"}
+              placeholder={
+                tipo
+                  ? valoresEquivalentes(tipo, "outro")
+                    ? "Ex.: Reforço, DANCEP ou Laboratório"
+                    : "Ex.: 3º J"
+                  : "Escolha primeiro o tipo"
+              }
               autoComplete="off"
               disabled={!turno || !tipo}
               required
             />
             <datalist id="opcoes-turmas-mapa">
-              {turmasDisponiveis.map((turma) => <option value={turma.nome} key={turma.id} />)}
-              {locaisEspeciais.map((local) => <option value={local.nome} key={`local-${local.id}`} />)}
+              {turmasDisponiveis.map((turma) => (
+                <option value={turma.nome} key={turma.id} />
+              ))}
+              {locaisEspeciais.map((local) => (
+                <option value={local.nome} key={`local-${local.id}`} />
+              ))}
             </datalist>
-            <small>A busca ignora acentos, espaços e os sinais º e °. Em “Outro”, também estão os espaços especiais.</small>
+            <small>
+              A busca ignora acentos, espaços e os sinais º e °. Em “Outro”, também estão os espaços
+              especiais.
+            </small>
           </label>
         </div>
-        <button type="submit" aria-controls="resultados-busca-turma">Encontrar turma ou atividade</button>
+        <button type="submit" aria-controls="resultados-busca-turma">
+          Encontrar turma ou atividade
+        </button>
       </form>
 
       {/* resultado da busca por turma */}
@@ -298,12 +353,28 @@ function BuscaTurma({ dados, turmaInicial }: { dados: DadosMapa; turmaInicial?: 
         {estado === "resultado" && (
           <>
             {/* quantidade de resultados */}
-            <ResumoResultados quantidade={resultados.length} singular="resultado encontrado" plural="resultados encontrados" />
+            <ResumoResultados
+              quantidade={resultados.length}
+              singular="resultado encontrado"
+              plural="resultados encontrados"
+            />
             <div className="lista-resultados-mapa">
               {/* cartões das turmas e locais encontrados */}
-              {resultados.map((item, indice) => item.origem === "turma"
-                ? <CartaoResultadoTurma resultado={item.resultado} categorias={dados.categorias} key={`turma-${item.resultado.turma.id}-${item.resultado.ensalamento?.id ?? `sem-sala-${indice}`}`} />
-                : <CartaoResultadoLocal resultado={item.resultado} categorias={dados.categorias} key={`local-${item.resultado.local.id}`} />)}
+              {resultados.map((item, indice) =>
+                item.origem === "turma" ? (
+                  <CartaoResultadoTurma
+                    resultado={item.resultado}
+                    categorias={dados.categorias}
+                    key={`turma-${item.resultado.turma.id}-${item.resultado.ensalamento?.id ?? `sem-sala-${indice}`}`}
+                  />
+                ) : (
+                  <CartaoResultadoLocal
+                    resultado={item.resultado}
+                    categorias={dados.categorias}
+                    key={`local-${item.resultado.local.id}`}
+                  />
+                ),
+              )}
             </div>
           </>
         )}
@@ -371,34 +442,52 @@ function BuscaLocal({ dados }: { dados: DadosMapa }) {
               autoComplete="off"
               required
             />
-            <small>Também é possível pesquisar laboratórios, setores e espaços institucionais.</small>
+            <small>
+              Também é possível pesquisar laboratórios, setores e espaços institucionais.
+            </small>
           </label>
 
           {/* filtro opcional de turno */}
           <label>
             <span>Turno (opcional)</span>
-            <select value={turno} onChange={(evento) => {
-              setTurno(evento.target.value as Turno);
-              limparResultado();
-            }}>
+            <select
+              value={turno}
+              onChange={(evento) => {
+                setTurno(evento.target.value as Turno);
+                limparResultado();
+              }}
+            >
               <option value="">Todos os turnos</option>
-              {turnos.map((item) => <option value={item.valor} key={item.valor}>{item.nome}</option>)}
+              {turnos.map((item) => (
+                <option value={item.valor} key={item.valor}>
+                  {item.nome}
+                </option>
+              ))}
             </select>
           </label>
 
           {/* filtro opcional de atividade */}
           <label>
             <span>Tipo de atividade (opcional)</span>
-            <select value={tipo} onChange={(evento) => {
-              setTipo(evento.target.value);
-              limparResultado();
-            }}>
+            <select
+              value={tipo}
+              onChange={(evento) => {
+                setTipo(evento.target.value);
+                limparResultado();
+              }}
+            >
               <option value="">Todos os tipos</option>
-              {opcoesTipo.map((item) => <option value={item.valor} key={item.valor}>{item.nome}</option>)}
+              {opcoesTipo.map((item) => (
+                <option value={item.valor} key={item.valor}>
+                  {item.nome}
+                </option>
+              ))}
             </select>
           </label>
         </div>
-        <button type="submit" aria-controls="resultados-busca-local">Procurar sala ou local</button>
+        <button type="submit" aria-controls="resultados-busca-local">
+          Procurar sala ou local
+        </button>
       </form>
 
       {/* resultado da busca por local */}
@@ -416,11 +505,19 @@ function BuscaLocal({ dados }: { dados: DadosMapa }) {
         {estado === "resultado" && (
           <>
             {/* quantidade de locais */}
-            <ResumoResultados quantidade={resultados.length} singular="local encontrado" plural="locais encontrados" />
+            <ResumoResultados
+              quantidade={resultados.length}
+              singular="local encontrado"
+              plural="locais encontrados"
+            />
             <div className="lista-resultados-mapa">
               {/* cartões dos locais encontrados */}
               {resultados.map((resultado) => (
-                <CartaoResultadoLocal resultado={resultado} categorias={dados.categorias} key={resultado.local.id} />
+                <CartaoResultadoLocal
+                  resultado={resultado}
+                  categorias={dados.categorias}
+                  key={resultado.local.id}
+                />
               ))}
             </div>
           </>
@@ -431,14 +528,28 @@ function BuscaLocal({ dados }: { dados: DadosMapa }) {
 }
 
 // mostra o resultado de uma turma
-function CartaoResultadoTurma({ resultado, categorias }: { resultado: ResultadoTurma; categorias: CategoriaMapa[] }) {
+function CartaoResultadoTurma({
+  resultado,
+  categorias,
+}: {
+  resultado: ResultadoTurma;
+  categorias: CategoriaMapa[];
+}) {
   // separa os dados do resultado
   const { turma, ensalamento, local } = resultado;
   // encontra a atualização mais recente
-  const atualizadoEm = dataMaisRecente(turma.atualizadoEm, ensalamento?.atualizadoEm, local?.atualizadoEm);
+  const atualizadoEm = dataMaisRecente(
+    turma.atualizadoEm,
+    ensalamento?.atualizadoEm,
+    local?.atualizadoEm,
+  );
   // verifica se existem observações
   const temObservacoes = temTexto(turma.observacoes, ensalamento?.observacoes, local?.observacoes);
-  const filtrosRepresentantes = new URLSearchParams({ turmaId: String(turma.id), turma: turma.nome, turno: turma.turno });
+  const filtrosRepresentantes = new URLSearchParams({
+    turmaId: String(turma.id),
+    turma: turma.nome,
+    turno: turma.turno,
+  });
 
   return (
     <article className="cartao-resultado-mapa">
@@ -465,7 +576,11 @@ function CartaoResultadoTurma({ resultado, categorias }: { resultado: ResultadoT
       <div className="blocos-informacao-mapa">
         <SecaoTextoMapa titulo="Referência" texto={local?.referencia} />
         <SecaoTextoMapa titulo="Como chegar" texto={local?.instrucoes} ocultarVazio />
-        <SecaoTextoMapa titulo="Descrição da turma ou atividade" texto={turma.descricao} ocultarVazio />
+        <SecaoTextoMapa
+          titulo="Descrição da turma ou atividade"
+          texto={turma.descricao}
+          ocultarVazio
+        />
         <SecaoTextoMapa titulo="Descrição do local" texto={local?.descricao} ocultarVazio />
       </div>
 
@@ -485,14 +600,27 @@ function CartaoResultadoTurma({ resultado, categorias }: { resultado: ResultadoT
       <dl className="detalhes-mapa detalhes-complementares-mapa">
         <DetalheMapa rotulo="Curso" valor={turma.curso} />
         <DetalheMapa rotulo="Série ou ano" valor={turma.serie} />
-        {turma.turnoParcial && <>
-          <DetalheMapa rotulo="Dias de aula" valor={rotuloDiasDeAula(turma.diasSemana)} />
-          <DetalheMapa rotulo="Horário das aulas" valor={`${turma.horarioInicial} às ${turma.horarioFinal}`} />
-        </>}
+        {turma.turnoParcial && (
+          <>
+            <DetalheMapa rotulo="Dias de aula" valor={rotuloDiasDeAula(turma.diasSemana)} />
+            <DetalheMapa
+              rotulo="Horário das aulas"
+              valor={`${turma.horarioInicial} às ${turma.horarioFinal}`}
+            />
+          </>
+        )}
         <DetalheMapa rotulo="Acessibilidade do local" valor={local?.acessibilidade} ocultarVazio />
         <DetalheMapa rotulo="Funcionamento" valor={local?.horario} ocultarVazio />
-        <DetalheMapa rotulo="Início da validade" valor={formatarData(ensalamento?.inicioValidade || turma.inicioValidade)} ocultarVazio />
-        <DetalheMapa rotulo="Fim da validade" valor={formatarData(ensalamento?.fimValidade || turma.fimValidade)} ocultarVazio />
+        <DetalheMapa
+          rotulo="Início da validade"
+          valor={formatarData(ensalamento?.inicioValidade || turma.inicioValidade)}
+          ocultarVazio
+        />
+        <DetalheMapa
+          rotulo="Fim da validade"
+          valor={formatarData(ensalamento?.fimValidade || turma.fimValidade)}
+          ocultarVazio
+        />
       </dl>
 
       {/* imagem de referência */}
@@ -503,18 +631,34 @@ function CartaoResultadoTurma({ resultado, categorias }: { resultado: ResultadoT
         </figure>
       )}
 
-      <Link className="botao-secundario" href={`/representantes?${filtrosRepresentantes}#resultado-representantes`}>Ver representantes da turma ›</Link>
-      <p className="atualizacao-mapa">Última atualização: {valorOuInformacao(formatarData(atualizadoEm))}</p>
+      <Link
+        className="botao-secundario"
+        href={`/representantes?${filtrosRepresentantes}#resultado-representantes`}
+      >
+        Ver representantes da turma ›
+      </Link>
+      <p className="atualizacao-mapa">
+        Última atualização: {valorOuInformacao(formatarData(atualizadoEm))}
+      </p>
     </article>
   );
 }
 
 // mostra o resultado de um local
-function CartaoResultadoLocal({ resultado, categorias }: { resultado: ResultadoLocal; categorias: CategoriaMapa[] }) {
+function CartaoResultadoLocal({
+  resultado,
+  categorias,
+}: {
+  resultado: ResultadoLocal;
+  categorias: CategoriaMapa[];
+}) {
   // separa o local e seus usos
   const { local, usos } = resultado;
   // encontra a atualização mais recente
-  const atualizadoEm = dataMaisRecente(local.atualizadoEm, ...usos.map((uso) => uso.ensalamento.atualizadoEm));
+  const atualizadoEm = dataMaisRecente(
+    local.atualizadoEm,
+    ...usos.map((uso) => uso.ensalamento.atualizadoEm),
+  );
 
   return (
     <article className="cartao-resultado-mapa">
@@ -559,14 +703,25 @@ function CartaoResultadoLocal({ resultado, categorias }: { resultado: ResultadoL
               <li key={ensalamento.id}>
                 <div>
                   <strong>{turma.nome}</strong>
-                  <span>{rotuloTurno(ensalamento.turno || turma.turno)} · {nomeCategoria(categorias, "atividade", ensalamento.tipo || turma.tipo)}{turma.turnoParcial && ` · ${rotuloDiasDeAula(turma.diasSemana, true)} · ${turma.horarioInicial} às ${turma.horarioFinal}`}</span>
+                  <span>
+                    {rotuloTurno(ensalamento.turno || turma.turno)} ·{" "}
+                    {nomeCategoria(categorias, "atividade", ensalamento.tipo || turma.tipo)}
+                    {turma.turnoParcial &&
+                      ` · ${rotuloDiasDeAula(turma.diasSemana, true)} · ${turma.horarioInicial} às ${turma.horarioFinal}`}
+                  </span>
                 </div>
-                {ensalamento.observacoes && <p><b>Observação deste ensalamento:</b> {ensalamento.observacoes}</p>}
+                {ensalamento.observacoes && (
+                  <p>
+                    <b>Observação deste ensalamento:</b> {ensalamento.observacoes}
+                  </p>
+                )}
               </li>
             ))}
           </ul>
         ) : (
-          <p className="informacao-ausente-mapa">Nenhuma turma ou atividade cadastrada para os filtros escolhidos.</p>
+          <p className="informacao-ausente-mapa">
+            Nenhuma turma ou atividade cadastrada para os filtros escolhidos.
+          </p>
         )}
       </section>
 
@@ -578,60 +733,107 @@ function CartaoResultadoLocal({ resultado, categorias }: { resultado: ResultadoL
         </figure>
       )}
 
-      <p className="atualizacao-mapa">Última atualização: {valorOuInformacao(formatarData(atualizadoEm))}</p>
+      <p className="atualizacao-mapa">
+        Última atualização: {valorOuInformacao(formatarData(atualizadoEm))}
+      </p>
     </article>
   );
 }
 
 // mostra um dado simples do mapa
-function DetalheMapa({ rotulo, valor, ocultarVazio = false }: { rotulo: string; valor?: string | null; ocultarVazio?: boolean }) {
+function DetalheMapa({
+  rotulo,
+  valor,
+  ocultarVazio = false,
+}: {
+  rotulo: string;
+  valor?: string | null;
+  ocultarVazio?: boolean;
+}) {
   // verifica se o dado foi preenchido
   const preenchido = Boolean(valor?.trim());
   if (!preenchido && ocultarVazio) return null;
   return (
     <div>
       <dt>{rotulo}</dt>
-      <dd className={preenchido ? undefined : "informacao-ausente-mapa"}>{preenchido ? valor : informacaoAusente}</dd>
+      <dd className={preenchido ? undefined : "informacao-ausente-mapa"}>
+        {preenchido ? valor : informacaoAusente}
+      </dd>
     </div>
   );
 }
 
 // mostra um bloco de texto do mapa
-function SecaoTextoMapa({ titulo, texto, ocultarVazio = false }: { titulo: string; texto?: string | null; ocultarVazio?: boolean }) {
+function SecaoTextoMapa({
+  titulo,
+  texto,
+  ocultarVazio = false,
+}: {
+  titulo: string;
+  texto?: string | null;
+  ocultarVazio?: boolean;
+}) {
   // verifica se o texto foi preenchido
   const preenchido = Boolean(texto?.trim());
   if (!preenchido && ocultarVazio) return null;
   return (
     <section>
       <h4>{titulo}</h4>
-      <p className={preenchido ? undefined : "informacao-ausente-mapa"}>{preenchido ? texto : informacaoAusente}</p>
+      <p className={preenchido ? undefined : "informacao-ausente-mapa"}>
+        {preenchido ? texto : informacaoAusente}
+      </p>
     </section>
   );
 }
 
 // mostra um estado da consulta
-function EstadoMapa({ tipo, titulo, children, alerta = false }: { tipo: string; titulo: string; children: ReactNode; alerta?: boolean }) {
+function EstadoMapa({
+  tipo,
+  titulo,
+  children,
+  alerta = false,
+}: {
+  tipo: string;
+  titulo: string;
+  children: ReactNode;
+  alerta?: boolean;
+}) {
   return (
     <div className={`estado-mapa estado-mapa-${tipo}`} role={alerta ? "alert" : "status"}>
       <span aria-hidden="true">{tipo === "erro" ? "!" : tipo === "carregando" ? "…" : "⌕"}</span>
-      <div><strong>{titulo}</strong><p>{children}</p></div>
+      <div>
+        <strong>{titulo}</strong>
+        <p>{children}</p>
+      </div>
     </div>
   );
 }
 
 // mostra a quantidade de resultados
-function ResumoResultados({ quantidade, singular, plural }: { quantidade: number; singular: string; plural: string }) {
-  return <p className="resumo-resultados-mapa"><strong>{quantidade}</strong> {quantidade === 1 ? singular : plural}.</p>;
+function ResumoResultados({
+  quantidade,
+  singular,
+  plural,
+}: {
+  quantidade: number;
+  singular: string;
+  plural: string;
+}) {
+  return (
+    <p className="resumo-resultados-mapa">
+      <strong>{quantidade}</strong> {quantidade === 1 ? singular : plural}.
+    </p>
+  );
 }
 
 // valida os grupos principais do mapa
 function dadosMapaValidos(dados: DadosMapa | null): dados is DadosMapa {
   return Boolean(
-    dados
-    && Array.isArray(dados.categorias)
-    && Array.isArray(dados.locais)
-    && Array.isArray(dados.turmas)
-    && Array.isArray(dados.ensalamentos),
+    dados &&
+      Array.isArray(dados.categorias) &&
+      Array.isArray(dados.locais) &&
+      Array.isArray(dados.turmas) &&
+      Array.isArray(dados.ensalamentos),
   );
 }
 
@@ -673,7 +875,9 @@ function opcoesDeTipo(dados: DadosMapa): OpcaoTipo[] {
   }
 
   // ordena as opções para exibição
-  return [...opcoes.values()].sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, "pt-BR"));
+  return [...opcoes.values()].sort(
+    (a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, "pt-BR"),
+  );
 }
 
 // filtra os tipos usados em um turno
@@ -695,10 +899,12 @@ function turmasCompativeis(dados: DadosMapa, turno: Exclude<Turno, "">, tipo: st
   return dados.turmas
     .filter((turma) => {
       if (turma.turno === turno && valoresEquivalentes(turma.tipo, tipo)) return true;
-      return dados.ensalamentos.some((ensalamento) =>
-        ensalamento.turmaAtividadeId === turma.id
-        && ensalamento.turno === turno
-        && valoresEquivalentes(ensalamento.tipo, tipo));
+      return dados.ensalamentos.some(
+        (ensalamento) =>
+          ensalamento.turmaAtividadeId === turma.id &&
+          ensalamento.turno === turno &&
+          valoresEquivalentes(ensalamento.tipo, tipo),
+      );
     })
     .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, "pt-BR", { numeric: true }));
 }
@@ -714,36 +920,65 @@ function buscarTurmas(turmas: TurmaAtividadeMapa[], busca: string) {
 // monta todos os nomes pesquisáveis da turma
 function termosDaTurma(turma: TurmaAtividadeMapa) {
   // separa os apelidos cadastrados
-  const aliases = turma.aliases.split(/[,;|\n]/).map((item) => item.trim()).filter(Boolean);
+  const aliases = turma.aliases
+    .split(/[,;|\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
   return [turma.nome, turma.nomeNormalizado, ...aliases].map(normalizarTermoMapa).filter(Boolean);
 }
 
 // monta os resultados de uma turma
-function resultadosDaTurma(dados: DadosMapa, turma: TurmaAtividadeMapa, turno: Exclude<Turno, "">, tipo: string): ResultadoTurma[] {
+function resultadosDaTurma(
+  dados: DadosMapa,
+  turma: TurmaAtividadeMapa,
+  turno: Exclude<Turno, "">,
+  tipo: string,
+): ResultadoTurma[] {
   // procura todos os ensalamentos compatíveis
-  const ensalamentos = dados.ensalamentos.filter((item) =>
-    item.turmaAtividadeId === turma.id
-    && item.turno === turno
-    && valoresEquivalentes(item.tipo, tipo));
+  const ensalamentos = dados.ensalamentos.filter(
+    (item) =>
+      item.turmaAtividadeId === turma.id &&
+      item.turno === turno &&
+      valoresEquivalentes(item.tipo, tipo),
+  );
   if (!ensalamentos.length) return [{ turma }];
   return ensalamentos.map((ensalamento) => ({
     turma,
     ensalamento,
-    local: ensalamento.localId === null ? undefined : dados.locais.find((local) => local.id === ensalamento.localId),
+    local:
+      ensalamento.localId === null
+        ? undefined
+        : dados.locais.find((local) => local.id === ensalamento.localId),
   }));
 }
 
 // procura locais pelo texto e filtros
-function buscarLocais(dados: DadosMapa, busca: string, turno: Turno, tipo: string): ResultadoLocal[] {
+function buscarLocais(
+  dados: DadosMapa,
+  busca: string,
+  turno: Turno,
+  tipo: string,
+): ResultadoLocal[] {
   return dados.locais
     .filter((local) => termosDoLocal(local).some((termo) => termo.includes(busca)))
     .map((local) => montarResultadoLocal(dados, local, turno, tipo))
     .filter((resultado) => (!turno && !tipo) || resultado.usos.length > 0)
-    .sort((a, b) => a.local.ordem - b.local.ordem || nomeCompletoLocal(a.local).localeCompare(nomeCompletoLocal(b.local), "pt-BR", { numeric: true }));
+    .sort(
+      (a, b) =>
+        a.local.ordem - b.local.ordem ||
+        nomeCompletoLocal(a.local).localeCompare(nomeCompletoLocal(b.local), "pt-BR", {
+          numeric: true,
+        }),
+    );
 }
 
 // monta um local com as turmas que o usam
-function montarResultadoLocal(dados: DadosMapa, local: LocalMapa, turno: Turno, tipo: string): ResultadoLocal {
+function montarResultadoLocal(
+  dados: DadosMapa,
+  local: LocalMapa,
+  turno: Turno,
+  tipo: string,
+): ResultadoLocal {
   // filtra os ensalamentos do local
   const usos = dados.ensalamentos
     .filter((ensalamento) => ensalamento.localId === local.id)
@@ -753,7 +988,9 @@ function montarResultadoLocal(dados: DadosMapa, local: LocalMapa, turno: Turno, 
       ensalamento,
       turma: dados.turmas.find((turma) => turma.id === ensalamento.turmaAtividadeId),
     }))
-    .filter((uso): uso is { turma: TurmaAtividadeMapa; ensalamento: EnsalamentoMapa } => Boolean(uso.turma));
+    .filter((uso): uso is { turma: TurmaAtividadeMapa; ensalamento: EnsalamentoMapa } =>
+      Boolean(uso.turma),
+    );
   return { local, usos };
 }
 
@@ -768,7 +1005,9 @@ function termosDoLocal(local: LocalMapa) {
     local.bloco,
     local.corredor,
     local.numero ? `Sala ${local.numero}` : "",
-  ].map((item) => normalizarTermoMapa(item || "")).filter(Boolean);
+  ]
+    .map((item) => normalizarTermoMapa(item || ""))
+    .filter(Boolean);
 }
 
 // compara dois textos de busca
@@ -778,7 +1017,9 @@ function valoresEquivalentes(primeiro: string, segundo: string) {
 
 // encontra o nome de uma categoria
 function nomeCategoria(categorias: CategoriaMapa[], grupo: CategoriaMapa["grupo"], slug: string) {
-  const categoria = categorias.find((item) => item.grupo === grupo && valoresEquivalentes(item.slug, slug));
+  const categoria = categorias.find(
+    (item) => item.grupo === grupo && valoresEquivalentes(item.slug, slug),
+  );
   return categoria?.nome || rotuloDoCodigo(slug);
 }
 
@@ -797,7 +1038,8 @@ function rotuloTurno(turno?: string | null) {
 function nomeCompletoLocal(local: LocalMapa) {
   const nome = local.nome?.trim();
   const numero = local.numero?.trim();
-  if (numero && nome && normalizarTermoMapa(nome) !== normalizarTermoMapa(`Sala ${numero}`)) return `Sala ${numero} — ${nome}`;
+  if (numero && nome && normalizarTermoMapa(nome) !== normalizarTermoMapa(`Sala ${numero}`))
+    return `Sala ${numero} — ${nome}`;
   if (numero) return nome || `Sala ${numero}`;
   return nome || informacaoAusente;
 }
@@ -814,7 +1056,9 @@ function temTexto(...valores: Array<string | null | undefined>) {
 
 // encontra a data mais recente
 function dataMaisRecente(...datas: Array<string | null | undefined>) {
-  return datas.filter((data): data is string => Boolean(data)).sort((a, b) => b.localeCompare(a))[0];
+  return datas
+    .filter((data): data is string => Boolean(data))
+    .sort((a, b) => b.localeCompare(a))[0];
 }
 
 // transforma a data para leitura

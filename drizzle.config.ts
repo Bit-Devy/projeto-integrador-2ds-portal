@@ -1,4 +1,3 @@
-// importa a criação da configuração do banco
 import { defineConfig } from "drizzle-kit";
 
 // define onde ficam o esquema e as migrações

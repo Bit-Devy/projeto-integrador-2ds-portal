@@ -1,10 +1,6 @@
-// importa o tipo dos dados da página
 import type { Metadata } from "next";
-// importa os links entre páginas
 import Link from "next/link";
-// importa a agenda da tela inicial
 import AgendaInicio from "./componentes/AgendaInicio";
-// importa as notícias da tela inicial
 import NoticiasInicio from "./componentes/NoticiasInicio";
 
 // define os dados da tela inicial
@@ -149,9 +145,9 @@ export default function Home() {
         </div>
         <div className="introducao-texto">
           <p>
-            O GECEP é a instância de representação do corpo discente do Colégio Estadual do
-            Paraná. Fundado em 1951, reúne estudantes para defender interesses coletivos,
-            fortalecer a participação e construir projetos para a comunidade escolar.
+            O GECEP é a instância de representação do corpo discente do Colégio Estadual do Paraná.
+            Fundado em 1951, reúne estudantes para defender interesses coletivos, fortalecer a
+            participação e construir projetos para a comunidade escolar.
           </p>
           <Link href="/o-gecep">Conheça nossa história e funcionamento ›</Link>
         </div>
@@ -189,7 +185,10 @@ export default function Home() {
 
       {/* convite final */}
       <section className="limite convite-participacao">
-        <img src="/logo-gecep-com-texto.png" alt="GECEP — Grêmio Estudantil do Colégio Estadual do Paraná" />
+        <img
+          src="/logo-gecep-com-texto.png"
+          alt="GECEP — Grêmio Estudantil do Colégio Estadual do Paraná"
+        />
         <div>
           <span className="rotulo-secao">SUA VOZ IMPORTA</span>
           <h2>O GECEP é feito com a participação dos estudantes</h2>

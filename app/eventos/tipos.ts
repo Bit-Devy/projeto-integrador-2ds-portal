@@ -1,13 +1,51 @@
 // valores fechados compartilhados entre validação, banco e interface
-export const situacoesEvento = ["proximo", "em_andamento", "encerrado", "adiado", "cancelado"] as const;
-export const situacoesPartida = ["agendada", "em_andamento", "encerrada", "adiada", "cancelada", "wo", "data_a_definir"] as const;
-export const situacoesReuniao = ["agendada", "em_andamento", "encerrada", "adiada", "cancelada"] as const;
-export const situacoesPresenca = ["presente", "ausente", "justificada", "nao_se_aplica", "nao_informada"] as const;
+export const situacoesEvento = [
+  "proximo",
+  "em_andamento",
+  "encerrado",
+  "adiado",
+  "cancelado",
+] as const;
+export const situacoesPartida = [
+  "agendada",
+  "em_andamento",
+  "encerrada",
+  "adiada",
+  "cancelada",
+  "wo",
+  "data_a_definir",
+] as const;
+export const situacoesReuniao = [
+  "agendada",
+  "em_andamento",
+  "encerrada",
+  "adiada",
+  "cancelada",
+] as const;
+export const situacoesPresenca = [
+  "presente",
+  "ausente",
+  "justificada",
+  "nao_se_aplica",
+  "nao_informada",
+] as const;
 export const turnosEventos = ["manha", "tarde", "noite"] as const;
 export const funcoesRepresentante = ["titular", "vice", "suplente", "outra"] as const;
 export const tiposReuniao = ["representantes", "interna_gecep"] as const;
-export const formatosCampeonato = ["mata_mata", "personalizada", "grupos", "pontos_corridos", "grupos_mata_mata"] as const;
-export const tiposFase = ["eliminatoria", "grupos", "classificacao", "terceiro_lugar", "personalizada"] as const;
+export const formatosCampeonato = [
+  "mata_mata",
+  "personalizada",
+  "grupos",
+  "pontos_corridos",
+  "grupos_mata_mata",
+] as const;
+export const tiposFase = [
+  "eliminatoria",
+  "grupos",
+  "classificacao",
+  "terceiro_lugar",
+  "personalizada",
+] as const;
 
 export type SituacaoEvento = (typeof situacoesEvento)[number];
 export type SituacaoPartida = (typeof situacoesPartida)[number];

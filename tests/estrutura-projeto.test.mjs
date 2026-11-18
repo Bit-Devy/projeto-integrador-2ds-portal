@@ -1,8 +1,5 @@
-// importa a criação dos testes
 import test from "node:test";
-// importa as verificações dos resultados
 import assert from "node:assert/strict";
-// importa a leitura de arquivos e pastas
 import { readFile, stat } from "node:fs/promises";
 
 // verifica as ligações com o banco e os arquivos
@@ -29,14 +26,22 @@ test("possui as rotas principais e o painel", async () => {
     "app/api/arquivos/route.ts",
   ];
   // confirma cada arquivo da lista
-  for (const arquivo of arquivos) assert.ok((await stat(arquivo)).isFile(), `${arquivo} deve existir`);
+  for (const arquivo of arquivos)
+    assert.ok((await stat(arquivo)).isFile(), `${arquivo} deve existir`);
 });
 
 // verifica os dados iniciais disponíveis
 test("mantém os dados fáceis de editar em um só lugar", async () => {
   const fonte = await readFile("app/conteudo/dados-iniciais.ts", "utf8");
   // confirma cada grupo de dados esperado
-  for (const nome of ["membrosIniciais", "eventosIniciais", "noticiasIniciais", "projetosIniciais", "documentosIniciais", "movimentosIniciais"]) {
+  for (const nome of [
+    "membrosIniciais",
+    "eventosIniciais",
+    "noticiasIniciais",
+    "projetosIniciais",
+    "documentosIniciais",
+    "movimentosIniciais",
+  ]) {
     assert.match(fonte, new RegExp(`export const ${nome}`));
   }
 });

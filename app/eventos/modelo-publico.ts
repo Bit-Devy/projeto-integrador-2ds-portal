@@ -1,5 +1,5 @@
-// Tipos usados somente pela interface pública do sistema de eventos.
-// Todos os campos opcionais podem deixar de ser publicados pela gestão.
+// tipos usados somente pela interface pública do sistema de eventos
+// todos os campos opcionais podem deixar de ser publicados pela gestão
 
 export type DocumentoPublico = {
   id?: number;
@@ -314,7 +314,10 @@ export function textoParticipante(valor: unknown): string {
 
 export function textos(valor: unknown): string[] {
   if (temTexto(valor)) {
-    return valor.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+    return valor
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter(Boolean);
   }
   if (Array.isArray(valor)) return valor.filter(temTexto).map((item) => item.trim());
   return [];
@@ -332,12 +335,16 @@ export function formatarData(valor?: string): string {
 export function formatarDataHora(valor?: string): string {
   if (!temTexto(valor)) return "";
   if (/^\d{4}-\d{2}-\d{2}$/.test(valor.trim())) return formatarData(valor.trim());
-  // Timestamps sem fuso vindos do SQLite estão em UTC.
+  // timestamps sem fuso vindos do sqlite estão em utc
   const timestamp = valor.trim().replace(" ", "T");
   const semFuso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(timestamp);
   const data = new Date(semFuso ? `${timestamp}Z` : timestamp);
   if (Number.isNaN(data.getTime())) return formatarData(valor);
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(data);
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
+  }).format(data);
 }
 
 export function normalizarBusca(valor: string): string {
@@ -351,15 +358,22 @@ export function normalizarBusca(valor: string): string {
 }
 
 // mostra a duração do evento do mesmo jeito nos cartões e na página completa
-export function horarioDoEvento(evento: Pick<EventoPublico, "diaTodo" | "horarioInicial" | "horarioFinal" | "horario">): string {
+export function horarioDoEvento(
+  evento: Pick<EventoPublico, "diaTodo" | "horarioInicial" | "horarioFinal" | "horario">,
+): string {
   if (evento.diaTodo) return "Dia todo";
-  if (evento.horarioInicial || evento.horarioFinal) return [evento.horarioInicial, evento.horarioFinal].filter(temTexto).join("–");
+  if (evento.horarioInicial || evento.horarioFinal)
+    return [evento.horarioInicial, evento.horarioFinal].filter(temTexto).join("–");
   return evento.horario || "";
 }
 
 export function rotuloSituacao(valor?: string): string {
   if (!temTexto(valor)) return "Informação ainda não publicada";
-  const chave = valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[\s-]+/g, "_");
+  const chave = valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
   const rotulos: Record<string, string> = {
     proximo: "Próximo",
     futura: "Próximo",
@@ -387,12 +401,18 @@ export function rotuloSituacao(valor?: string): string {
 
 export function rotuloTurno(valor?: string): string {
   if (!temTexto(valor)) return "";
-  return ({ manha: "Manhã", tarde: "Tarde", noite: "Noite" } as Record<string, string>)[valor] || valor;
+  return (
+    ({ manha: "Manhã", tarde: "Tarde", noite: "Noite" } as Record<string, string>)[valor] || valor
+  );
 }
 
 export function classeSituacao(valor?: string): string {
   if (!temTexto(valor)) return "nao-publicado";
-  return valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-");
 }
 
 export function urlPublica(valor?: string): string {

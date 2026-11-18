@@ -1,4 +1,3 @@
-// importa o tipo da configuração do portal
 import type { NextConfig } from "next";
 
 // guarda as opções do portal

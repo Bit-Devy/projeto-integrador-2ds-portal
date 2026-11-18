@@ -1,13 +1,8 @@
-// ativa recursos do navegador
 "use client";
 
-// importa o componente de link
 import Link from "next/link";
-// importa as notícias iniciais
 import { noticias } from "../dados";
-// importa a busca de conteúdo público
 import { useConteudoPublico } from "../conteudo/useConteudoPublico";
-// importa o cartão de notícia
 import CartaoNoticia from "./CartaoNoticia";
 // escolhe as notícias do ano em andamento
 import { anoDoPortal, pertenceAoAno, destaqueValido } from "../conteudo/periodos";
@@ -26,11 +21,22 @@ export default function NoticiasInicio() {
     <section className="limite secao-inicial-noticias">
       {/* título e botão de todas as notícias */}
       <div className="cabecalho-secao">
-        <div><span className="rotulo-secao">ACONTECEU NO GECEP</span><h2>Notícias em destaque</h2></div>
+        <div>
+          <span className="rotulo-secao">ACONTECEU NO GECEP</span>
+          <h2>Notícias em destaque</h2>
+        </div>
         <Link href="/noticias">Ver todas as notícias ››</Link>
       </div>
       {/* cartões das notícias em destaque */}
-      {exibidas.length ? <div className="grade-noticias">{exibidas.map((noticia) => <CartaoNoticia noticia={noticia} key={`${noticia.id ?? "noticia"}-${noticia.titulo}`} />)}</div> : <p className="sem-resultados">Nenhuma notícia em destaque no momento.</p>}
+      {exibidas.length ? (
+        <div className="grade-noticias">
+          {exibidas.map((noticia) => (
+            <CartaoNoticia noticia={noticia} key={`${noticia.id ?? "noticia"}-${noticia.titulo}`} />
+          ))}
+        </div>
+      ) : (
+        <p className="sem-resultados">Nenhuma notícia em destaque no momento.</p>
+      )}
     </section>
   );
 }

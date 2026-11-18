@@ -1,14 +1,8 @@
-// importa as verificações dos resultados
 import assert from "node:assert/strict";
-// importa a leitura de arquivos e pastas
 import { readFile, readdir, stat } from "node:fs/promises";
-// importa o registro de carregadores
 import "../scripts/registrar-typescript-testes.mjs";
-// importa a montagem de caminhos
 import path from "node:path";
-// importa a criação dos testes
 import test from "node:test";
-// importa a transformação de caminhos em endereços
 import { pathToFileURL } from "node:url";
 
 // guarda a pasta principal do projeto
@@ -17,7 +11,8 @@ const raiz = process.cwd();
 // verifica a limpeza dos textos usados na busca
 test("normaliza variações de turma, sala, acentos e espaços", async () => {
   // carrega as funções de normalização
-  const { normalizarNumeroSala, normalizarSlug, normalizarTextoBusca } = await importarNormalizacao();
+  const { normalizarNumeroSala, normalizarSlug, normalizarTextoBusca } =
+    await importarNormalizacao();
 
   // compara as diferentes formas da mesma turma
   for (const forma of ["3º J", "3° J", "3 J", "3J", "terceiro J"]) {
@@ -84,23 +79,29 @@ test("classifica as turmas do PDF como aula regular e preserva somente Reforço 
   // carrega os dados usados na classificação
   const dados = await importarDadosMapa("classificacao-atualizada");
 
-  assert.deepEqual(contarPor(dados.turmasMapa2026, (item) => item.tipo), {
-    outro: 2,
-    aula_regular: 95,
-    idiomas: 3,
-  });
-  assert.deepEqual(contarPor(dados.ensalamentosMapa2026, (item) => item.tipo), {
-    outro: 4,
-    aula_regular: 96,
-    idiomas: 12,
-  });
+  assert.deepEqual(
+    contarPor(dados.turmasMapa2026, (item) => item.tipo),
+    {
+      outro: 2,
+      aula_regular: 95,
+      idiomas: 3,
+    },
+  );
+  assert.deepEqual(
+    contarPor(dados.ensalamentosMapa2026, (item) => item.tipo),
+    {
+      outro: 4,
+      aula_regular: 96,
+      idiomas: 12,
+    },
+  );
 
   // encontra os nomes classificados como outro
-  const nomesEmOutro = [...new Set(
-    dados.turmasMapa2026
-      .filter((item) => item.tipo === "outro")
-      .map((item) => item.nome),
-  )];
+  const nomesEmOutro = [
+    ...new Set(
+      dados.turmasMapa2026.filter((item) => item.tipo === "outro").map((item) => item.nome),
+    ),
+  ];
   assert.deepEqual(nomesEmOutro, ["Reforço"]);
 
   // confere a categoria de cada turma
@@ -123,7 +124,9 @@ test("classifica as turmas do PDF como aula regular e preserva somente Reforço 
   }
 
   // confere a categoria de cada ligação
-  const tiposPorTurma = new Map(dados.turmasMapa2026.map((item) => [item.chaveImportacao, item.tipo]));
+  const tiposPorTurma = new Map(
+    dados.turmasMapa2026.map((item) => [item.chaveImportacao, item.tipo]),
+  );
   for (const ensalamento of dados.ensalamentosMapa2026) {
     assert.equal(ensalamento.tipo, tiposPorTurma.get(ensalamento.chaveTurma));
   }
@@ -189,7 +192,10 @@ test("possui página pública, Notícias e menu Mais acessível", async () => {
   assert.match(menu, /aria-expanded=/);
   assert.match(menu, /aria-controls=/);
   assert.match(menu, /onFocus=/);
-  assert.match(estilos, /\.item-menu-tem-submenu\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:/s);
+  assert.match(
+    estilos,
+    /\.item-menu-tem-submenu\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:/s,
+  );
   assert.match(estilos, /\.botao-submenu\s*\{[^}]*position:\s*static/s);
   assert.doesNotMatch(estilos, /\.submenu-aberto\s*>\s*\.botao-submenu\s+span\s*\{[^}]*rotate/s);
 });
@@ -198,7 +204,6 @@ test("possui página pública, Notícias e menu Mais acessível", async () => {
 test("não renderiza os detalhes opcionais quando eles estão vazios", async () => {
   // carrega a renderização e a interface do mapa
   const [{ renderToStaticMarkup }, interfaceMapa] = await Promise.all([
-    // importa o renderizador do react
     import("react-dom/server"),
     importarInterfaceMapa("detalhes-opcionais"),
   ]);
@@ -208,10 +213,12 @@ test("não renderiza os detalhes opcionais quando eles estão vazios", async () 
   const ensalamento = dados.ensalamentos[0];
 
   // monta um cartão de turma sem detalhes
-  const htmlTurmaVazia = renderToStaticMarkup(interfaceMapa.CartaoResultadoTurma({
-    resultado: { turma, local, ensalamento },
-    categorias: dados.categorias,
-  }));
+  const htmlTurmaVazia = renderToStaticMarkup(
+    interfaceMapa.CartaoResultadoTurma({
+      resultado: { turma, local, ensalamento },
+      categorias: dados.categorias,
+    }),
+  );
   // confirma que rótulos vazios não aparecem
   for (const rotulo of [
     "Como chegar",
@@ -227,12 +234,23 @@ test("não renderiza os detalhes opcionais quando eles estão vazios", async () 
   }
 
   // monta um cartão de local sem detalhes
-  const htmlLocalVazio = renderToStaticMarkup(interfaceMapa.CartaoResultadoLocal({
-    resultado: { local, usos: [{ turma, ensalamento }] },
-    categorias: dados.categorias,
-  }));
-  for (const rotulo of ["Descrição", "Como chegar", "Observações do local", "Acessibilidade", "Funcionamento"]) {
-    assert.ok(!htmlLocalVazio.includes(rotulo), `${rotulo} do local não deve aparecer sem conteúdo`);
+  const htmlLocalVazio = renderToStaticMarkup(
+    interfaceMapa.CartaoResultadoLocal({
+      resultado: { local, usos: [{ turma, ensalamento }] },
+      categorias: dados.categorias,
+    }),
+  );
+  for (const rotulo of [
+    "Descrição",
+    "Como chegar",
+    "Observações do local",
+    "Acessibilidade",
+    "Funcionamento",
+  ]) {
+    assert.ok(
+      !htmlLocalVazio.includes(rotulo),
+      `${rotulo} do local não deve aparecer sem conteúdo`,
+    );
   }
 
   // preenche os detalhes da turma
@@ -255,10 +273,16 @@ test("não renderiza os detalhes opcionais quando eles estão vazios", async () 
   // preenche os detalhes da ligação
   const ensalamentoPreenchido = { ...ensalamento, observacoes: "Observação do ensalamento." };
   // monta o cartão com todos os detalhes
-  const htmlPreenchido = renderToStaticMarkup(interfaceMapa.CartaoResultadoTurma({
-    resultado: { turma: turmaPreenchida, local: localPreenchido, ensalamento: ensalamentoPreenchido },
-    categorias: dados.categorias,
-  }));
+  const htmlPreenchido = renderToStaticMarkup(
+    interfaceMapa.CartaoResultadoTurma({
+      resultado: {
+        turma: turmaPreenchida,
+        local: localPreenchido,
+        ensalamento: ensalamentoPreenchido,
+      },
+      categorias: dados.categorias,
+    }),
+  );
   // confirma a presença de cada detalhe
   for (const texto of [
     "Descrição confirmada da atividade.",
@@ -281,14 +305,15 @@ test("inclui locais especiais e Reforço na primeira pesquisa em Outro", async (
   // prepara os dados e os módulos da busca
   const dados = dadosMapaParaInterface();
   const [{ renderToStaticMarkup }, interfaceMapa, buscaPublica, carga] = await Promise.all([
-    // importa o renderizador do react
     import("react-dom/server"),
     importarInterfaceMapa("locais-na-primeira-pesquisa"),
     importarTypeScript("app/mapa/busca-publica.ts", "buscas-especiais"),
     importarDadosMapa("locais-especiais-reais"),
   ]);
   // separa os locais que também funcionam como atividades
-  const locaisEspeciaisReais = carga.locaisMapa2026.filter(buscaPublica.localPesquisavelComoAtividade);
+  const locaisEspeciaisReais = carga.locaisMapa2026.filter(
+    buscaPublica.localPesquisavelComoAtividade,
+  );
   assert.equal(locaisEspeciaisReais.length, 18);
 
   // confere locais especiais conhecidos
@@ -299,12 +324,16 @@ test("inclui locais especiais e Reforço na primeira pesquisa em Outro", async (
     ["SRM-DI", "SRM - DI / AHSD"],
   ]) {
     assert.ok(
-      buscaPublica.buscarLocaisEspeciaisComoAtividade(carga.locaisMapa2026, termo)
+      buscaPublica
+        .buscarLocaisEspeciaisComoAtividade(carga.locaisMapa2026, termo)
         .some((local) => local.nome === nomeEsperado),
       `${termo} deve encontrar ${nomeEsperado}`,
     );
   }
-  assert.ok(!buscaPublica.localPesquisavelComoAtividade(dados.locais[0]), "Sala 114 não é atividade especial");
+  assert.ok(
+    !buscaPublica.localPesquisavelComoAtividade(dados.locais[0]),
+    "Sala 114 não é atividade especial",
+  );
 
   // simula os filtros da primeira pesquisa
   globalThis.__estadosMapaColegioTeste = ["manha", "outro", "", "incompleto", []];
@@ -317,7 +346,10 @@ test("inclui locais especiais e Reforço na primeira pesquisa em Outro", async (
       "Sala do Coro",
       "SRM - DI / AHSD",
     ]) {
-      assert.ok(html.includes(opcao), `${opcao} deve estar disponível em Outro na primeira pesquisa`);
+      assert.ok(
+        html.includes(opcao),
+        `${opcao} deve estar disponível em Outro na primeira pesquisa`,
+      );
     }
   } finally {
     // remove os dados usados pela simulação
@@ -328,15 +360,16 @@ test("inclui locais especiais e Reforço na primeira pesquisa em Outro", async (
 // verifica a administração e a estrutura do mapa
 test("possui painel protegido, APIs com publicação e migração do mapa", async () => {
   // lê a página, o painel, a api e as migrações
-  const [paginaPainel, painel, painelMapa, tiposMapa, fontesApi, bancoMapa, migracoes] = await Promise.all([
-    readFile(path.join(raiz, "app/painel/page.tsx"), "utf8"),
-    readFile(path.join(raiz, "app/componentes/PainelAdministrativo.tsx"), "utf8"),
-    readFile(path.join(raiz, "app/componentes/PainelMapaColegio.tsx"), "utf8"),
-    readFile(path.join(raiz, "app/mapa/tipos.ts"), "utf8"),
-    lerFontesRecursivamente(path.join(raiz, "app/api/mapa")),
-    readFile(path.join(raiz, "app/mapa/banco.ts"), "utf8"),
-    lerMigracoes(),
-  ]);
+  const [paginaPainel, painel, painelMapa, tiposMapa, fontesApi, bancoMapa, migracoes] =
+    await Promise.all([
+      readFile(path.join(raiz, "app/painel/page.tsx"), "utf8"),
+      readFile(path.join(raiz, "app/componentes/PainelAdministrativo.tsx"), "utf8"),
+      readFile(path.join(raiz, "app/componentes/PainelMapaColegio.tsx"), "utf8"),
+      readFile(path.join(raiz, "app/mapa/tipos.ts"), "utf8"),
+      lerFontesRecursivamente(path.join(raiz, "app/api/mapa")),
+      readFile(path.join(raiz, "app/mapa/banco.ts"), "utf8"),
+      lerMigracoes(),
+    ]);
   // junta os pontos que consultam o mapa
   const fontesMapa = `${fontesApi}\n${bancoMapa}`;
 
@@ -357,7 +390,10 @@ test("possui painel protegido, APIs com publicação e migração do mapa", asyn
 
   // confere as tabelas necessárias
   for (const tabela of ["categorias_mapa", "locais_colegio", "turmas_atividades", "ensalamentos"]) {
-    assert.match(migracoes, new RegExp(`CREATE TABLE (?:IF NOT EXISTS )?[\\\"\`]${tabela}[\\\"\`]`));
+    assert.match(
+      migracoes,
+      new RegExp(`CREATE TABLE (?:IF NOT EXISTS )?[\\\"\`]${tabela}[\\\"\`]`),
+    );
   }
   assert.match(migracoes, /CREATE UNIQUE INDEX[^;]+chave_importacao/is);
 });
@@ -380,10 +416,15 @@ async function importarValidacao(sufixo) {
   // troca os imports locais por endereços completos
   const fonte = (await readFile(caminho, "utf8"))
     .replace('from "./normalizacao"', `from "${normalizacao}"`)
-    .replace('from "../conteudo/periodos"', `from "${pathToFileURL(path.join(raiz, "app/conteudo/periodos.ts")).href}"`)
+    .replace(
+      'from "../conteudo/periodos"',
+      `from "${pathToFileURL(path.join(raiz, "app/conteudo/periodos.ts")).href}"`,
+    )
     .replace('from "./tipos"', `from "${pathToFileURL(path.join(raiz, "app/mapa/tipos.ts")).href}"`)
-    .replace('from "./dias-de-aula"', `from "${pathToFileURL(path.join(raiz, "app/mapa/dias-de-aula.ts")).href}"`);
-  // importa o compilador de typescript
+    .replace(
+      'from "./dias-de-aula"',
+      `from "${pathToFileURL(path.join(raiz, "app/mapa/dias-de-aula.ts")).href}"`,
+    );
   const moduloTypeScript = await import("typescript");
   // aceita as duas formas de exportação do compilador
   const typescript = moduloTypeScript.default ?? moduloTypeScript;
@@ -396,7 +437,6 @@ async function importarValidacao(sufixo) {
   }).outputText;
   // cria um endereço único para o módulo
   const url = `data:text/javascript,${encodeURIComponent(compilado)}#${encodeURIComponent(sufixo)}`;
-  // importa o módulo criado para o teste
   return import(url);
 }
 
@@ -419,7 +459,10 @@ async function importarInterfaceMapa(sufixo) {
   const fonte = (await readFile(caminho, "utf8"))
     .replace('from "react"', `from "${estados}"`)
     .replace('from "next/link"', `from "${import.meta.resolve("next/link.js")}"`)
-    .replace('from "../mapa/dias-de-aula"', `from "${pathToFileURL(path.join(raiz, "app/mapa/dias-de-aula.ts")).href}"`)
+    .replace(
+      'from "../mapa/dias-de-aula"',
+      `from "${pathToFileURL(path.join(raiz, "app/mapa/dias-de-aula.ts")).href}"`,
+    )
     .replace(
       'from "../mapa/busca-publica"',
       `from "${pathToFileURL(path.join(raiz, "app/mapa/busca-publica.ts")).href}"`,
@@ -427,25 +470,25 @@ async function importarInterfaceMapa(sufixo) {
     .replace("function BuscaTurma(", "export function BuscaTurma(")
     .replace("function CartaoResultadoTurma(", "export function CartaoResultadoTurma(")
     .replace("function CartaoResultadoLocal(", "export function CartaoResultadoLocal(");
-  // importa o compilador de typescript
   const moduloTypeScript = await import("typescript");
   // aceita as duas formas de exportação do compilador
   const typescript = moduloTypeScript.default ?? moduloTypeScript;
   // transforma a interface em código comum
-  const compilado = typescript.transpileModule(fonte, {
-    compilerOptions: {
-      jsx: typescript.JsxEmit.ReactJSX,
-      module: typescript.ModuleKind.ESNext,
-      target: typescript.ScriptTarget.ES2022,
-    },
-  }).outputText.replace(
-    // aponta a criação de elementos para o pacote instalado
-    /["']react\/jsx-runtime["']/g,
-    `"${pathToFileURL(path.join(raiz, "node_modules/react/jsx-runtime.js")).href}"`,
-  );
+  const compilado = typescript
+    .transpileModule(fonte, {
+      compilerOptions: {
+        jsx: typescript.JsxEmit.ReactJSX,
+        module: typescript.ModuleKind.ESNext,
+        target: typescript.ScriptTarget.ES2022,
+      },
+    })
+    .outputText.replace(
+      // aponta a criação de elementos para o pacote instalado
+      /["']react\/jsx-runtime["']/g,
+      `"${pathToFileURL(path.join(raiz, "node_modules/react/jsx-runtime.js")).href}"`,
+    );
   // cria um endereço único para o módulo
   const url = `data:text/javascript,${encodeURIComponent(compilado)}#${encodeURIComponent(sufixo)}`;
-  // importa o módulo criado para o teste
   return import(url);
 }
 
@@ -453,28 +496,67 @@ async function importarInterfaceMapa(sufixo) {
 function dadosMapaParaInterface() {
   // reúne os campos comuns dos locais
   const camposLocal = {
-    numero: "", nomeAlternativo: "", ala: "Par", andar: "3º andar", bloco: "", setor: "",
-    corredor: "", referencia: "", descricao: "", instrucoes: "", observacoes: "",
-    acessibilidade: "", horario: "", imagemUrl: "", ordem: 1, atualizadoEm: "2026-01-01 12:00:00",
+    numero: "",
+    nomeAlternativo: "",
+    ala: "Par",
+    andar: "3º andar",
+    bloco: "",
+    setor: "",
+    corredor: "",
+    referencia: "",
+    descricao: "",
+    instrucoes: "",
+    observacoes: "",
+    acessibilidade: "",
+    horario: "",
+    imagemUrl: "",
+    ordem: 1,
+    atualizadoEm: "2026-01-01 12:00:00",
   };
   // cria locais comuns e especiais
   const locais = [
     { ...camposLocal, id: 1, nome: "Sala 114", numero: "114", tipo: "sala_aula" },
-    { ...camposLocal, id: 2, nome: "Laboratório de Informática", numero: "312", tipo: "laboratorio" },
+    {
+      ...camposLocal,
+      id: 2,
+      nome: "Laboratório de Informática",
+      numero: "312",
+      tipo: "laboratorio",
+    },
     { ...camposLocal, id: 3, nome: "DANCEP", numero: "302", tipo: "outro" },
     { ...camposLocal, id: 4, nome: "Sala do Coro", numero: "328", tipo: "outro" },
     { ...camposLocal, id: 5, nome: "SRM - DI / AHSD", numero: "326", tipo: "outro" },
   ];
   // cria uma atividade de reforço
   const turma = {
-    id: 10, nome: "Reforço", nomeNormalizado: "reforco", aliases: "", turno: "manha", tipo: "outro",
-    curso: "", serie: "", turma: "", descricao: "", observacoes: "", inicioValidade: "",
-    fimValidade: "", ordem: 1, atualizadoEm: "2026-01-01 12:00:00",
+    id: 10,
+    nome: "Reforço",
+    nomeNormalizado: "reforco",
+    aliases: "",
+    turno: "manha",
+    tipo: "outro",
+    curso: "",
+    serie: "",
+    turma: "",
+    descricao: "",
+    observacoes: "",
+    inicioValidade: "",
+    fimValidade: "",
+    ordem: 1,
+    atualizadoEm: "2026-01-01 12:00:00",
   };
   // liga a atividade a uma sala
   const ensalamento = {
-    id: 20, turmaAtividadeId: 10, localId: 1, turno: "manha", tipo: "outro", observacoes: "",
-    inicioValidade: "", fimValidade: "", ordem: 1, atualizadoEm: "2026-01-01 12:00:00",
+    id: 20,
+    turmaAtividadeId: 10,
+    localId: 1,
+    turno: "manha",
+    tipo: "outro",
+    observacoes: "",
+    inicioValidade: "",
+    fimValidade: "",
+    ordem: 1,
+    atualizadoEm: "2026-01-01 12:00:00",
   };
   // entrega os dados no formato da interface
   return {
@@ -491,11 +573,9 @@ function dadosMapaParaInterface() {
   };
 }
 
-// importa um arquivo tipado com um endereço único
 function importarTypeScript(caminho, sufixo) {
   const url = pathToFileURL(path.join(raiz, caminho));
   url.searchParams.set("teste", sufixo);
-  // importa o arquivo com um endereço exclusivo
   return import(url.href);
 }
 
@@ -548,11 +628,11 @@ async function lerFontesRecursivamente(diretorio) {
 async function lerMigracoes() {
   // encontra e ordena os arquivos de migração
   const diretorio = path.join(raiz, "drizzle");
-  const arquivos = (await readdir(diretorio))
-    .filter((arquivo) => arquivo.endsWith(".sql"))
-    .sort();
+  const arquivos = (await readdir(diretorio)).filter((arquivo) => arquivo.endsWith(".sql")).sort();
   // lê todas as migrações ao mesmo tempo
-  const fontes = await Promise.all(arquivos.map((arquivo) => readFile(path.join(diretorio, arquivo), "utf8")));
+  const fontes = await Promise.all(
+    arquivos.map((arquivo) => readFile(path.join(diretorio, arquivo), "utf8")),
+  );
   return fontes.join("\n");
 }
 
